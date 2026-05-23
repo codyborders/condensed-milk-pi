@@ -90,6 +90,21 @@ provider isn't reporting cache hits (vLLM versions before
 lack this on the OpenAI-compat path — server-side `/metrics` shows the
 real hit rate).
 
+### Added — status-bar toggle (from PR #1 by @joelazar)
+
+`showStatus` config flag (default `true`) gates the `↓N (Cf)` token-savings
+indicator that's published to the pi footer. Toggle via:
+
+```
+/compress-config status on   # show indicator
+/compress-config status off  # hide it; compression still runs
+```
+
+Orthogonal to compression — only controls the footer display. Persisted
+alongside `thresholds`/`coverage`/`profile`. Preserved across profile
+reloads at `session_start` so switching profiles doesn't reset the
+footer preference.
+
 ### Compatibility
 
 - Existing v1.9.x configs (top-level `thresholds` / `coverage`, no
@@ -100,6 +115,8 @@ real hit rate).
   from the `default` profile and apply user fields on top.
 - Unknown profile names log a warning and fall back to `default` —
   never crashes session start.
+- `showStatus` defaults to `true` for users upgrading from any prior
+  version — footer appears as before until explicitly hidden.
 
 ## [1.9.0] - 2026-04-21
 
