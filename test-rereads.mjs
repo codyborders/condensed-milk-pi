@@ -21,6 +21,8 @@ import { join } from "node:path";
 const tmp = mkdtempSync(join(tmpdir(), "cm-test-"));
 const srcPath = join(tmp, "context-compress.ts");
 writeFileSync(srcPath, readFileSync("filters/context-compress.ts", "utf-8"));
+// v1.10.0: context-compress.ts now imports from ./profiles.js; copy alongside.
+writeFileSync(join(tmp, "profiles.ts"), readFileSync("filters/profiles.ts", "utf-8"));
 
 const tsc = spawnSync("npx", ["-y", "-p", "typescript@5.9", "tsc",
   "--target", "es2022",

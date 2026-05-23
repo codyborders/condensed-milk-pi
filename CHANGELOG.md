@@ -2,6 +2,105 @@
 
 All notable changes to condensed-milk.
 
+## [1.10.0] - 2026-04-30
+
+### Added — backend profiles (Phase 1 of vLLM/Qwen support)
+
+New `profile` system bundles every backend-specific tuning knob into a
+named profile that's selected explicitly per session. Anthropic users
+get zero behavior change — the `default` profile is identical to v1.9.0.
+A new `qwen-vllm` profile bakes in research-derived tunings for Qwen3.x
+served via vLLM, where the cache model, long-context behavior, and
+placeholder norms differ from Anthropic.
+
+**Built-in profiles:**
+
+| Knob | `default` (Anthropic) | `qwen-vllm` |
+|---|---|---|
+| `thresholds` | `[0.30, 0.45, 0.60]` | `[0.20, 0.35, 0.55]` |
+| `coverage` | `[0.60, 0.80, 0.95]` | `[0.50, 0.75, 0.92]` |
+| `effectiveContextCap` | model default | `131072` |
+| `placeholderFormat.bash` | `[cm-masked bash] {cmd}` | same |
+| `placeholderFormat.read` | `[cm-masked read] {path} ({n} lines, {size})` | same |
+| `maskOldThinking` | `off` | `with-coverage` |
+
+Qwen-vllm rationale: vLLM has no Anthropic-style cache_control breakpoint
+rescue tier (per [vLLM APC docs](https://docs.vllm.ai/en/stable/design/prefix_caching/)),
+so we trigger compression earlier. Qwen3.6 long-context degrades past
+~128K with YaRN scaling, so we cap pressure math at 131072 even when the
+model is served at 262144. Qwen3 ships with `preserve_thinking` on so
+historical `<think>` blocks accumulate in context — we mask them under
+the same coverage gate as tool results (per [JetBrains Dec 2025](https://blog.jetbrains.com/research/2025/12/efficient-context-management/),
+masking matched or beat LLM-summary on 4/5 settings on Qwen3-Coder 480B).
+
+**Config (`~/.config/condensed-milk.json`):**
+
+```json
+{
+  "profile": "qwen-vllm",
+  "profiles": {
+    "my-custom": {
+      "label": "my A/B variant",
+      "thresholds": [0.15, 0.30, 0.50],
+      "coverage": [0.50, 0.75, 0.95],
+      "effectiveContextCap": 131072,
+      "placeholderFormat": {
+        "bash": "<elided tool=\"bash\" cmd=\"{cmd}\"/>",
+        "read": "<elided tool=\"read\" path=\"{path}\" lines=\"{n}\" size=\"{size}\"/>"
+      },
+      "maskOldThinking": "above-cutoff"
+    }
+  }
+}
+```
+
+### Added — historical thinking-block masking
+
+New `maskOldThinking` policy on each profile: `"off"` |
+`"with-coverage"` | `"above-cutoff"`. When non-`off`, assistant messages
+before the static cutoff have their `<think>...</think>` text spans,
+`{type: "thinking"}` content blocks, and top-level `reasoning_content`
+fields replaced with deterministic empty strings. Bytes stay
+identical turn-over-turn, so prefix cache is preserved.
+
+Default profile keeps `"off"` (no behavior change for Anthropic
+users — extended thinking is already cache-controlled by Claude).
+`qwen-vllm` profile defaults to `"with-coverage"`.
+
+### Added — `/compress-profile` command
+
+Inspect or switch active profile:
+
+```
+/compress-profile                # show active profile + built-ins
+/compress-profile qwen-vllm      # switch (takes effect next session)
+```
+
+Validates that the requested profile exists (built-in or in user
+`profiles` map) before writing. Switch is persisted to
+`~/.config/condensed-milk.json` and applied at next `session_start`.
+
+### Changed — `/compress-stats` shows profile
+
+New lines at the top show active profile name + key tunings, plus
+any profile-validation warnings. Cache impact section now hints when
+`prompt_tokens_details: null` across the whole session may mean the
+provider isn't reporting cache hits (vLLM versions before
+[vllm#23363](https://github.com/vllm-project/vllm/issues/23363)
+lack this on the OpenAI-compat path — server-side `/metrics` shows the
+real hit rate).
+
+### Compatibility
+
+- Existing v1.9.x configs (top-level `thresholds` / `coverage`, no
+  `profile` field) keep working unchanged. Top-level fields are now
+  treated as overrides on top of the active profile when active is
+  `"default"` — i.e., the back-compat path.
+- Custom profile names that don't appear in `BUILT_IN_PROFILES` start
+  from the `default` profile and apply user fields on top.
+- Unknown profile names log a warning and fall back to `default` —
+  never crashes session start.
+
 ## [1.9.0] - 2026-04-21
 
 ### Fixed — compound-command stdout over-masking (ADR-030)

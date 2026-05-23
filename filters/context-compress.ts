@@ -26,7 +26,13 @@
  * Why masking over summarization still holds (ADR-016): deterministic
  * byte-identical placeholders, JetBrains empirical advantage, agent
  * re-reads via just-in-time pattern.
+ *
+ * v1.10.0 (Phase 1 of vLLM/Qwen support): per-profile placeholder
+ * templates and an optional historical thinking-block masking pass.
  */
+
+import type { PlaceholderTemplates, ThinkingMaskPolicy } from "./profiles.js";
+import { renderPlaceholder } from "./profiles.js";
 
 /** Context-usage thresholds that trigger cutoff advancement.
  *  Must be monotonically increasing.
@@ -148,6 +154,80 @@ export function resolveRules(user: UserConfig): ResolvedRules {
  *  index.ts loads user JSON and overrides via opts.rules. */
 const DEFAULT_RULES: ResolvedRules = resolveRules(emptyUserConfig());
 
+/** v1.10.0: replace any `<think>…</think>` blocks and any
+ *  `type: "thinking"` content blocks on an assistant message with a
+ *  deterministic empty placeholder. Pure transform — never mutates
+ *  the input message; returns a new structure if anything changed.
+ *
+ *  Both formats are handled because providers vary:
+ *  - pi-ai's normalized assistant content uses `{type: "thinking"}` blocks
+ *  - some openai-completions paths fold thinking inline as `<think>...</think>`
+ *  - some shapes carry a top-level `reasoning_content` string field
+ *
+ *  The "with-coverage" vs "above-cutoff" distinction is handled by the
+ *  caller via the cutoff gate — this function masks unconditionally
+ *  when invoked. "above-cutoff" is not yet differentiated from
+ *  "with-coverage" in this minimal Phase 1 — both currently mask any
+ *  thinking on a pre-cutoff assistant message. Reserved for future
+ *  divergence (e.g. "above-cutoff" might also bypass MIN_MASK_LENGTH-
+ *  style thresholds we don't currently apply to thinking). */
+function maskAssistantThinking(
+  m: any,
+  _policy: ThinkingMaskPolicy,
+): { message: any; changed: boolean; bytesSaved: number } {
+  const msg = m?.message ?? m;
+  if (msg?.role !== "assistant") return { message: m, changed: false, bytesSaved: 0 };
+
+  let bytesSaved = 0;
+  let changed = false;
+
+  // 1. Content blocks of type "thinking" — replace .thinking with the
+  //    empty placeholder. Block kept in place so block count stays
+  //    stable (any downstream code counting blocks won't shift).
+  let newContent = msg.content;
+  if (Array.isArray(msg.content)) {
+    let blockChanged = false;
+    newContent = msg.content.map((block: any) => {
+      if (block?.type !== "thinking") return block;
+      const original = typeof block.thinking === "string" ? block.thinking : "";
+      if (original.length === 0) return block;  // already empty — skip
+      bytesSaved += original.length - MASKED_THINKING_PLACEHOLDER.length;
+      blockChanged = true;
+      return { ...block, thinking: MASKED_THINKING_PLACEHOLDER };
+    });
+    // Also strip inline `<think>...</think>` from text blocks (some
+    // openai-completions paths fold thinking into text). Conservative:
+    // only strip well-formed pairs to avoid corrupting text that
+    // legitimately mentions `<think>` substrings.
+    newContent = newContent.map((block: any) => {
+      if (block?.type !== "text" || typeof block.text !== "string") return block;
+      const stripped = block.text.replace(/<think>[\s\S]*?<\/think>/g, "");
+      if (stripped === block.text) return block;
+      bytesSaved += block.text.length - stripped.length;
+      blockChanged = true;
+      return { ...block, text: stripped };
+    });
+    if (blockChanged) changed = true;
+  }
+
+  // 2. Top-level reasoning_content field (some shapes; e.g. deepseek-style).
+  let newReasoning: string | undefined = msg.reasoning_content;
+  if (typeof msg.reasoning_content === "string" && msg.reasoning_content.length > 0) {
+    bytesSaved += msg.reasoning_content.length;
+    newReasoning = "";
+    changed = true;
+  }
+
+  if (!changed) return { message: m, changed: false, bytesSaved: 0 };
+
+  // Rebuild preserving the m / m.message wrapper shape used by the rest
+  // of the codebase.
+  const updatedMsg: any = { ...msg, content: newContent };
+  if (newReasoning !== undefined) updatedMsg.reasoning_content = newReasoning;
+  if (m?.message) return { message: { ...m, message: updatedMsg }, changed: true, bytesSaved };
+  return { message: updatedMsg, changed: true, bytesSaved };
+}
+
 function isReferenceFile(path: string, rules: ResolvedRules): boolean {
   const base = path.split("/").pop() ?? path;
   if (rules.basenames.has(base)) return true;
@@ -204,7 +284,26 @@ export interface CompressOptions {
   /** v1.6.0: override the module-level DEFAULT_RULES. Tests inject a
    *  custom ResolvedRules here; prod callers leave unset. */
   rules?: ResolvedRules;
+  /** v1.10.0: profile-supplied placeholder templates. Falls back to
+   *  the v1.9.0 `[cm-masked …]` strings when undefined. */
+  placeholderFormat?: PlaceholderTemplates;
+  /** v1.10.0: policy for masking historical `<think>` / reasoning
+   *  blocks on assistant messages. Defaults to "off" (Anthropic
+   *  behavior). See profiles.ts for semantics. */
+  maskOldThinking?: ThinkingMaskPolicy;
 }
+
+/** v1.10.0 fallback templates — exact byte match for the v1.9.0
+ *  hardcoded strings. Used when no profile is supplied. */
+const FALLBACK_PLACEHOLDERS: PlaceholderTemplates = {
+  bash: "[cm-masked bash] {cmd}",
+  read: "[cm-masked read] {path} ({n} lines, {size})",
+};
+
+/** v1.10.0 deterministic constant for masked thinking blocks. Empty
+ *  string keeps prefix bytes minimal AND identical across turns —
+ *  same content, same hash, same prefix-cache lookup. */
+const MASKED_THINKING_PLACEHOLDER = "";
 
 export interface CutoffDecision {
   /** Cutoff to use for this call. */
@@ -302,9 +401,12 @@ export function compressStaleToolResults(
         // condensed-milk artifact (not a tool failure) — self-documenting
         // for self-sufficient looping agents who only see placeholder text
         // post-context_checkout. Bytes stay deterministic per message.
+        // v1.10.0: template comes from active profile (back-compat default
+        // matches v1.9.0 byte-for-byte).
+        const tpl = (opts.placeholderFormat ?? FALLBACK_PLACEHOLDERS).bash;
         const placeholder = command
-          ? `[cm-masked bash] ${command.slice(0, 80)}`
-          : `[cm-masked bash]`;
+          ? renderPlaceholder(tpl, { cmd: command.slice(0, 80) })
+          : renderPlaceholder(tpl, { cmd: "" }).trimEnd();
         bytesSaved += content.length - placeholder.length;
         masksApplied++;
         if (command) maskedCommands.push(command);
@@ -325,11 +427,27 @@ export function compressStaleToolResults(
         const lineCount = countLines(content);
         const sizeStr = formatSize(content.length);
         // v1.9.0 (ADR-029): `cm-` prefix (see bash branch above).
-        const placeholder = `[cm-masked read] ${path} (${lineCount} lines, ${sizeStr})`;
+        // v1.10.0: profile-supplied template (back-compat default identical to v1.9.0).
+        const tpl = (opts.placeholderFormat ?? FALLBACK_PLACEHOLDERS).read;
+        const placeholder = renderPlaceholder(tpl, { path, n: lineCount, size: sizeStr });
         bytesSaved += content.length - placeholder.length;
         masksApplied++;
         maskedPaths.push(path);
         return replaceContent(m, placeholder);
+      }
+    }
+
+    // v1.10.0: thinking-block masking on assistant messages.
+    // Only mutates messages strictly before cutoffIdx. Replaces thinking
+    // content with a deterministic empty string so post-cutoff bytes stay
+    // byte-identical turn-over-turn → cache prefix is unaffected.
+    const thinkingPolicy = opts.maskOldThinking ?? "off";
+    if (thinkingPolicy !== "off" && idx < cutoffIdx) {
+      const masked = maskAssistantThinking(m, thinkingPolicy);
+      if (masked.changed) {
+        bytesSaved += masked.bytesSaved;
+        masksApplied++;
+        return masked.message;
       }
     }
 

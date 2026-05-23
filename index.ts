@@ -42,6 +42,12 @@ import {
   type ResolvedRules,
 } from "./filters/context-compress.js";
 import { stripAnsi } from "./filters/ansi-strip.js";
+import {
+  resolveProfile,
+  BUILT_IN_PROFILES,
+  type Profile,
+  type ProfileOverride,
+} from "./filters/profiles.js";
 
 // --- Config ---
 // v1.2.0 (ADR-018): static-cutoff algorithm replaces rolling window.
@@ -49,6 +55,10 @@ import { stripAnsi } from "./filters/ansi-strip.js";
 // the cutoff stay identical turn-over-turn — cache prefix stable.
 //
 // Migration from v1.1.x: windowSize silently ignored.
+// v1.10.0 (Phase 1 of vLLM/Qwen support): adds profile system. Existing
+// `thresholds` and `coverage` top-level fields are preserved as legacy
+// overrides on top of the active profile when profile is unset or
+// "default". This keeps every v1.9.x config working unchanged.
 interface CompressorConfig {
   /** Context-usage thresholds (monotonically increasing, 0..1) that
    *  trigger cutoff advancement. Default [0.30, 0.45, 0.60] as of v1.7.0
@@ -81,7 +91,7 @@ const CONFIG_PATH = join(homedir(), ".config", "condensed-milk.json");
 // Path is separate from CONFIG_PATH so deleting one doesn't disturb the other.
 const TELEMETRY_LOG_PATH = join(homedir(), ".config", "condensed-milk-sessions.jsonl");
 const TELEMETRY_SCHEMA_VERSION = 1;
-const PACKAGE_VERSION = "1.8.1";
+const PACKAGE_VERSION = "1.10.0";
 
 /** v1.8.0: allowlist of pi built-in tool names. Any tool name from a custom
  *  extension (e.g. user-installed third-party tools with identifying names)
@@ -137,6 +147,26 @@ function matchesStaleDefault(cfg: CompressorConfig): string | null {
     }
   }
   return null;
+}
+
+/** v1.10.0: load profile selection + overrides alongside legacy config.
+ *  Returns the resolved Profile plus the active name and any warnings
+ *  from validation, so /compress-stats can surface them. */
+function loadProfile(): { profile: Profile; activeName: string; warnings: string[] } {
+  let parsed: Record<string, unknown> = {};
+  try {
+    parsed = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+  } catch {
+    // No config or unreadable — use built-in default with no overrides.
+  }
+  const activeName = typeof parsed.profile === "string" ? parsed.profile : "default";
+  const userProfiles = (parsed.profiles && typeof parsed.profiles === "object")
+    ? parsed.profiles as Record<string, ProfileOverride>
+    : undefined;
+  return resolveProfile(activeName, userProfiles, {
+    thresholds: parsed.thresholds,
+    coverage: parsed.coverage,
+  });
 }
 
 function loadConfig(): CompressorConfig {
@@ -272,6 +302,10 @@ export default function tokenCompressor(pi: ExtensionAPI) {
 
   // Config
   let config: CompressorConfig = loadConfig();
+  // v1.10.0: active profile (resolved at session start; reload on session_start).
+  let activeProfile: Profile = BUILT_IN_PROFILES.default;
+  let activeProfileName = "default";
+  let profileWarnings: string[] = [];
 
   // v1.8.0: telemetry state. Captured regardless of opt-in; written to disk
   // at session_shutdown ONLY if telemetry.local is true. Zero-cost when off.
@@ -322,6 +356,27 @@ export default function tokenCompressor(pi: ExtensionAPI) {
     // Reload telemetry config at session start so toggle via /compress-telemetry
     // in a previous session is honored without requiring full pi restart.
     telemetryConfig = loadTelemetryConfig();
+    // v1.10.0: re-resolve active profile each session start so config
+    // edits are honored without a full pi restart.
+    const resolved = loadProfile();
+    activeProfile = resolved.profile;
+    activeProfileName = resolved.activeName;
+    profileWarnings = resolved.warnings;
+    if (profileWarnings.length > 0) {
+      try {
+        for (const w of profileWarnings) {
+          process.stderr.write(`condensed-milk profile: ${w}\n`);
+        }
+      } catch { /* best-effort */ }
+    }
+    // Sync legacy config view with active profile so /compress-stats and
+    // any callers that still read `config.thresholds` see the active
+    // values. /compress-config writes still go to the legacy fields
+    // (which act as default-profile overrides per resolveProfile()).
+    config = {
+      thresholds: [...activeProfile.thresholds],
+      coverage: [...activeProfile.coverage],
+    };
     const cmds = registeredCommands();
     ctx.ui?.setStatus?.("token-savings", `↓0 (${cmds.length}f)`);
   });
@@ -536,11 +591,17 @@ export default function tokenCompressor(pi: ExtensionAPI) {
     }
 
     // Read current context usage to drive static-cutoff decision.
+    // v1.10.0: when the active profile sets effectiveContextCap, use it
+    // as the denominator instead of the model's advertised window.
+    // Forces compression to engage earlier on backends where the
+    // advertised window outruns the proven long-context regime
+    // (e.g. Qwen3.6 at 262K with YaRN — trigger inside the trained 131K).
     let contextUsage = 0;
     try {
       const usage = (ctx as any).getContextUsage?.();
       if (usage?.tokens && usage?.contextWindow) {
-        contextUsage = usage.tokens / usage.contextWindow;
+        const denom = activeProfile.effectiveContextCap ?? usage.contextWindow;
+        contextUsage = usage.tokens / denom;
       }
     } catch {}
 
@@ -572,6 +633,9 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       previousCutoff: persistentCutoff,
       zoneEntered,
       rules: USER_RULES,
+      // v1.10.0: profile-driven knobs.
+      placeholderFormat: activeProfile.placeholderFormat,
+      maskOldThinking: activeProfile.maskOldThinking,
     });
     const turnBytesCompressed = result?.bytesSaved ?? 0;
     const turnMasksApplied = result?.masksApplied ?? 0;
@@ -650,6 +714,14 @@ export default function tokenCompressor(pi: ExtensionAPI) {
 
       const lines = [
         "Token Compressor Stats",
+        `  Profile: ${activeProfileName}  (${activeProfile.label})`,
+        `  Effective context cap: ${activeProfile.effectiveContextCap ?? "model default"}`,
+        `  Mask old thinking: ${activeProfile.maskOldThinking}`,
+        `  Placeholder bash: ${activeProfile.placeholderFormat.bash}`,
+        `  Placeholder read: ${activeProfile.placeholderFormat.read}`,
+        ...(profileWarnings.length > 0
+          ? ["  Profile warnings:", ...profileWarnings.map((w) => `    • ${w}`)]
+          : []),
         `  Filters: ${cmds.join(", ")}`,
         `  Commands processed: ${totalCommands}`,
         `  Commands compressed: ${compressedCount}`,
@@ -674,6 +746,14 @@ export default function tokenCompressor(pi: ExtensionAPI) {
         `  Avg turns placeholder held: ${(reReadByRead + reReadByBash) > 0 ? (reReadTurnsDeltaSum / (reReadByRead + reReadByBash)).toFixed(1) : "—"}`,
         "",
         "Cache Impact",
+        // v1.10.0: vLLM (older) populates `prompt_tokens_details: null`
+        // even when prefix caching is active server-side. When we see
+        // zero cache reads AND zero cache writes across the whole
+        // session, hint that the provider may not be reporting it (vs.
+        // a clean session that genuinely never hit cache).
+        ...(totalCacheRead === 0 && totalCacheWrite === 0 && cacheHistory.length > 5
+          ? ["  (note: provider may not report cached_tokens — check server /metrics for actual hit rate)"]
+          : []),
         `  Total input: ${formatTokens(totalAllInput)}`,
         `  Cache hits:   ${formatTokens(totalCacheRead)} (${cacheHitRate.toFixed(1)}%) @ $${PRICE_CACHE_READ}/M = $${costCacheRead.toFixed(2)}`,
         `  Cache writes: ${formatTokens(totalCacheWrite)} (${cacheWriteRate.toFixed(1)}%) @ $${PRICE_CACHE_WRITE}/M = $${costCacheWrite.toFixed(2)}`,
@@ -777,6 +857,84 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       }
 
       ctx.ui?.notify?.(`Unknown config key: ${key}. Use thresholds or coverage.`, "warning");
+    },
+  });
+
+  // /compress-profile — v1.10.0 active profile inspect + switch.
+  pi.registerCommand("compress-profile", {
+    description: "Inspect or switch the active condensed-milk profile (Anthropic/vLLM tunings)",
+    handler: async (args, ctx) => {
+      const arg = (args ?? "").trim();
+
+      if (!arg) {
+        // Show active profile + list available built-ins.
+        const builtinNames = Object.keys(BUILT_IN_PROFILES);
+        const lines = [
+          `Active profile: ${activeProfileName}  (${activeProfile.label})`,
+          `  thresholds:           [${activeProfile.thresholds.join(", ")}]`,
+          `  coverage:             [${activeProfile.coverage.join(", ")}]`,
+          `  effectiveContextCap:  ${activeProfile.effectiveContextCap ?? "model default"}`,
+          `  maskOldThinking:      ${activeProfile.maskOldThinking}`,
+          `  placeholder.bash:     ${activeProfile.placeholderFormat.bash}`,
+          `  placeholder.read:     ${activeProfile.placeholderFormat.read}`,
+          "",
+          `Built-in profiles:    ${builtinNames.join(", ")}`,
+          "",
+          "Switch:  /compress-profile <name>",
+          "Edit:    ~/.config/condensed-milk.json",
+          `         {"profile": "<name>", "profiles": { "<name>": { ...overrides... } }}`,
+          "",
+          "Profile change takes effect on next session_start. Restart pi or",
+          "start a new session to load the new profile.",
+        ];
+        if (profileWarnings.length > 0) {
+          lines.push("", "Warnings from current config:");
+          for (const w of profileWarnings) lines.push(`  • ${w}`);
+        }
+        ctx.ui?.notify?.(lines.join("\n"), "info");
+        return;
+      }
+
+      // Validate the requested name resolves to *something* before persisting.
+      // Accepts built-in names AND custom names that exist under user `profiles`.
+      let existing: Record<string, unknown> = {};
+      try { existing = JSON.parse(readFileSync(CONFIG_PATH, "utf-8")); } catch { /* fresh */ }
+      const userProfiles = (existing.profiles && typeof existing.profiles === "object")
+        ? existing.profiles as Record<string, unknown>
+        : {};
+      const isBuiltIn = arg in BUILT_IN_PROFILES;
+      const isCustom = arg in userProfiles;
+      if (!isBuiltIn && !isCustom) {
+        ctx.ui?.notify?.(
+          [
+            `Unknown profile "${arg}".`,
+            `Built-in: ${Object.keys(BUILT_IN_PROFILES).join(", ")}`,
+            `Custom (in your config): ${Object.keys(userProfiles).join(", ") || "(none)"}`,
+            "",
+            "To define a custom profile, edit ~/.config/condensed-milk.json:",
+            `  {"profile": "my-name", "profiles": { "my-name": { "thresholds": [...], ... } }}`,
+          ].join("\n"),
+          "warning",
+        );
+        return;
+      }
+
+      // Persist with merge semantics matching saveConfig() / saveTelemetryConfig().
+      try {
+        existing.profile = arg;
+        mkdirSync(dirname(CONFIG_PATH), { recursive: true });
+        writeFileSync(CONFIG_PATH, JSON.stringify(existing, null, 2) + "\n");
+        ctx.ui?.notify?.(
+          [
+            `Profile set to "${arg}" in ${CONFIG_PATH}.`,
+            "Active profile in this session is unchanged — restart pi or start",
+            "a new session to apply.  /compress-profile (no args) shows active.",
+          ].join("\n"),
+          "info",
+        );
+      } catch (e: any) {
+        ctx.ui?.notify?.(`Failed to write ${CONFIG_PATH}: ${e?.message ?? e}`, "warning");
+      }
     },
   });
 

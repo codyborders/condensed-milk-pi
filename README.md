@@ -127,6 +127,7 @@ The extension works automatically — no configuration needed. Every bash comman
 |---------|-------------|
 | `/compress-stats` | Show compression + masking statistics for the current session, including re-read telemetry (v1.4.0) |
 | `/compress-config` | Show or update thresholds/coverage (`thresholds 0.15,0.30,0.45`, `coverage 0.5,0.75,0.9`) |
+| `/compress-profile` | Show or switch the active backend profile (v1.10.0). `/compress-profile qwen-vllm` switches; takes effect on next session. |
 
 ### Status Bar
 
@@ -155,6 +156,80 @@ v1.8.0 auto-migrates configs matching any recognized prior default tuple (e.g. v
 | `coverage` | Fraction of messages masked when each threshold fires. Same length as `thresholds`. |
 
 Also editable via `/compress-config`. Changes take effect on next session.
+
+#### Backend profiles (v1.10.0)
+
+Profiles bundle every backend-specific tuning into one named preset. Built-in profiles cover the two backends with non-trivial differences in cache model and long-context behavior:
+
+| Profile | When to use | thresholds × coverage | cap | thinking mask |
+|---|---|---|---|---|
+| `default` | Anthropic Claude (any model) | `[0.30, 0.45, 0.60]` × `[0.60, 0.80, 0.95]` | model default | off |
+| `qwen-vllm` | Qwen3.x served via vLLM (or any OpenAI-compatible vLLM endpoint) | `[0.20, 0.35, 0.55]` × `[0.50, 0.75, 0.92]` | 131072 | with-coverage |
+
+Why `qwen-vllm` differs:
+
+- **Earlier triggers + lower cap.** vLLM has no Anthropic-style cache-control breakpoint rescue tier ([vLLM APC docs](https://docs.vllm.ai/en/stable/design/prefix_caching/)) — every cache miss is a full prefill. We compress earlier so the working set stays inside the proven long-context regime. Qwen3.6 quality measurably degrades past ~128K with YaRN scaling ([yarn issue](https://github.com/vllm-project/vllm/issues/18728)), so we cap pressure math at 131072 even when vLLM is configured for 262144.
+- **Mask historical thinking.** Qwen3 ships with `preserve_thinking` on, so historical `<think>` blocks accumulate in context. With `with-coverage` policy, they're masked under the same cutoff gate as tool results — [JetBrains Dec 2025](https://blog.jetbrains.com/research/2025/12/efficient-context-management/) measured masking matched or beat LLM-summary on 4/5 settings on Qwen3-Coder 480B.
+
+Select a profile:
+
+```bash
+/compress-profile qwen-vllm    # writes profile field to config; restart pi to apply
+```
+
+Or edit the config directly:
+
+```json
+{
+  "profile": "qwen-vllm"
+}
+```
+
+#### Custom profiles
+
+Define your own under `profiles`. Built-in profiles can be partially overridden by reusing the same name; unknown names start from `default` and apply user fields on top.
+
+```json
+{
+  "profile": "my-qwen-aggressive",
+  "profiles": {
+    "my-qwen-aggressive": {
+      "label": "Qwen on vLLM — A/B variant with XML placeholders",
+      "thresholds": [0.15, 0.30, 0.50],
+      "coverage":   [0.50, 0.75, 0.95],
+      "effectiveContextCap": 131072,
+      "placeholderFormat": {
+        "bash": "<elided tool=\"bash\" cmd=\"{cmd}\"/>",
+        "read": "<elided tool=\"read\" path=\"{path}\" lines=\"{n}\" size=\"{size}\"/>"
+      },
+      "maskOldThinking": "above-cutoff"
+    }
+  }
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `label` | Human-readable name shown in `/compress-stats` |
+| `thresholds`, `coverage` | Same as legacy top-level fields, but scoped per-profile |
+| `effectiveContextCap` | Denominator for pressure math; `null` = use the model's advertised window |
+| `placeholderFormat.bash` | Template with `{cmd}`. Substituted at mask time. Must be deterministic (no timestamps). |
+| `placeholderFormat.read` | Template with `{path}`, `{n}`, `{size}` |
+| `maskOldThinking` | `"off"` \| `"with-coverage"` \| `"above-cutoff"`. Controls whether assistant `<think>` blocks before the cutoff are wiped to a deterministic empty string. |
+
+Validation is non-fatal — invalid overrides log a warning surfaced in `/compress-stats` and fall back to the base profile. Unknown profile names log a warning and use `default`.
+
+#### Telemetry caveat for vLLM
+
+Older vLLM versions don't populate `usage.prompt_tokens_details.cached_tokens` on the OpenAI-compat path (see [vllm#23363](https://github.com/vllm-project/vllm/issues/23363)). When this happens, `/compress-stats` shows `0` cache hits even though the server's KV cache is being used — check `vllm:prefix_cache_hits_total` on the server's `/metrics` endpoint for the real number. Profile selection still helps: the masking optimization runs whether or not the response reports it.
+
+Server flags to ask your operator to verify (none of these belong in the extension):
+
+```bash
+--enable-prefix-caching
+--enable-auto-tool-choice --tool-call-parser qwen3_coder
+--reasoning-parser qwen3
+```
 
 ### 2. Telemetry (opt-in, local-only) — `~/.config/condensed-milk-sessions.jsonl`
 
