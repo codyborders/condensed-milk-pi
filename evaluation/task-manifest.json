@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "evaluationStatus": "not-run",
+  "taskCount": 20,
+  "tasks": [
+    {
+      "number": 1,
+      "id": "task-01",
+      "category": "python",
+      "title": "Fix a failing Python unit test",
+      "description": "Locate the defect, make the smallest fix, and run the focused pytest command.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 2,
+      "id": "task-02",
+      "category": "python",
+      "title": "Add validation to a Python function",
+      "description": "Add input validation while preserving existing behavior and test the boundary cases.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 3,
+      "id": "task-03",
+      "category": "python",
+      "title": "Trace a Python exception",
+      "description": "Use the traceback and nearby code to fix the reported exception without hiding errors.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 4,
+      "id": "task-04",
+      "category": "typescript",
+      "title": "Resolve a TypeScript type error",
+      "description": "Find the source of a compiler error, apply a type-safe fix, and run typecheck.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 5,
+      "id": "task-05",
+      "category": "typescript",
+      "title": "Extend a TypeScript module",
+      "description": "Add one requested behavior with a focused test and preserve the public API.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 6,
+      "id": "task-06",
+      "category": "typescript",
+      "title": "Refactor duplicated TypeScript logic",
+      "description": "Remove local duplication without changing observable behavior or test coverage.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 7,
+      "id": "task-07",
+      "category": "git",
+      "title": "Inspect a staged change",
+      "description": "Use Git status and diff output to identify the requested change and report its files.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 8,
+      "id": "task-08",
+      "category": "git",
+      "title": "Resolve a merge conflict",
+      "description": "Resolve the supplied conflict, preserve both required behaviors, and verify the result.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 9,
+      "id": "task-09",
+      "category": "git",
+      "title": "Review recent history",
+      "description": "Use Git log and status to summarize relevant changes without modifying the worktree.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 10,
+      "id": "task-10",
+      "category": "search",
+      "title": "Find all callers of an API",
+      "description": "Search the repository, group the matches, and identify every caller that needs review.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 11,
+      "id": "task-11",
+      "category": "search",
+      "title": "Trace a configuration value",
+      "description": "Search definitions and uses to explain how one configuration value reaches runtime behavior.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 12,
+      "id": "task-12",
+      "category": "search",
+      "title": "Locate stale documentation",
+      "description": "Search for an obsolete option, update its references, and check related documentation.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 13,
+      "id": "task-13",
+      "category": "build",
+      "title": "Fix a build-script failure",
+      "description": "Inspect the build error, correct the minimal configuration or source issue, and rerun the build.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 14,
+      "id": "task-14",
+      "category": "build",
+      "title": "Add a build validation step",
+      "description": "Add the requested validation while keeping normal build output and failure signals intact.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 15,
+      "id": "task-15",
+      "category": "debugging",
+      "title": "Diagnose a regression",
+      "description": "Reproduce the reported regression, identify its cause, and implement a narrow correction.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 16,
+      "id": "task-16",
+      "category": "debugging",
+      "title": "Investigate an intermittent failure",
+      "description": "Inspect logs and tests, isolate the failure condition, and document remaining uncertainty.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 17,
+      "id": "task-17",
+      "category": "debugging",
+      "title": "Repair a boundary-case bug",
+      "description": "Use the failing example to fix boundary handling and verify nearby cases.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 18,
+      "id": "task-18",
+      "category": "long-context",
+      "title": "Navigate a large repository history",
+      "description": "Find the relevant implementation and references in a large context without losing task constraints.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 19,
+      "id": "task-19",
+      "category": "mixed-tool",
+      "title": "Search, edit, test, and inspect Git",
+      "description": "Complete a small change that requires search, editing, a focused test, and Git verification.",
+      "status": "not-run",
+      "result": null
+    },
+    {
+      "number": 20,
+      "id": "task-20",
+      "category": "mixed-tool",
+      "title": "Debug and validate a cross-file change",
+      "description": "Trace a failure across files, apply the fix, run relevant checks, and report the final state.",
+      "status": "not-run",
+      "result": null
+    }
+  ]
+}

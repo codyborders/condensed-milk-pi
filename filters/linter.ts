@@ -1,7 +1,7 @@
 /**
  * Linter output aggregation filter.
  * Compresses verbose eslint/ruff/mypy/pylint/flake8/clippy output into
- * a summary: error/warning counts, top rules, top files.
+ * a summary while retaining complete diagnostics for the model.
  *
  * Adapted from MasuRii/pi-rtk-optimizer techniques/linter.ts
  */
@@ -11,9 +11,13 @@ interface Issue {
   severity: "ERROR" | "WARNING";
   rule: string;
   file: string;
-  line?: number;
+  line: number;
+  column: number;
   message: string;
+  original: string;
 }
+
+const MAX_RETAINED_DIAGNOSTICS = 10;
 
 function detectLinterType(command: string): string {
   if (/eslint\b/.test(command)) return "ESLint";
@@ -29,80 +33,62 @@ function detectLinterType(command: string): string {
 }
 
 function parseLine(line: string): Issue | null {
-  // file:line:col: message [rule]
-  const match = line.match(/^(.+?):(\d+):(?:\d+:)?\s*(.+)$/);
+  // Supported form: file:line:column: severity: message [rule]
+  // Parenthesized rules are accepted for tools using that conventional form.
+  const match = line.match(
+    /^(.+):(\d+):(\d+):\s*(error|warning)\s*:?\s+(.+?)\s+(?:\[([^\]\r\n]+)\]|\(([^()\r\n]+)\))$/i,
+  );
   if (!match) return null;
 
-  const file = match[1] ?? "unknown";
-  const lineNum = Number.parseInt(match[2] ?? "0", 10);
-  const content = match[3] ?? line;
-  const severity = /warning/i.test(content) ? "WARNING" : "ERROR";
-  const rule = content.match(/\[(.+?)\]$/)?.[1] ?? content.match(/\((.+?)\)$/)?.[1] ?? "unknown";
+  const file = match[1];
+  const lineNum = Number.parseInt(match[2], 10);
+  const columnNum = Number.parseInt(match[3], 10);
+  const severityText = match[4].toLowerCase();
+  const message = match[5];
+  const rule = match[6] ?? match[7];
+  if (!file || !message || !rule || !Number.isSafeInteger(lineNum) || !Number.isSafeInteger(columnNum)) return null;
 
   return {
-    severity,
+    severity: severityText === "warning" ? "WARNING" : "ERROR",
     rule,
     file,
-    line: Number.isNaN(lineNum) ? undefined : lineNum,
-    message: content,
+    line: lineNum,
+    column: columnNum,
+    message,
+    original: line,
   };
-}
-
-function compactPath(path: string, maxLen: number): string {
-  if (path.length <= maxLen) return path;
-  const parts = path.split("/");
-  if (parts.length <= 2) return `...${path.slice(-(maxLen - 3))}`;
-  return `.../${parts.slice(-2).join("/")}`.slice(-maxLen);
 }
 
 function filterLinter(stdout: string, command: string): FilterResult | null {
   const linterType = detectLinterType(command);
+  if (linterType === "Prettier" || linterType === "Black") return null;
+  if (/(?:^|\s)(?:-w|--watch)(?:\s|$)/.test(command)) return null;
+  if (/watch(?:ing| mode)|file changes detected|starting compilation in watch mode/i.test(stdout)) return null;
+
   const issues: Issue[] = [];
   for (const line of stdout.split("\n")) {
+    if (line.trim().length === 0) continue;
     const parsed = parseLine(line);
-    if (parsed) issues.push(parsed);
+    if (!parsed) return null;
+    issues.push(parsed);
   }
 
-  // Need enough issues to justify compression
+  // Need enough issues to justify compression.
   if (issues.length < 5) return null;
 
-  const errors = issues.filter((i) => i.severity === "ERROR").length;
-  const warnings = issues.filter((i) => i.severity === "WARNING").length;
-
-  const byRule = new Map<string, number>();
-  for (const i of issues) byRule.set(i.rule, (byRule.get(i.rule) ?? 0) + 1);
-
-  const byFile = new Map<string, Issue[]>();
-  for (const i of issues) {
-    const existing = byFile.get(i.file) ?? [];
-    existing.push(i);
-    byFile.set(i.file, existing);
-  }
-
-  const lines = [`${linterType}: ${errors} errors, ${warnings} warnings in ${byFile.size} files`];
-
-  lines.push("Rules:");
-  const sortedRules = [...byRule.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-  for (const [rule, count] of sortedRules) lines.push(`  ${rule} (${count}x)`);
-
-  lines.push("Files:");
-  const sortedFiles = [...byFile.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 10);
-  for (const [file, fileIssues] of sortedFiles) {
-    lines.push(`  ${compactPath(file, 40)} (${fileIssues.length} issues)`);
-    const seen = new Set<string>();
-    for (const issue of fileIssues) {
-      if (seen.size >= 3) break;
-      if (seen.has(issue.rule)) continue;
-      seen.add(issue.rule);
-      const msg = issue.message.length > 60 ? `${issue.message.slice(0, 57)}...` : issue.message;
-      lines.push(`    L${issue.line ?? "?"}: ${msg}`);
-    }
-  }
+  const errors = issues.filter((issue) => issue.severity === "ERROR").length;
+  const warnings = issues.filter((issue) => issue.severity === "WARNING").length;
+  const files = new Set(issues.map((issue) => issue.file));
+  const retained = issues.slice(0, MAX_RETAINED_DIAGNOSTICS);
+  const omitted = issues.length - retained.length;
+  const lines = [`${linterType}: ${errors} errors, ${warnings} warnings in ${files.size} files`];
+  lines.push(...retained.map((issue) => issue.original));
+  if (omitted > 0) lines.push(`+${omitted} more diagnostics`);
 
   return { output: lines.join("\n"), category: "medium" };
 }
 
-// Register for all linter command prefixes
+// Register for all linter command prefixes. These IDs remain default-off in dispatch.
 const LINTER_COMMANDS = [
   "eslint", "npx eslint", "pnpm eslint",
   "ruff", "ruff check",

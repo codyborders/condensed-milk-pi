@@ -15,7 +15,9 @@ interface Counts {
   conflicted: number;
 }
 
-function filterGitStatus(input: string): FilterResult | null {
+function filterGitStatus(input: string, command: string): FilterResult | null {
+  // Plain section output is ambiguous. Only summarize explicit porcelain/short output.
+  if (!/(?:--porcelain(?:=v?[12])?|--short|-s)(?:\s|$)/.test(command)) return null;
   if (input.length === 0) return { output: "git status: no output", category: "fast" };
   if (input.length < 80) return null; // Already compact
 
@@ -40,17 +42,25 @@ function filterGitStatus(input: string): FilterResult | null {
       if (line.startsWith("# branch.head ")) {
         counts.branch = line.slice("# branch.head ".length);
       } else if (line[0] === "1" && line[1] === " " && line.length > 3) {
-        countV2(line[2], line[3], counts);
-        if (files.length < 15) files.push(lastField(line));
+        const record = parseV2Record(line, 8);
+        if (!record) return null;
+        countV2(record.x, record.y, counts);
+        if (files.length < 15) files.push(record.path);
       } else if (line[0] === "2" && line[1] === " " && line.length > 3) {
-        countV2(line[2], line[3], counts);
-        if (files.length < 15) files.push(renameFile(line));
-      } else if (line[0] === "?" && line.length > 2) {
+        const record = parseV2Record(line, 9);
+        if (!record) return null;
+        countV2(record.x, record.y, counts);
+        if (files.length < 15) files.push(record.path);
+      } else if (line[0] === "?" && line[1] === " " && line.length > 2) {
+        const path = parsePath(line.slice(2));
+        if (!path) return null;
         counts.untracked++;
-        if (files.length < 15) files.push(line.slice(2));
-      } else if (line[0] === "u" && line[1] === " ") {
+        if (files.length < 15) files.push(path);
+      } else if (line[0] === "u" && line[1] === " " && line.length > 3) {
+        const record = parseV2Record(line, 10);
+        if (!record) return null;
         counts.conflicted++;
-        if (files.length < 15) files.push(lastField(line));
+        if (files.length < 15) files.push(record.path);
       }
     } else if (format === "v1") {
       parseV1Line(line, counts, files);
@@ -87,18 +97,27 @@ function looksLikeV1Line(line: string): boolean {
 }
 
 function detectFormat(input: string): Format | null {
-  const lines = input.split("\n");
-  let v1Hits = 0;
-  for (const line of lines) {
-    if (line.length === 0) continue;
-    if (line.startsWith("# branch.")) return "v2";
-    if (line.startsWith("## ")) return "v1";
-    if (line.startsWith("On branch ")) return "plain";
-    if (looksLikeV1Line(line)) v1Hits++;
+  const lines = input.split("\n").filter((line) => line.length > 0);
+  if (lines.length === 0) return null;
+
+  if (lines.some((line) => line.startsWith("# branch."))) {
+    return lines.every((line) =>
+      line.startsWith("# ") ||
+      /^1 [^ ]{2} /.test(line) ||
+      /^2 [^ ]{2} /.test(line) ||
+      /^u /.test(line) ||
+      /^\? /.test(line),
+    ) ? "v2" : null;
   }
-  // Confident v1 only if multiple status-format lines observed anywhere.
-  // Single-hit could be a coincidental line in non-git output.
-  return v1Hits >= 2 ? "v1" : null;
+
+  if (lines.some((line) => line.startsWith("## "))) {
+    return lines.every((line) => line.startsWith("## ") || looksLikeV1Line(line)) ? "v1" : null;
+  }
+
+  if (lines.some((line) => line.startsWith("On branch "))) return "plain";
+  // A status stream without branch headers is valid, but require two records
+  // before compressing. This avoids interpreting arbitrary command output.
+  return lines.length >= 2 && lines.every(looksLikeV1Line) ? "v1" : null;
 }
 
 function countV2(c1: string, c2: string, counts: Counts): void {
@@ -106,40 +125,92 @@ function countV2(c1: string, c2: string, counts: Counts): void {
   if (c2 !== ".") counts.modified++;
 }
 
-function lastField(line: string): string {
-  const tab = line.lastIndexOf("\t");
-  if (tab >= 0) return line.slice(tab + 1);
-  const space = line.lastIndexOf(" ");
-  if (space >= 0) return line.slice(space + 1);
-  return line;
+interface V2Record {
+  x: string;
+  y: string;
+  path: string;
 }
 
-function renameFile(line: string): string {
-  const tab = line.lastIndexOf("\t");
-  if (tab >= 0) {
-    const segment = line.slice(tab + 1);
-    const arrow = segment.indexOf(" -> ");
-    return arrow >= 0 ? segment.slice(arrow + 4) : segment;
+function parseV2Record(line: string, fixedFields: number): V2Record | null {
+  const fields: string[] = [];
+  let start = 0;
+  for (let i = 0; i < fixedFields; i++) {
+    const separator = line.indexOf(" ", start);
+    if (separator <= start) return null;
+    fields.push(line.slice(start, separator));
+    start = separator + 1;
   }
-  return lastField(line);
+  const rawPath = line.slice(start);
+  if (fields[1]?.length !== 2) return null;
+  if (fields[0] === "2") {
+    const tab = rawPath.indexOf("\t");
+    if (tab < 1) return null;
+    if (!parsePath(rawPath.slice(tab + 1))) return null;
+    const destination = parsePath(rawPath.slice(0, tab));
+    return destination ? { x: fields[1][0], y: fields[1][1], path: destination } : null;
+  }
+  const path = parsePath(rawPath);
+  return path ? { x: fields[1][0], y: fields[1][1], path } : null;
+}
+
+function parsePath(raw: string): string | null {
+  if (raw.length === 0) return null;
+  if (raw[0] === '"') return parseQuotedPath(raw);
+  if (raw.includes('"')) return null;
+  return raw;
+}
+
+function parseQuotedPath(raw: string): string | null {
+  let path = "";
+  for (let i = 1; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === '"') return i === raw.length - 1 ? path : null;
+    if (ch !== "\\") {
+      if (ch.charCodeAt(0) < 32) return null;
+      path += ch;
+      continue;
+    }
+    if (++i >= raw.length) return null;
+    const escaped = raw[i];
+    const simple: Record<string, string> = { '"': '"', "\\": "\\", a: "\x07", b: "\b", t: "\t", n: "\n", v: "\v", f: "\f", r: "\r" };
+    if (simple[escaped] !== undefined) {
+      path += simple[escaped];
+      continue;
+    }
+    if (!/[0-7]/.test(escaped)) return null;
+    let octal = escaped;
+    while (octal.length < 3 && i + 1 < raw.length && /[0-7]/.test(raw[i + 1])) octal += raw[++i];
+    path += String.fromCharCode(parseInt(octal, 8));
+  }
+  return null;
 }
 
 function parseV1Line(line: string, counts: Counts, files: string[]): void {
   if (line.startsWith("## ")) {
     const branchPart = line.slice(3);
     const dotDot = branchPart.indexOf("...");
-    counts.branch = dotDot >= 0 ? branchPart.slice(0, dotDot) : branchPart;
+    if (branchPart.startsWith("No commits yet on ")) {
+      counts.branch = branchPart.slice("No commits yet on ".length);
+    } else {
+      counts.branch = dotDot >= 0 ? branchPart.slice(0, dotDot) : branchPart;
+    }
     return;
   }
-  if (line.length < 4) return;
+  if (line.length < 4 || !looksLikeV1Line(line)) return;
   const x = line[0];
   const y = line[1];
-  if (x === "?") { counts.untracked++; }
+  if (x === "?" && y === "?") counts.untracked++;
+  else if (x === "!" && y === "!") return;
+  else if (x === "U" || y === "U") counts.conflicted++;
   else {
-    if (x !== " " && x !== "?") counts.staged++;
-    if (y !== " " && y !== "?") counts.modified++;
+    if (x !== " ") counts.staged++;
+    if (y !== " ") counts.modified++;
   }
-  if (files.length < 15) files.push(line.slice(3).trim());
+  if (files.length < 15) {
+    const path = line.slice(3).trim();
+    const arrow = path.indexOf(" -> ");
+    files.push(arrow >= 0 ? path.slice(arrow + 4) : path);
+  }
 }
 
 function parsePlainLine(line: string, counts: Counts): void {

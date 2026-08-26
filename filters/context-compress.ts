@@ -97,17 +97,94 @@ const DEFAULT_REFERENCE_PATH_SUBSTRINGS: readonly string[] = [
  *  last-seen cwd (effective working directory after all chained cds)
  *  and the residual command to match against invalidation regexes.
  *
+ *  The public shape stays small for callers. The internal parser also tracks
+ *  whether an explicit cwd was unresolved, so unknown paths never invalidate.
  *  Pure function. Deterministic. Cache-safe. */
 export function parseCdPrefix(cmd: string): { cwd?: string; cmd: string } {
+  const parsed = parseCdPrefixDetailed(cmd);
+  return { cwd: parsed.cwd, cmd: parsed.cmd };
+}
+
+type ParsedCd = { cwd?: string; cmd: string; hasCd: boolean; cwdResolved: boolean };
+
+function parseCdPrefixDetailed(cmd: string): ParsedCd {
   let cwd: string | undefined;
   let current = cmd;
+  let hasCd = false;
+  let cwdResolved = true;
   for (;;) {
-    const m = /^cd\s+(\S+)\s*&&\s*(.+)$/s.exec(current);
-    if (!m) break;
-    cwd = m[1];
-    current = m[2];
+    const prefix = parseCdPrefixOnce(current);
+    if (prefix.kind === "none") break;
+    hasCd = true;
+    if (prefix.kind === "unresolved") {
+      cwd = undefined;
+      cwdResolved = false;
+      break;
+    } else {
+      cwd = normalizeCwd(prefix.cwd);
+      if (cwd === undefined) cwdResolved = false;
+    }
+    current = prefix.cmd;
   }
-  return { cwd, cmd: current };
+  return { cwd, cmd: current, hasCd, cwdResolved };
+}
+
+type CdPrefix =
+  | { kind: "none" }
+  | { kind: "unresolved"; cmd: string }
+  | { kind: "resolved"; cwd: string; cmd: string };
+
+function parseCdPrefixOnce(cmd: string): CdPrefix {
+  if (!/^cd(?:[ \t]+)/.test(cmd)) return { kind: "none" };
+  let i = 2;
+  while (i < cmd.length && (cmd[i] === " " || cmd[i] === "\t")) i++;
+  if (i >= cmd.length) return { kind: "unresolved", cmd };
+
+  const quote = cmd[i] === "'" || cmd[i] === '"' ? cmd[i++] : undefined;
+  let cwd = "";
+  let unresolved = false;
+  let closed = !quote;
+  for (; i < cmd.length; i++) {
+    const ch = cmd[i];
+    if (quote) {
+      if (ch.charCodeAt(0) === 92 && quote === '"' && i + 1 < cmd.length) {
+        cwd += cmd[++i];
+        continue;
+      }
+      if (ch === quote) { closed = true; i++; break; }
+      cwd += ch;
+      if (quote === '"' && (ch === "$" || ch === "`")) unresolved = true;
+    } else {
+      if (ch.charCodeAt(0) === 92 && i + 1 < cmd.length) { cwd += cmd[++i]; continue; }
+      if (ch === " " || ch.charCodeAt(0) === 9) break;
+      cwd += ch;
+      if (ch === "$" || ch === "`" || ch === "*" || ch === "?" || ch === "[") unresolved = true;
+    }
+  }
+  if (!closed || cwd.length === 0) return { kind: "unresolved", cmd };
+  while (i < cmd.length && cmd.charCodeAt(i) <= 32) i++;
+  if (!cmd.startsWith("&&", i)) return { kind: "unresolved", cmd };
+  i += 2;
+  while (i < cmd.length && cmd.charCodeAt(i) <= 32) i++;
+  if (i >= cmd.length) return { kind: "unresolved", cmd };
+  if (unresolved) return { kind: "unresolved", cmd: cmd.slice(i) };
+  return { kind: "resolved", cwd, cmd: cmd.slice(i) };
+}
+
+function normalizeCwd(cwd: string): string | undefined {
+  if (cwd.length === 0) return undefined;
+  // Shell expansion and globbing do not identify one stable directory.
+  if (/[ `$*?\\[\\]]/.test(cwd)) return undefined;
+  const absolute = cwd.startsWith("/");
+  const parts: string[] = [];
+  for (const part of cwd.split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === ".." && parts.length > 0 && parts[parts.length - 1] !== "..") parts.pop();
+    else if (part !== "..") parts.push(part);
+    else if (!absolute) parts.push(part);
+  }
+  const normalized = parts.join("/");
+  return absolute ? `/${normalized}` : normalized || ".";
 }
 
 // ── v1.6.0 config + rule resolution (pure, no IO) ──
@@ -123,6 +200,73 @@ export interface UserConfig {
 
 export function emptyUserConfig(): UserConfig {
   return { referenceBasenames: [], referencePathSubstrings: [], invalidationRules: [], disableDefaults: false };
+}
+
+function isPlainJsonObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function invalidConfig(sourcePath: string, detail: string): never {
+  throw new Error(`condensed-milk: invalid rules config '${sourcePath}': ${detail}`);
+}
+
+/** Validate one JSON rules file at the extension boundary. Missing fields use
+ *  empty defaults so global and project configs can merge additively. */
+export function validateUserConfig(value: unknown, sourcePath: string): UserConfig {
+  if (!isPlainJsonObject(value)) invalidConfig(sourcePath, "top level must be a plain JSON object");
+
+  const config = emptyUserConfig();
+  if (Object.prototype.hasOwnProperty.call(value, "referenceBasenames")) {
+    const basenames = value.referenceBasenames;
+    if (!Array.isArray(basenames) || !basenames.every((entry) => typeof entry === "string")) {
+      invalidConfig(sourcePath, "referenceBasenames must be an array of strings");
+    }
+    config.referenceBasenames = [...basenames];
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "referencePathSubstrings")) {
+    const substrings = value.referencePathSubstrings;
+    if (!Array.isArray(substrings) || !substrings.every((entry) => typeof entry === "string")) {
+      invalidConfig(sourcePath, "referencePathSubstrings must be an array of strings");
+    }
+    config.referencePathSubstrings = [...substrings];
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "invalidationRules")) {
+    const rules = value.invalidationRules;
+    if (!Array.isArray(rules)) {
+      invalidConfig(sourcePath, "invalidationRules must be an array");
+    }
+    config.invalidationRules = rules.map((rule, index) => {
+      if (!isPlainJsonObject(rule)) {
+        invalidConfig(sourcePath, `invalidationRules[${index}] must be a plain object with invalidator and invalidated fields`);
+      }
+      if (typeof rule.invalidator !== "string") {
+        invalidConfig(sourcePath, `invalidationRules[${index}].invalidator must be a string`);
+      }
+      if (typeof rule.invalidated !== "string") {
+        invalidConfig(sourcePath, `invalidationRules[${index}].invalidated must be a string`);
+      }
+      for (const field of ["invalidator", "invalidated"] as const) {
+        try {
+          new RegExp(rule[field] as string);
+        } catch (error: any) {
+          invalidConfig(
+            sourcePath,
+            `invalidationRules[${index}].${field} has invalid regex source: ${error?.message ?? error}`,
+          );
+        }
+      }
+      return { invalidator: rule.invalidator, invalidated: rule.invalidated };
+    });
+  }
+  if (Object.prototype.hasOwnProperty.call(value, "disableDefaults")) {
+    if (typeof value.disableDefaults !== "boolean") {
+      invalidConfig(sourcePath, "disableDefaults must be a boolean");
+    }
+    config.disableDefaults = value.disableDefaults;
+  }
+  return config;
 }
 
 export interface ResolvedRules {
@@ -377,6 +521,7 @@ export function compressStaleToolResults(
   if (cutoffIdx <= 0) return null;
 
   const toolCallIndex = buildToolCallIndex(messages);
+  const invalidationIndex = buildInvalidationIndex(messages, toolCallIndex, rules);
 
   let bytesSaved = 0;
   let masksApplied = 0;
@@ -386,15 +531,16 @@ export function compressStaleToolResults(
   const result = messages.map((m: any, idx: number) => {
     const msg = m?.message ?? m;
     if (isAlreadyMasked(msg)) return m;
+    if (msg?.role === "toolResult" && msg.isError) return m;
 
     // BASH: past cutoff OR invalidated by later command
-    if (isBashToolResult(msg) && !msg.isError) {
+    if (isBashToolResult(msg)) {
       const content = extractTextContent(msg);
       if (content.length < MIN_MASK_LENGTH) return m;
 
       const command = extractCommand(msg, toolCallIndex);
       const pastCutoff = idx < cutoffIdx;
-      const invalidated = !pastCutoff && isCommandInvalidated(command, messages, idx, toolCallIndex, rules);
+      const invalidated = !pastCutoff && isCommandInvalidated(command, idx, invalidationIndex, rules);
 
       if (pastCutoff || invalidated) {
         // v1.9.0 (ADR-029): `cm-` prefix brands placeholder as a
@@ -415,7 +561,7 @@ export function compressStaleToolResults(
     }
 
     // READ: past cutoff AND not reference file
-    if (isReadToolResult(msg) && !msg.isError) {
+    if (isReadToolResult(msg)) {
       const path = extractPath(msg, toolCallIndex);
       const content = extractTextContent(msg);
 
@@ -496,23 +642,58 @@ function buildToolCallIndex(messages: any[]): Map<string, ToolCallEntry> {
  *  as a match (the common single-cwd case where neither command has
  *  explicit cd), so existing sessions behave identically. Cross-cwd
  *  cases (mvdirty's multi-repo pattern) no longer spuriously invalidate. */
-function isCommandInvalidated(
-  command: string,
+type InvalidationIndex = Map<string, ReadonlyMap<number, number>>;
+
+function cwdIndexKey(parsed: ParsedCd): string | undefined {
+  if (!parsed.cwdResolved) return undefined;
+  return parsed.hasCd ? `explicit:${parsed.cwd ?? ""}` : "implicit";
+}
+
+function regexMatches(pattern: RegExp, value: string): boolean {
+  pattern.lastIndex = 0;
+  return pattern.test(value);
+}
+
+/** Build one reverse index of invalidators by cwd and stable rule index. */
+function buildInvalidationIndex(
   messages: any[],
-  fromIdx: number,
   toolCallIndex: Map<string, ToolCallEntry>,
   rules: ResolvedRules,
+): InvalidationIndex {
+  const mutable = new Map<string, Map<number, number>>();
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i]?.message ?? messages[i];
+    if (!isBashToolResult(msg) || msg.isError) continue;
+    const parsed = parseCdPrefixDetailed(extractCommand(msg, toolCallIndex));
+    const key = cwdIndexKey(parsed);
+    if (key === undefined) continue;
+    for (let ruleIndex = 0; ruleIndex < rules.invalidationRules.length; ruleIndex++) {
+      const rule = rules.invalidationRules[ruleIndex];
+      if (!regexMatches(rule.invalidator, parsed.cmd)) continue;
+      let matches = mutable.get(key);
+      if (!matches) { matches = new Map<number, number>(); mutable.set(key, matches); }
+      const latestIndex = matches.get(ruleIndex);
+      if (latestIndex === undefined || i > latestIndex) matches.set(ruleIndex, i);
+    }
+  }
+  return mutable;
+}
+
+function isCommandInvalidated(
+  command: string,
+  candidateIndex: number,
+  index: InvalidationIndex,
+  rules: ResolvedRules,
 ): boolean {
-  const self = parseCdPrefix(command);
-  const applicable = rules.invalidationRules.filter((r) => r.invalidated.test(self.cmd));
-  if (applicable.length === 0) return false;
-  for (let i = fromIdx + 1; i < messages.length; i++) {
-    const later = messages[i]?.message ?? messages[i];
-    if (!isBashToolResult(later)) continue;
-    const laterRaw = extractCommand(later, toolCallIndex);
-    const laterParsed = parseCdPrefix(laterRaw);
-    if (self.cwd !== laterParsed.cwd) continue;
-    if (applicable.some((r) => r.invalidator.test(laterParsed.cmd))) return true;
+  const self = parseCdPrefixDetailed(command);
+  const key = cwdIndexKey(self);
+  if (key === undefined) return false;
+  const invalidators = index.get(key);
+  if (!invalidators) return false;
+  for (let ruleIndex = 0; ruleIndex < rules.invalidationRules.length; ruleIndex++) {
+    const rule = rules.invalidationRules[ruleIndex];
+    const latestIndex = invalidators.get(ruleIndex);
+    if (regexMatches(rule.invalidated, self.cmd) && latestIndex !== undefined && latestIndex > candidateIndex) return true;
   }
   return false;
 }
@@ -558,6 +739,15 @@ function extractTextContent(msg: any): string {
 }
 
 function replaceContent(m: any, text: string): any {
-  if (m?.message) return { ...m, message: { ...m.message, content: [{ type: "text", text }] } };
-  return { ...m, content: [{ type: "text", text }] };
+  const msg = m?.message ?? m;
+  const content = Array.isArray(msg?.content) ? msg.content : [];
+  let replaced = false;
+  const preservedContent = content.map((block: any) => {
+    if (block?.type !== "text") return block;
+    if (replaced) return { ...block, text: "" };
+    replaced = true;
+    return { ...block, text };
+  });
+  if (m?.message) return { ...m, message: { ...m.message, content: preservedContent } };
+  return { ...m, content: preservedContent };
 }

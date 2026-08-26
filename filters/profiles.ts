@@ -53,19 +53,18 @@ export interface Profile {
   coverage: readonly number[];
   /** Effective context window cap. When set, used as the denominator
    *  in pressure math instead of the model's advertised context window.
-   *  For Qwen3.6-27B at vLLM's 262144 we recommend 131072 — quality
-   *  degrades past ~128K with YaRN scaling, so we trigger compression
-   *  earlier than the advertised window would suggest. null = use the
-   *  model's advertised context window unchanged. */
+   *  The qwen-vllm profile sets this to 131072 as part of its explicit
+   *  compatibility preset. null = use the model's advertised context
+   *  window unchanged. */
   effectiveContextCap: number | null;
   placeholderFormat: PlaceholderTemplates;
   maskOldThinking: ThinkingMaskPolicy;
 }
 
-/** Default profile — Anthropic-tuned. Identical to v1.9.0 behavior so
- *  upgrading users see zero behavior change. */
+/** Default profile — Anthropic compatibility. Identical to v1.9.0 behavior
+ *  so upgrading users see zero behavior change. */
 const DEFAULT_PROFILE: Profile = {
-  label: "default (Anthropic-tuned)",
+  label: "default (Anthropic compatibility)",
   thresholds: [0.30, 0.45, 0.60],
   coverage: [0.60, 0.80, 0.95],
   effectiveContextCap: null,
@@ -76,31 +75,21 @@ const DEFAULT_PROFILE: Profile = {
   maskOldThinking: "off",
 };
 
-/** Qwen on vLLM profile — built from Phase 1 research synthesis.
+/** Qwen on vLLM profile — explicit compatibility preset carried from prior
+ *  configuration. Its values were not validated by the paired task study.
  *
- *  Thresholds shifted earlier ([0.20, 0.35, 0.55]) because vLLM has no
- *  rescue tier (no Anthropic-style cache_control breakpoints) and Qwen
- *  long-context degrades past ~128K. Coverage slightly relaxed
- *  ([0.50, 0.75, 0.92]) because a 27B dense model is more sensitive to
- *  elided context than the 480B MoE the JetBrains paper measured.
+ *  Thresholds are [0.20, 0.35, 0.55]. Coverage is [0.50, 0.75, 0.92].
+ *  effectiveContextCap = 131072. These values are retained as preset
+ *  configuration, without claims about context-window or model behavior.
  *
- *  effectiveContextCap = 131072: cap pressure math at half the
- *  advertised window. Lets a 262144-served model still compress
- *  aggressively enough to keep the working set inside the proven
- *  long-context regime.
+ *  Placeholder format stays at the default `[cm-masked …]` so selecting
+ *  this profile does not change prefix format. The XML self-closing form
+ *  remains available through custom profiles.
  *
- *  Placeholder format kept as default `[cm-masked …]` so users opting
- *  into this profile don't get a prefix-format change as a side effect
- *  of switching profiles. The XML self-closing form is documented as a
- *  custom-profile recipe (see README) for users who want to A/B it.
- *
- *  maskOldThinking = "with-coverage": Qwen3.6 ships with
- *  `preserve_thinking` on, so historical `<think>` blocks accumulate in
- *  context. Masking them via the same coverage gate as tool results is
- *  the conservative middle ground — JetBrains-aligned but not as
- *  aggressive as `above-cutoff`. */
+ *  maskOldThinking = "with-coverage": historical `<think>` blocks are
+ *  masked through the same coverage gate as tool results. */
 const QWEN_VLLM_PROFILE: Profile = {
-  label: "qwen-vllm (Qwen3.x on vLLM)",
+  label: "qwen-vllm (Qwen3.x on vLLM compatibility)",
   thresholds: [0.20, 0.35, 0.55],
   coverage: [0.50, 0.75, 0.92],
   effectiveContextCap: 131072,
@@ -141,22 +130,30 @@ export interface ProfileOverride {
  *
  *  Returns the resolved Profile plus warnings to surface in /compress-stats. */
 export function resolveProfile(
-  activeName: string,
-  userProfiles: Record<string, ProfileOverride> | undefined,
-  legacyTopLevel: { thresholds?: unknown; coverage?: unknown } = {},
+  activeName: unknown,
+  userProfiles: unknown,
+  legacyTopLevel: unknown = {},
 ): { profile: Profile; activeName: string; warnings: string[] } {
   const warnings: string[] = [];
+  const requestedName = typeof activeName === "string" ? activeName : "default";
+  if (typeof activeName !== "string") {
+    warnings.push("active profile name must be a string — falling back to \"default\"");
+  }
+  const profiles = isPlainObject(userProfiles) ? userProfiles : undefined;
+  if (userProfiles !== undefined && profiles === undefined) {
+    warnings.push("profiles must be a plain object — ignoring profile overrides");
+  }
 
   // 1. Pick base profile by name.
   let base: Profile;
-  let resolvedName = activeName;
-  if (activeName in BUILT_IN_PROFILES) {
-    base = BUILT_IN_PROFILES[activeName];
-  } else if (userProfiles && activeName in userProfiles) {
+  let resolvedName = requestedName;
+  if (hasOwn(BUILT_IN_PROFILES, requestedName)) {
+    base = BUILT_IN_PROFILES[requestedName];
+  } else if (profiles && hasOwn(profiles, requestedName)) {
     base = BUILT_IN_PROFILES.default;  // Custom name with no built-in → start from default.
   } else {
     warnings.push(
-      `unknown profile "${activeName}", falling back to "default". ` +
+      `unknown profile "${requestedName}", falling back to "default". ` +
       `Built-in: ${Object.keys(BUILT_IN_PROFILES).join(", ")}.`,
     );
     base = BUILT_IN_PROFILES.default;
@@ -164,36 +161,54 @@ export function resolveProfile(
   }
 
   // 2. Apply user override under profiles[name], if present.
-  const override = userProfiles?.[resolvedName];
+  const override = profiles?.[resolvedName];
   let merged = applyOverride(base, override, warnings, `profiles.${resolvedName}`);
 
   // 3. Apply legacy top-level thresholds/coverage as a final override.
   //    Only when the active profile is "default" — applying legacy values
   //    to qwen-vllm would silently undo the profile's whole point.
   if (resolvedName === "default") {
-    merged = applyOverride(
-      merged,
-      {
-        thresholds: legacyTopLevel.thresholds as readonly number[] | undefined,
-        coverage: legacyTopLevel.coverage as readonly number[] | undefined,
-      },
-      warnings,
-      "top-level (legacy)",
-    );
+    if (!isPlainObject(legacyTopLevel)) {
+      warnings.push("top-level (legacy) must be a plain object — keeping base profile values");
+    } else {
+      merged = applyOverride(
+        merged,
+        {
+          thresholds: legacyTopLevel.thresholds,
+          coverage: legacyTopLevel.coverage,
+        },
+        warnings,
+        "top-level (legacy)",
+      );
+    }
   }
 
   return { profile: merged, activeName: resolvedName, warnings };
 }
 
+function isPlainObject(value: unknown): value is Record<string, any> {
+  if (typeof value !== "object" || value === null) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function hasOwn(value: object, key: PropertyKey): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
 function applyOverride(
   base: Profile,
-  override: ProfileOverride | undefined,
+  override: unknown,
   warnings: string[],
   ctx: string,
 ): Profile {
-  if (!override) return base;
+  if (override === undefined) return base;
+  if (!isPlainObject(override)) {
+    warnings.push(`${ctx} must be a plain object — keeping base profile values`);
+    return base;
+  }
   const out: Profile = {
-    label: override.label ?? base.label,
+    label: base.label,
     thresholds: base.thresholds,
     coverage: base.coverage,
     effectiveContextCap: base.effectiveContextCap,
@@ -201,16 +216,22 @@ function applyOverride(
     maskOldThinking: base.maskOldThinking,
   };
 
+  if (typeof override.label === "string") {
+    out.label = override.label;
+  } else if (override.label !== undefined) {
+    warnings.push(`${ctx}.label must be a string — keeping base value`);
+  }
+
   if (override.thresholds !== undefined || override.coverage !== undefined) {
-    const t = override.thresholds ?? base.thresholds;
-    const c = override.coverage ?? base.coverage;
-    if (validateMonotonic(t, ctx + ".thresholds", warnings) &&
-        validateMonotonic(c, ctx + ".coverage", warnings) &&
-        t.length === c.length) {
-      out.thresholds = t;
-      out.coverage = c;
-    } else if (t.length !== c.length) {
-      warnings.push(`${ctx}: thresholds.length (${t.length}) !== coverage.length (${c.length}) — keeping base profile values`);
+    const rawThresholds = override.thresholds !== undefined ? override.thresholds : base.thresholds;
+    const rawCoverage = override.coverage !== undefined ? override.coverage : base.coverage;
+    const thresholdsValid = validateMonotonic(rawThresholds, ctx + ".thresholds", warnings);
+    const coverageValid = validateCoverage(rawCoverage, ctx + ".coverage", warnings);
+    if (thresholdsValid && coverageValid && rawThresholds.length === rawCoverage.length) {
+      out.thresholds = rawThresholds;
+      out.coverage = rawCoverage;
+    } else if (thresholdsValid && coverageValid) {
+      warnings.push(`${ctx}: thresholds.length (${rawThresholds.length}) !== coverage.length (${rawCoverage.length}) — keeping base profile values`);
     }
   }
 
@@ -225,11 +246,19 @@ function applyOverride(
     }
   }
 
-  if (override.placeholderFormat) {
-    out.placeholderFormat = {
-      bash: override.placeholderFormat.bash ?? base.placeholderFormat.bash,
-      read: override.placeholderFormat.read ?? base.placeholderFormat.read,
-    };
+  if (override.placeholderFormat !== undefined) {
+    const format = override.placeholderFormat;
+    if (!isPlainObject(format)) {
+      warnings.push(`${ctx}.placeholderFormat must be a plain object — keeping base value`);
+    } else {
+      const candidate = format as Partial<PlaceholderTemplates>;
+      out.placeholderFormat = {
+        bash: validateTemplate(candidate.bash, ["cmd"], ctx + ".placeholderFormat.bash", warnings)
+          ?? base.placeholderFormat.bash,
+        read: validateTemplate(candidate.read, ["path", "n", "size"], ctx + ".placeholderFormat.read", warnings)
+          ?? base.placeholderFormat.read,
+      };
+    }
   }
 
   if (override.maskOldThinking !== undefined) {
@@ -245,14 +274,14 @@ function applyOverride(
   return out;
 }
 
-function validateMonotonic(arr: readonly number[] | undefined, ctx: string, warnings: string[]): boolean {
+function validateMonotonic(arr: unknown, ctx: string, warnings: string[]): arr is readonly number[] {
   if (!Array.isArray(arr) || arr.length === 0) {
     warnings.push(`${ctx} must be non-empty number[]`);
     return false;
   }
   for (let i = 0; i < arr.length; i++) {
     if (typeof arr[i] !== "number" || !Number.isFinite(arr[i]) || arr[i] < 0 || arr[i] > 1) {
-      warnings.push(`${ctx}[${i}] = ${arr[i]} must be number in [0, 1]`);
+      warnings.push(`${ctx}[${i}] = ${String(arr[i])} must be number in [0, 1]`);
       return false;
     }
     if (i > 0 && arr[i] <= arr[i - 1]) {
@@ -261,6 +290,42 @@ function validateMonotonic(arr: readonly number[] | undefined, ctx: string, warn
     }
   }
   return true;
+}
+
+function validateCoverage(arr: unknown, ctx: string, warnings: string[]): arr is readonly number[] {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    warnings.push(`${ctx} must be non-empty number[]`);
+    return false;
+  }
+  for (let i = 0; i < arr.length; i++) {
+    if (typeof arr[i] !== "number" || !Number.isFinite(arr[i]) || arr[i] < 0 || arr[i] > 1) {
+      warnings.push(`${ctx}[${i}] = ${String(arr[i])} must be number in [0, 1]`);
+      return false;
+    }
+  }
+  return true;
+}
+
+function validateTemplate(
+  value: unknown,
+  allowed: readonly string[],
+  ctx: string,
+  warnings: string[],
+): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string") {
+    warnings.push(`${ctx} must be a string — keeping base template`);
+    return undefined;
+  }
+  const variables = value.match(/\{([^{}]*)\}/g) ?? [];
+  for (const variable of variables) {
+    const name = variable.slice(1, -1);
+    if (!allowed.includes(name)) {
+      warnings.push(`${ctx} contains unsupported variable ${variable} — keeping base template`);
+      return undefined;
+    }
+  }
+  return value;
 }
 
 /** Render a placeholder template with substitutions. Unknown placeholders

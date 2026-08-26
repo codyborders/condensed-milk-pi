@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22.19.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Run performance benchmark
+        run: npm run benchmark
+      - name: Check package contents
+        run: npm pack --dry-run

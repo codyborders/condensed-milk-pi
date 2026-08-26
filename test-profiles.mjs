@@ -47,7 +47,23 @@ function eqArr(a, b) {
   assert(qwen.maskOldThinking === "with-coverage", "qwen thinking mask with-coverage");
 }
 
-// 2. resolveProfile picks built-in by name.
+// 2. Built-in labels must not make unsupported tuning or validation claims.
+{
+  const claimPattern = /\\b(?:tuned|proven|recommended|validated)\\b/i;
+  for (const [name, profile] of Object.entries(BUILT_IN_PROFILES)) {
+    assert(!claimPattern.test(profile.label), \`\${name} label avoids unsupported claims\`);
+  }
+}
+
+// 3. Invalid threshold values must fall back to base values.
+{
+  const r = resolveProfile("default", { default: { thresholds: null, coverage: [0.9, 0.2, 0.8] } }, {});
+  assert(r.profile.thresholds.join(",") === "0.3,0.45,0.6", "null thresholds keep base");
+  assert(r.profile.coverage.join(",") === "0.6,0.8,0.95", "invalid thresholds keep base coverage");
+  assert(r.warnings.some((w) => w.includes("thresholds")), "invalid thresholds warning");
+}
+
+// 3. resolveProfile picks built-in by name.
 {
   const r = resolveProfile("qwen-vllm", undefined, {});
   assert(r.activeName === "qwen-vllm", "resolves qwen-vllm by name");
@@ -275,6 +291,52 @@ function eqArr(a, b) {
     m.role === "toolResult" && m.content?.[0]?.text?.startsWith("<elided"));
   assert(masked, "tool result was masked with custom XML format");
   assert(masked.content[0].text.includes('cmd="git status"'), "custom format includes command");
+}
+
+// 16. Malicious JSON-shaped runtime profile values never throw or poison the result.
+{
+  const malformedMaps = [null, [], 7];
+  for (const map of malformedMaps) {
+    const r = resolveProfile("default", map, {});
+    assert(r.profile.placeholderFormat && typeof r.profile.placeholderFormat.bash === "string", "malformed profile map keeps safe templates");
+    assert(r.warnings.some((w) => w.includes("plain object")), "malformed profile map warns");
+  }
+  for (const entry of [[], null, 4]) {
+    const r = resolveProfile("custom", { custom: entry }, {});
+    assert(r.warnings.some((w) => w.includes("plain object")), "malformed profile entry warns");
+    assert(typeof r.profile.placeholderFormat.bash === "string", "malformed profile entry keeps safe template");
+  }
+  const malformed = [
+    { thresholds: [], coverage: [0.5, 0.6, 0.7] },
+    { thresholds: [0.2, Infinity, 0.5], coverage: [0.5, 0.6, 0.7] },
+    { thresholds: [0.2, 0.3], coverage: [0.5, 0.6, 0.7] },
+    { thresholds: [0.2, 0.2, 0.5], coverage: [0.5, 0.6, 0.7] },
+    { thresholds: [0.2, NaN, 0.5], coverage: [0.5, 0.6, 0.7] },
+    { thresholds: [0.2, 0.3, 0.5], coverage: [0.5, NaN, 0.7] },
+    { effectiveContextCap: Infinity },
+    { effectiveContextCap: NaN },
+    { effectiveContextCap: 0 },
+    { label: 12 },
+    { maskOldThinking: "unsupported" },
+    { placeholderFormat: { bash: 12, read: null } },
+    { placeholderFormat: [] },
+    { placeholderFormat: null },
+    { placeholderFormat: { bash: "{cmd} {stderr}", read: "{path} {bad}" } },
+  ];
+  for (const override of malformed) {
+    let r;
+    try { r = resolveProfile("default", { default: override }, {}); }
+    catch (error) { assert(false, "malformed override threw: " + String(error)); continue; }
+    assert(typeof r.profile.label === "string", "malformed override keeps string label");
+    assert(Array.isArray(r.profile.thresholds) && r.profile.thresholds.length > 0, "malformed override keeps thresholds");
+    assert(Array.isArray(r.profile.coverage) && r.profile.coverage.length === r.profile.thresholds.length, "malformed override keeps aligned coverage");
+    assert(typeof r.profile.placeholderFormat.bash === "string" && typeof r.profile.placeholderFormat.read === "string", "malformed override keeps string templates");
+    assert(r.warnings.length > 0, "malformed override warns");
+  }
+  const stable = { default: { label: "stable", effectiveContextCap: 4096, placeholderFormat: { bash: "{cmd}", read: "{path} {n} {size}" } } };
+  const first = resolveProfile("default", stable, {});
+  const second = resolveProfile("default", stable, {});
+  assert(JSON.stringify(first) === JSON.stringify(second), "repeated resolution is deterministic");
 }
 
 if (failures > 0) {

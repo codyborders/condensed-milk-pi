@@ -2,8 +2,7 @@
  * git diff output filter.
  *
  * - Passthrough for --stat output (already compact)
- * - Strip ---/+++ file headers (redundant with diff --git line)
- * - Passthrough small diffs (<10 lines after stripping)
+ * - Passthrough small diffs (<10 lines)
  * - Condense large diffs: keep hunk headers + changed lines, drop unchanged context
  */
 import { registerFilter, type FilterResult } from "./dispatch.js";
@@ -21,8 +20,13 @@ function filterGitDiff(input: string): FilterResult | null {
     return null; // Already compact
   }
 
-  // Strip ---/+++ metadata headers
-  const stripped = stripFileHeaders(input);
+  // Combined diffs use different hunk markers. Preserve them.
+  if (/^diff --(?:cc|combined) /m.test(input) || /^@@@ /m.test(input)) return null;
+  const hunkHeaders = input.match(/^@@ .* @@.*$/gm) ?? [];
+  if (hunkHeaders.length === 0 || hunkHeaders.some((line) => !/^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.test(line))) return null;
+
+  // Preserve file headers and all other decisive metadata.
+  const stripped = input;
 
   const lineCount = countLines(stripped);
   if (lineCount < 10) {
@@ -38,67 +42,63 @@ function filterGitDiff(input: string): FilterResult | null {
     : null;
 }
 
-function stripFileHeaders(input: string): string {
-  const lines = input.split("\n");
-  const out: string[] = [];
-  for (const line of lines) {
-    if (isFileHeader(line)) continue;
-    out.push(line);
-  }
-  return out.join("\n");
-}
-
-function isFileHeader(line: string): boolean {
-  if (line.length < 4) return false;
-  return (
-    (line[0] === "-" && line[1] === "-" && line[2] === "-" && line[3] === " ") ||
-    (line[0] === "+" && line[1] === "+" && line[2] === "+" && line[3] === " ")
-  );
-}
-
 function condenseLargeDiff(input: string): string {
-  const lines = input.split("\n");
   const out: string[] = [];
-  let contextRun = 0;
-  const MAX_CONTEXT = 2; // Keep at most 2 context lines around changes
+  const context: string[] = [];
+  let afterChange = false;
 
-  for (const line of lines) {
-    // Always keep structural lines
-    if (
-      line.startsWith("diff --git") ||
-      line.startsWith("index ") ||
-      line.startsWith("@@ ")
-    ) {
-      if (contextRun > MAX_CONTEXT) {
-        out.push(`  ... ${contextRun - MAX_CONTEXT} unchanged lines ...`);
-      }
-      contextRun = 0;
+  const flushContext = (beforeChange: boolean): void => {
+    if (context.length === 0) return;
+    let kept: string[];
+    if (afterChange && beforeChange && context.length > 4) {
+      kept = [...context.slice(0, 2), ...context.slice(-2)];
+    } else if (afterChange && beforeChange) {
+      kept = [...context];
+    } else if (afterChange) {
+      kept = context.slice(0, 2);
+    } else {
+      kept = context.slice(-2);
+    }
+    const omitted = context.length - kept.length;
+    if (omitted > 0) out.push(`  ... ${omitted} unchanged lines ...`);
+    out.push(...kept);
+    context.length = 0;
+  };
+
+  for (const line of input.split("\n")) {
+    if (isStructural(line)) {
+      flushContext(false);
       out.push(line);
+      if (!line.startsWith("\\\\ No newline at end of file")) afterChange = false;
       continue;
     }
-
-    // Changed lines: always keep
     if (line.startsWith("+") || line.startsWith("-")) {
-      if (contextRun > MAX_CONTEXT) {
-        out.push(`  ... ${contextRun - MAX_CONTEXT} unchanged lines ...`);
-      }
-      contextRun = 0;
+      flushContext(true);
       out.push(line);
+      afterChange = true;
       continue;
     }
-
-    // Context (unchanged) line
-    contextRun++;
-    if (contextRun <= MAX_CONTEXT) {
-      out.push(line);
+    if (line.startsWith(" ")) {
+      context.push(line);
+      continue;
     }
+    flushContext(false);
+    out.push(line);
+    afterChange = false;
   }
-
-  if (contextRun > MAX_CONTEXT) {
-    out.push(`  ... ${contextRun - MAX_CONTEXT} unchanged lines ...`);
-  }
-
+  flushContext(false);
   return out.join("\n");
+}
+
+function isStructural(line: string): boolean {
+  return line.startsWith("diff --git") || line.startsWith("index ") ||
+    line.startsWith("--- ") || line.startsWith("+++ ") || line.startsWith("old mode ") ||
+    line.startsWith("new mode ") || line.startsWith("new file mode ") ||
+    line.startsWith("deleted file mode ") || line.startsWith("similarity index ") ||
+    line.startsWith("dissimilarity index ") || line.startsWith("rename from ") ||
+    line.startsWith("rename to ") || line.startsWith("copy from ") || line.startsWith("copy to ") ||
+    line.startsWith("Binary files ") || line === "GIT binary patch" || /^@@ /.test(line) ||
+    line.startsWith("\\ No newline at end of file");
 }
 
 function countLines(s: string): number {

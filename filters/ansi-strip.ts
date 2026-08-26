@@ -9,7 +9,8 @@
 export function stripAnsi(text: string): string {
   if (!text.includes("\x1b")) return text;
   return text
-    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
-    .replace(/\x1b\][0-9;]*(?:\x07|\x1b\\)/g, "")
+    // CSI: ESC [ parameter bytes, optional intermediate bytes, final byte.
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+    // OSC: ESC ] payload terminated by BEL or ST (ESC backslash).
     .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "");
 }

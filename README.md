@@ -1,289 +1,116 @@
-# 🥛 Condensed Milk
+# Condensed Milk
 
-**Semantic token compression for [pi terminal](https://github.com/badlogic/pi-mono).** Cuts LLM token consumption by compressing bash tool output and retroactively shrinking stale conversation history.
+Condensed Milk is a pi terminal extension that reduces repetitive bash output and masks stale tool results before an LLM call. It uses deterministic, domain-aware transforms. It is not a general-purpose output truncator.
 
-Inspired by [ztk](https://github.com/codejunkie99/ztk) (Zig) and [RTK](https://github.com/rtk-ai/rtk) (Rust) — standalone CLI proxies for Claude Code — rebuilt as a native pi extension using `tool_result` post-processing and pi's `context` event. ANSI stripping, linter aggregation, and grep grouping techniques adapted from [pi-rtk-optimizer](https://github.com/MasuRii/pi-rtk-optimizer) by MasuRii. This architecture gives Condensed Milk capabilities that standalone proxies structurally cannot have.
+This repository records current remediation work. No release, upstream pull request, publication, or production-readiness claim is part of this work.
 
-## What It Does
+## Safety-first defaults
 
-### Tool Result Compression
+The extension applies ANSI escape-code removal to every text block in bash output. It removes cosmetic CSI and OSC sequences before other processing. It does not remove ordinary text.
 
-Intercepts bash command output before the model sees it and applies semantic compression — not blind truncation but domain-aware filters that preserve meaning while dropping noise.
+The default semantic filters are deliberately small:
 
-| Command | Before | After | Savings |
-|---------|--------|-------|---------|
-| `python -m pytest` | 50+ lines of progress dots, headers, timing | `pytest: 125 passed, 15 skipped in 5.6s` | ~95% |
-| `git status` | Branch info, staging area, working tree | `on main: 3 staged, 2 modified [file1, file2]` | ~75% |
-| `git diff` (large) | Full patch with metadata headers | Changed lines only, context collapsed | ~70% |
-| `git log` (verbose) | Author/Date/body per commit | `hash subject` per commit | ~80% |
-| `git add/commit/push` | Transfer progress, CRLF warnings | `ok abc1234` | ~90% |
-| `ls -la` (>20 files) | Permission bits, dates, owners | Extension counts + first 10 names | ~80% |
-| `find` (>30 results) | Full path listing | Dir/type summary + first 15 paths | ~70% |
-| `grep/rg` (>30 matches) | All matches | File summary + first 10 matches | ~65% |
-| `tree` | Full tree with noise dirs | Stripped `.git/node_modules/.venv/__pycache__` | ~50-90% |
-| `env` | All variables, secrets in plain text | Secrets masked, values truncated | ~60% + security |
-| Python traceback | Full stack trace | First 2 + last 2 frames + exception | ~50% |
-| `tsc` | Verbose TS errors | Grouped by file, 3 samples each | ~60% |
-| Log output | Repeated lines with timestamps | Collapsed to `line [xN]` | Variable |
-| JSON output (>1KB) | Full values, deeply nested | Keys + types + array lengths | ~80% |
+- `env` and `printenv` redact sensitive environment values.
+- `pytest`, `python -m pytest`, and `python3 -m pytest` compress only a positively identified terminal all-pass summary. Known skip, deselection, and warning counts are allowed. Failures, errors, interruptions, and uncertain streams pass through unchanged.
+- `git status --short` and `git status --porcelain` summarize validated porcelain v1 or v2 output. Unknown status formats pass through unchanged. Plain `git status` output is not summarized unless its command requests a supported porcelain form.
+- `git log` compresses verbose log output to a hash and subject per commit when the result is shorter.
+- `journalctl`, `docker logs`, `tail`, and `tmux capture-pane` deduplicate consecutive lines. UUIDs, hexadecimal addresses, and large numbers are normalized for matching, while the first displayed line remains the source line.
 
-**Log dedup normalization** (from RTK): UUIDs, hex addresses, and large numbers are normalized before dedup matching, so lines differing only in request IDs or memory addresses collapse together.
+The context hook uses static-cutoff historical masking. Context pressure crosses thresholds `[0.30, 0.45, 0.60]`. Each zone freezes its cutoff at entry with coverage `[0.60, 0.80, 0.95]`. The cutoff does not drift as messages arrive. Older bash and read results become deterministic `[cm-masked ...]` placeholders. Reference files remain visible. A compaction event resets cutoff and tracker state.
 
-### Context Retroactive Compression (v1.6.0: static-cutoff masking + cwd-aware invalidation)
+Masking is not semantic summarization. It preserves the command or path so an agent can rerun or reread it. It masks only tool results that meet the size and safety rules. Failed tool results are not historically masked.
 
-The killer feature that standalone proxies **cannot** do.
+### Filters that are off by default
 
-Pi's `context` event fires before every LLM call with a deep copy of the conversation history. Condensed Milk retroactively masks old tool results so the model sees a short deterministic placeholder instead of the original payload.
+Lossy or higher-risk filters remain disabled until explicitly enabled in the global configuration. This includes:
 
-**Algorithm (v1.2.0+ static cutoff, ADR-018):** a cutoff index T advances only when context usage crosses a pressure threshold. Between advances T is immutable — bytes before T stay byte-identical turn-over-turn — cache prefix stable. Defaults: thresholds `[0.20, 0.35, 0.50]` of context used, coverage `[0.50, 0.75, 0.90]` of messages masked at each zone.
+- `git diff`, Git mutation summaries for `git add`, `git commit`, and `git push`
+- `ls`, `find`, `tree`, `grep`, `rg`, and other search or listing summaries
+- Python traceback summaries, TypeScript compiler summaries, linter summaries, build summaries, and JavaScript test-runner summaries
+- Package-install summaries
+- JSON schema extraction
 
-**Placeholders (v1.9.0, ADR-029):**
+ANSI removal and environment secret redaction are not optional semantic filters. Secret redaction can produce longer text because privacy takes priority over compression.
 
-- `[cm-masked bash] <command truncated to 80 chars>` — for bash results
-- `[cm-masked read] <path> (N lines, SIZE)` — for read results (v1.4.0: size metadata helps the model decide whether to re-read)
+## Output safety contract
 
-The `cm-` prefix brands the placeholder as a condensed-milk artifact so fresh agents (e.g. parachuted in via `context_checkout`) don't misread them as tool failures. v1.9.0 also appends a constant explainer to every turn's system prompt via `before_agent_start` so looping agents always know that `[cm-masked …]` means "re-run or re-read to get current content" — cache-stable (same bytes every turn) and amortized across the session regardless of how many items are masked. Legacy `[masked …]` placeholders in pre-v1.9.0 session files are still recognized by `/compress-stats` via back-compat prefix match.
+The dispatcher applies a transform only when its parser confirms the expected format and the result is strictly shorter. It does not use a generic JSON or unknown-format fallback. Malformed JSON, unknown output, uncertain shell syntax, unsupported pipelines, and failed semantic commands pass through unchanged.
 
-**Reference files are never masked.** v1.6.0 protects by basename set (`AGENTS.md`, `CONVENTIONS.md`, `CLAUDE.md`, `GEMINI.md`, `SKILL.md`, `README.md`, `CHANGELOG.md`, `package.json`, `tsconfig.json`, `pyproject.toml`, `biome.json`, etc.) *and* by path substrings (`/knowledge/decisions/`, `/knowledge/concepts/`, `/knowledge/patterns/`, `/.pi/agent/skills/`, `/.pi/skills/`, `/rules/`). Add your own via config — see [Configuration](#configuration).
+Environment privacy has one explicit exception. The environment filter is allowed to process failed output, compound output, short output, and output where `[REDACTED]` is longer than the original value. It preserves non-sensitive lines byte-for-byte and only changes values for sensitive variable names. Neither global nor project configuration can disable this filter. A disable attempt produces a warning, and the filter stays enabled.
 
-**Command invalidation fires immediately, regardless of cutoff.** Built-in rules:
+Semantic dispatch requires exactly one text block in each bash tool result. With multiple text blocks, the extension strips ANSI from each text block. It also applies mandatory environment secret redaction to each text block. Semantic compression stays off because blocks are partial fragments. Failed and unknown output is preserved except for ANSI removal and mandatory environment redaction. Non-text blocks remain in place and unchanged. The extension processes output after pi's normal 50 KB tool-result cap.
 
-- `git {add,rm,checkout,reset,stash,merge,rebase,cherry-pick}` invalidates earlier `git status`
-- `git {commit,merge,rebase}` invalidates earlier `git diff` / `git log`
-- `{npm,pnpm,yarn,bun} {install,add,remove}` invalidates earlier `{ls,list,outdated}`
-- `pip install` invalidates earlier `pip {list,freeze}`
+A command chain with two or more output-producing segments does not receive a semantic prefix filter. A small explicit allowlist treats `cd`, `export`, `set`, `unset`, `source`, `.`, `true`, `false`, and `:` as silent. Environment redaction still protects the combined text. Supported output pipes are limited to `head`, `tail`, `wc`, `sort`, and `uniq`. Other pipelines pass through.
 
-**v1.6.0 cwd-awareness:** invalidation now strips `cd <path> &&` prefix before matching, then scopes by cwd tuple. A commit in `/repoA` will NOT spuriously invalidate `git status` output that was actually run in `/repoB`. Single-cwd sessions behave identically to before (both cwds undefined → treated as same scope).
+## Installation
 
-**Add your own invalidation rules via config** (see [Configuration](#configuration)) — useful for stacked-diff tools like `gt` / `jj` / `spr` that aren't matched by built-in git rules.
-
-**Why masking over summarization** (per JetBrains Research Dec 2025 and Anthropic's own engineering guide):
-
-- Byte-identical placeholders produce a **single cache miss per tool-result lifetime**, then the cache stays warm. Summaries changed bytes every turn → repeated cache misses.
-- JetBrains empirical result: masking matches or beats LLM-style summarization on solve rate, -52% cost on Qwen3-Coder 480B.
-- Summaries cause "trajectory elongation" (+13-15% more turns) by smoothing over stop-signals. Masks don't.
-- The agent can re-read files or re-run commands if it needs the content again — just-in-time pattern endorsed by Anthropic. Masks preserve the command / file path so the agent knows what to re-fetch.
-
-**Measured result** on a 926-message real session at defaults: 42 cache variants, static cutoff yields ~$0.10 vs ≈$0.19 with no cache — ≈47% cost reduction, and prefix stays stable across full session length.
-
-### Compound Command Handling
-
-Real-world commands are chains:
-
-```bash
-source .venv/bin/activate && python -m pytest -q 2>&1 | tail -3 && ruff check src/
-```
-
-The dispatcher splits on `&&`/`||`/`;`, strips pipe tails (`| head`, `| tail`, `| wc`), cleans env vars and redirects, then matches each segment against registered filters. Last matching segment wins (it produced the output).
-
-**Multi-producer guard (v1.9.0, ADR-030).** If the compound has ≥ 2 *non-silent* segments (anything not in the allowlist `cd / export / set / unset / source / . / true / false / :`), prefix filters are skipped and the raw stdout passes through. Otherwise a filter matching the tail segment would be handed the combined stdout of every prior command and parse it as if it were its own format — the symptom was `cd repo && git init && git add -A && git status --short | head -10 && echo "..." && git status --short | wc -l` collapsing to `on unknown: clean`. Content-based fallbacks (JSON etc.) still run. Single-segment compounds like `cd repo && git status` are unaffected (one non-silent segment).
-
-### Secret Masking
-
-The `env`/`printenv` filter masks values for keys containing `KEY`, `SECRET`, `TOKEN`, `PASSWORD`, `API`, `AUTH`, or `CREDENTIAL`. This prevents API keys and secrets from entering the LLM context window.
-
-## Install
-
-### Recommended: via `pi install` (pi package manager)
+Install through pi:
 
 ```bash
 pi install npm:@tomooshi/condensed-milk-pi
 ```
 
-Registers the package in `~/.pi/agent/settings.json` and auto-loads on every session. Updatable with `pi update`, removable with `pi remove npm:@tomooshi/condensed-milk-pi`.
-
-### Alternative: raw npm install
-
-```bash
-npm i -g @tomooshi/condensed-milk-pi
-```
-
-Works if your pi setup autoloads global npm modules. Reload pi (Ctrl+R) or restart.
-
-### Alternative: clone-and-symlink (for local hacking)
+For local work, clone the repository and link it into the pi extensions directory:
 
 ```bash
 git clone https://github.com/tomooshi/condensed-milk-pi.git ~/condensed-milk-pi
 ln -s ~/condensed-milk-pi ~/.pi/agent/extensions/condensed-milk
 ```
 
-Use this when you want to modify the source yourself — pi will auto-discover the symlink and hot-reload via `/reload`.
-
-### Verify
-
-```bash
-npm ls -g @tomooshi/condensed-milk-pi
-```
-
-Confirms the installed version. After install, run `/compress-stats` inside pi — you should see a `Re-read Telemetry` block. Telemetry shape is stable since v1.4.0 so the header doesn't bump per minor version; the installed `package.json` version is the source of truth.
-
-## Usage
-
-The extension works automatically — no configuration needed. Every bash command the model runs goes through the compression pipeline, and retroactive masking activates on its own once context pressure crosses the first threshold.
-
-### Commands
-
-| Command | Description |
-|---------|-------------|
-| `/compress-stats` | Show compression + masking statistics for the current session, including re-read telemetry (v1.4.0) |
-| `/compress-config` | Show or update thresholds/coverage/statusbar (`thresholds 0.15,0.30,0.45`, `coverage 0.5,0.75,0.9`, `status on\|off`) |
-| `/compress-profile` | Show or switch the active backend profile (v1.10.0). `/compress-profile qwen-vllm` switches; takes effect on next session. |
-
-### Status Bar
-
-Shows a running total: `↓12.5KB saved (15/42 cmds, 68%)`
+The extension loads automatically. Use `/compress-stats` to inspect filter, masking, and cache telemetry. Use `/compress-config` to view or change thresholds, coverage, and the status-bar indicator.
 
 ## Configuration
 
-Two config files, two different concerns, both optional.
-
-### 1. Cutoff behavior — `~/.config/condensed-milk.json`
-
-Controls when and how aggressively masking fires. Single source of truth for cache stability (no project-local overrides — intentional).
+The cutoff configuration is global and lives at `~/.config/condensed-milk.json`. Project-local cutoff overrides are not supported. This single source keeps static-cutoff behavior and placeholder bytes consistent across a session.
 
 ```json
 {
   "thresholds": [0.30, 0.45, 0.60],
-  "coverage":   [0.60, 0.80, 0.95],
-  "showStatus": true
+  "coverage": [0.60, 0.80, 0.95],
+  "showStatus": true,
+  "filters": {
+    "git-diff": false,
+    "json-schema": false
+  },
+  "jsonSchemaCommands": ["curl", "gh api"]
 }
 ```
 
-v1.8.0 auto-migrates configs matching any recognized prior default tuple (e.g. v1.6.x `[0.20, 0.35, 0.50] × [0.50, 0.75, 0.90]`) to the current recommended values on next session start. Customizations (any non-matching tuple) are preserved.
+Global `filters` values are booleans keyed by registered filter ID. The global file can enable or disable any registered filter except `environment-secrets`, including filters that are off by default. A global attempt to disable `environment-secrets` produces a warning and the filter stays enabled. Invalid IDs or non-boolean values produce warnings and are ignored.
 
-| Field | Meaning |
-|---|---|
-| `thresholds` | Context-usage fractions (0..1) that trigger cutoff advancement. Monotonically increasing. |
-| `coverage` | Fraction of messages masked when each threshold fires. Same length as `thresholds`. |
-| `showStatus` | Publish `↓N (Cf)` token-savings indicator to the pi status bar. Default `true`. Orthogonal to compression — only controls the footer. |
-
-Also editable via `/compress-config`. Changes take effect on next session.
-
-#### Backend profiles (v1.10.0)
-
-Profiles bundle every backend-specific tuning into one named preset. Built-in profiles cover the two backends with non-trivial differences in cache model and long-context behavior:
-
-| Profile | When to use | thresholds × coverage | cap | thinking mask |
-|---|---|---|---|---|
-| `default` | Anthropic Claude (any model) | `[0.30, 0.45, 0.60]` × `[0.60, 0.80, 0.95]` | model default | off |
-| `qwen-vllm` | Qwen3.x served via vLLM (or any OpenAI-compatible vLLM endpoint) | `[0.20, 0.35, 0.55]` × `[0.50, 0.75, 0.92]` | 131072 | with-coverage |
-
-Why `qwen-vllm` differs:
-
-- **Earlier triggers + lower cap.** vLLM has no Anthropic-style cache-control breakpoint rescue tier ([vLLM APC docs](https://docs.vllm.ai/en/stable/design/prefix_caching/)) — every cache miss is a full prefill. We compress earlier so the working set stays inside the proven long-context regime. Qwen3.6 quality measurably degrades past ~128K with YaRN scaling ([yarn issue](https://github.com/vllm-project/vllm/issues/18728)), so we cap pressure math at 131072 even when vLLM is configured for 262144.
-- **Mask historical thinking.** Qwen3 ships with `preserve_thinking` on, so historical `<think>` blocks accumulate in context. With `with-coverage` policy, they're masked under the same cutoff gate as tool results — [JetBrains Dec 2025](https://blog.jetbrains.com/research/2025/12/efficient-context-management/) measured masking matched or beat LLM-summary on 4/5 settings on Qwen3-Coder 480B.
-
-Select a profile:
-
-```bash
-/compress-profile qwen-vllm    # writes profile field to config; restart pi to apply
-```
-
-Or edit the config directly:
+Project filter configuration is optional at `./condensed-milk.config.json`:
 
 ```json
 {
-  "profile": "qwen-vllm"
-}
-```
-
-#### Custom profiles
-
-Define your own under `profiles`. Built-in profiles can be partially overridden by reusing the same name; unknown names start from `default` and apply user fields on top.
-
-```json
-{
-  "profile": "my-qwen-aggressive",
-  "profiles": {
-    "my-qwen-aggressive": {
-      "label": "Qwen on vLLM — A/B variant with XML placeholders",
-      "thresholds": [0.15, 0.30, 0.50],
-      "coverage":   [0.50, 0.75, 0.95],
-      "effectiveContextCap": 131072,
-      "placeholderFormat": {
-        "bash": "<elided tool=\"bash\" cmd=\"{cmd}\"/>",
-        "read": "<elided tool=\"read\" path=\"{path}\" lines=\"{n}\" size=\"{size}\"/>"
-      },
-      "maskOldThinking": "above-cutoff"
-    }
+  "filters": {
+    "git-log-verbose": false
   }
 }
 ```
 
-| Field | Meaning |
-|---|---|
-| `label` | Human-readable name shown in `/compress-stats` |
-| `thresholds`, `coverage` | Same as legacy top-level fields, but scoped per-profile |
-| `effectiveContextCap` | Denominator for pressure math; `null` = use the model's advertised window |
-| `placeholderFormat.bash` | Template with `{cmd}`. Substituted at mask time. Must be deterministic (no timestamps). |
-| `placeholderFormat.read` | Template with `{path}`, `{n}`, `{size}` |
-| `maskOldThinking` | `"off"` \| `"with-coverage"` \| `"above-cutoff"`. Controls whether assistant `<think>` blocks before the cutoff are wiped to a deterministic empty string. |
+Project configuration can disable an enabled filter. It cannot enable a filter that is default-off, and it cannot disable `environment-secrets`. Project settings cannot register JSON schema commands. Global configuration therefore owns explicit opt-ins for risky filters.
 
-Validation is non-fatal — invalid overrides log a warning surfaced in `/compress-stats` and fall back to the base profile. Unknown profile names log a warning and use `default`.
+### Explicit JSON schema allowlist
 
-#### Telemetry caveat for vLLM
-
-Older vLLM versions don't populate `usage.prompt_tokens_details.cached_tokens` on the OpenAI-compat path (see [vllm#23363](https://github.com/vllm-project/vllm/issues/23363)). When this happens, `/compress-stats` shows `0` cache hits even though the server's KV cache is being used — check `vllm:prefix_cache_hits_total` on the server's `/metrics` endpoint for the real number. Profile selection still helps: the masking optimization runs whether or not the response reports it.
-
-Server flags to ask your operator to verify (none of these belong in the extension):
-
-```bash
---enable-prefix-caching
---enable-auto-tool-choice --tool-call-parser qwen3_coder
---reasoning-parser qwen3
-```
-
-### 2. Telemetry (opt-in, local-only) — `~/.config/condensed-milk-sessions.jsonl`
-
-**Default: off. Never enabled without your explicit action.**
-
-condensed-milk can optionally log one JSONL line per session to the file above
-on graceful shutdown. The data feeds an upcoming per-user threshold adapter.
-It stays on your machine — nothing is uploaded, automatically or otherwise.
-
-**What's recorded per session:** session duration, final turn count, pressure
-zones entered (turn + context% at each), tool-call counts by type, mask
-statistics, thresholds and coverage in use, cache hit rate, total tokens by
-bucket, condensed-milk version, and sha256-truncated (16-char) hashes of the
-session path and cwd.
-
-**What's NOT recorded:** any message or tool output content, file paths or
-tool inputs (only hashes), environment variables, API keys, or identity info.
-
-**Three ways to opt in:**
-
-```
-/compress-telemetry enable-local-logging    # slash command (verbose verb is deliberate)
-export CONDENSED_MILK_TELEMETRY=on          # env var
-```
-
-Or add `{"telemetry": {"local": true}}` to `~/.config/condensed-milk.json`
-(merged with your existing cutoff config).
-
-**Control:**
-
-```
-/compress-telemetry                        # show status + full disclosure
-/compress-telemetry enable-local-logging   # opt in
-/compress-telemetry disable                # opt out
-/compress-telemetry export                 # write a timestamped copy to ~/ for manual sharing
-cat ~/.config/condensed-milk-sessions.jsonl | jq   # view raw
-rm ~/.config/condensed-milk-sessions.jsonl         # delete local log
-```
-
-If you want to help improve defaults, you can review the file and send it to
-the author manually. No automated upload path exists — by design.
-
-### 3. Rules — `~/.pi/agent/condensed-milk-config.json` (global) + `./condensed-milk.config.json` (project-local)
-
-Custom reference files and invalidation rules. Both files optional; when both exist they merge additively (project-local extends global).
-
-**Full schema with all fields:**
+JSON structure extraction has no generic fallback. To enable it, add command prefixes to the global `jsonSchemaCommands` array and set the global `filters.json-schema` value to `true`:
 
 ```json
 {
-  "referenceBasenames": ["FILENAME.md", "spec.yaml"],
-  "referencePathSubstrings": ["/my-specs/", "/docs/adr/"],
+  "jsonSchemaCommands": ["curl", "gh api"],
+  "filters": { "json-schema": true }
+}
+```
+
+The filter parses only valid top-level objects or arrays. It emits types, object keys, and array lengths without scalar values. Malformed, uncertain, or non-shorter output passes through. The allowlist is global-only and applies only to the listed command prefixes.
+
+### Reference files and invalidation rules
+
+Reference protection and invalidation rules use separate files. The global rules file is `~/.pi/agent/condensed-milk-config.json`. The project rules file is `./condensed-milk.config.json`. Arrays merge additively across both files.
+
+```json
+{
+  "referenceBasenames": ["spec.yaml"],
+  "referencePathSubstrings": ["/openapi/"],
   "invalidationRules": [
     {
       "invalidator": "^cargo\\s+(build|update)\\b",
@@ -294,197 +121,61 @@ Custom reference files and invalidation rules. Both files optional; when both ex
 }
 ```
 
-| Field | Type | Purpose |
-|---|---|---|
-| `referenceBasenames` | `string[]` | File basenames (no path) that should never be masked. Matched against `path.split("/").pop()`. |
-| `referencePathSubstrings` | `string[]` | Any file whose path contains one of these substrings is protected. Good for "all files under this directory". |
-| `invalidationRules` | `{invalidator, invalidated}[]` | Each rule is a pair of regex source strings (NOT compiled `/regex/` literals — plain strings). When an `invalidator` command runs later, it invalidates earlier matching `invalidated` commands in the same cwd. |
-| `disableDefaults` | `boolean` | If `true`, your arrays *replace* the built-ins instead of extending them. Default `false`. |
+Reference basenames and path substrings prevent historical read masking. Invalidation rules mark earlier matching bash results stale in the same working directory. Built-in rules cover common Git mutations, package installation commands, and `pip install`. `cd` prefixes are stripped for matching. Unresolved shell expansions and cross-directory commands do not invalidate one another.
 
-**Regex notes:**
+Rules validation is strict. Each file must contain a plain JSON object. Arrays must contain strings. Each invalidation rule must contain string regex sources that compile successfully. `disableDefaults` must be boolean. Missing files are allowed. Invalid JSON, invalid values, permission failures, and other read failures stop extension loading with an error rather than silently changing behavior. A file that sets `disableDefaults` removes built-in reference and invalidation defaults before user arrays are applied.
 
-- Strings are passed to `new RegExp(...)`. Escape backslashes once: `"^git\\s+status"`, not `/^git\s+status/`.
-- Matching runs against the `cd`-stripped command. So your `invalidator` should match the bare tool invocation, not `cd /repo && tool ...`.
-- Invalidation only fires when both commands have the same cwd (both set to the same path, or both unset — the common single-cwd case).
+### Profiles and validation
 
-**Example 1 — add a custom spec-file protection:**
+Profiles bundle thresholds, coverage, an optional effective context cap, deterministic placeholder templates, and historical thinking masking. `default` is Anthropic-compatible. `qwen-vllm` is an explicit compatibility preset carried from prior configuration. It uses an effective cap of `131072`, earlier thresholds, and coverage-based historical thinking masking. These values were not validated by the paired task study. Profile selection is explicit. There is no backend auto-detection.
 
-Project uses OpenAPI specs under `./openapi/` that should stay inline all session.
+Profile arrays must be non-empty numbers in `[0, 1]`. Thresholds must be strictly increasing. Coverage length must match threshold length. A context cap must be null or a positive finite number. Templates must be strings with only supported variables. `maskOldThinking` must be `off`, `with-coverage`, or `above-cutoff`. Invalid profile overrides produce validation warnings and retain base values. Unknown profile names fall back to `default`. Profile validation does not crash session start.
 
-```json
-{
-  "referencePathSubstrings": ["/openapi/"]
-}
+### Migration from prior defaults
+
+Configurations carrying the recognized v1.6.x defaults, thresholds `[0.20, 0.35, 0.50]` and coverage `[0.50, 0.75, 0.90]`, migrate automatically to the current defaults on session start. A matching tuple is treated as stale generated configuration. Other threshold or coverage values are treated as explicit customization and remain unchanged. The old v1.1.x `windowSize` setting is ignored because static-cutoff masking replaced the rolling window. Review custom settings after upgrading.
+
+## Bounded telemetry
+
+Historical re-read trackers and unique-mask sets are bounded insertion-ordered collections. Each has a maximum of 10,000 entries. When full, the oldest entry is evicted. This bounds memory use but means telemetry may omit re-read relationships for evicted entries.
+
+Local session telemetry is separate and disabled by default. It writes only after graceful shutdown when explicitly enabled. It records aggregate counts, timing, thresholds, cache counters, and truncated hashes. It does not record message content, tool output, file paths, environment variables, API keys, or identity information. No automatic upload exists.
+
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `/compress-stats` | Show active profile, filter totals, historical masks, re-read counters, and provider-reported cache counters. |
+| `/compress-config` | Show or change thresholds, coverage, or the status-bar indicator. |
+| `/compress-profile` | Show or select a named profile for the next session. |
+| `/compress-telemetry` | Show local telemetry disclosure or manage explicit local logging. |
+
+The cache section is diagnostic. Provider-reported cache counters can be missing on some OpenAI-compatible servers. Do not treat the displayed dollar values as a universal cost estimate.
+
+## Development checks
+
+Run the focused test suite and static checks from the repository root:
+
+```bash
+npm test
+npm run typecheck
+npm run benchmark
 ```
 
-**Example 2 — add Graphite / stacked-diff invalidation:**
+`npm test` runs the repository's fixture and regression tests. `npm run typecheck` runs TypeScript without emitting files. `npm run benchmark` runs the deterministic context-hook benchmark and checks its local budgets. See [benchmarks/README.md](benchmarks/README.md) for interpretation limits.
 
-Graphite's `gt submit`, `gt up`, `gt down` change git state but don't match built-in `^git` rules.
+## Benchmark and evaluation status
 
-```json
-{
-  "invalidationRules": [
-    { "invalidator": "^gt\\s+(up|down|submit|checkout|sync|restack)\\b", "invalidated": "^git\\s+(status|diff|log)\\b" },
-    { "invalidator": "^gt\\s+(create|modify|commit|absorb)\\b",          "invalidated": "^git\\s+(status|diff|log)\\b" }
-  ]
-}
-```
-
-**Example 3 — language-specific build invalidation:**
-
-```json
-{
-  "invalidationRules": [
-    { "invalidator": "^cargo\\s+(build|update|add|remove)\\b", "invalidated": "^cargo\\s+(check|clippy|test)\\b" },
-    { "invalidator": "^go\\s+(get|mod)\\b",                    "invalidated": "^go\\s+(build|test|vet)\\b" },
-    { "invalidator": "^zig\\s+build\\b",                       "invalidated": "^zig\\s+(test|run)\\b" }
-  ]
-}
-```
-
-**Example 4 — replace defaults entirely (advanced):**
-
-```json
-{
-  "disableDefaults": true,
-  "referenceBasenames": ["MY-AGENT.md"],
-  "referencePathSubstrings": ["/my-project/docs/"],
-  "invalidationRules": [
-    { "invalidator": "^mytool\\s+update\\b", "invalidated": "^mytool\\s+status\\b" }
-  ]
-}
-```
-
-**Failure modes (intentional fail-loud):**
-
-- File missing (ENOENT): silently skipped. Optional by design.
-- Permission denied / other IO error: throws at extension load — pi will surface the error.
-- Invalid JSON: throws with the file path in the error message. Fix the file or delete it.
-
-**Config precedence:**
-
-For a given setting, effective value = `defaults` ++ `global file` ++ `project-local file`, with `disableDefaults: true` anywhere removing the `defaults` tier. Arrays concatenate (don't de-duplicate — duplicates are cheap to iterate).
-
-**Cache-safety guarantee:**
-
-Expanding protection (adding referenceBasenames / referencePathSubstrings) only *reduces* the masked set; it never changes placeholder bytes for already-masked items. Adding invalidation rules can only *mask more* bash results, but masking is still deterministic per message — prefix stability holds. You cannot break cache economics via config.
+The benchmark is a local synthetic performance check. It does not establish provider cost, task quality, safety in every shell environment, or production readiness. The paired paid-task evaluation was not run. No spend occurred because paid provider use requires explicit approval. The protocol, manifest, and unmet gates are documented in [evaluation/paired-task-evaluation.md](evaluation/paired-task-evaluation.md).
 
 ## Architecture
 
-```
-condensed-milk/
-├── index.ts                    # Extension entry — tool_result + context hooks
-├── filters/
-│   ├── dispatch.ts             # Command matching + compound splitting
-│   ├── pytest.ts               # pytest/python -m pytest
-│   ├── git-status.ts           # git status (porcelain v1/v2/plain)
-│   ├── git-diff.ts             # git diff (strip headers, condense context)
-│   ├── git-mutations.ts        # git add/commit/push
-│   ├── git-log.ts              # git log (verbose → hash subject)
-│   ├── file-ops.ts             # ls, find, grep, rg
-│   ├── tree.ts                 # tree (strip noise dirs)
-│   ├── env.ts                  # env/printenv (mask secrets)
-│   ├── python-traceback.ts     # Python crash output
-│   ├── log-dedup.ts            # journalctl, tail, docker logs, tmux
-│   ├── tsc.ts                  # TypeScript compiler
-│   ├── json-schema.ts          # JSON structure extraction (content-based)
-│   └── context-compress.ts     # Retroactive context compression
-└── package.json
-```
+- `tool_result` strips ANSI and applies one configured bash filter to a single text block.
+- `context` receives a copy of conversation history and applies deterministic static-cutoff masking to eligible historical results.
+- Filter modules register command prefixes. Longest matching prefix wins.
+- Filters return `null` when format, safety, or output-size checks fail. The original output then remains visible.
 
-### How It Works
-
-1. **`tool_result` hook** — runs after pi's built-in 50KB truncation, before the model sees the output. Matches the command against registered filters and returns compressed content. Deterministic per input, cache-safe.
-
-2. **`context` event hook** — runs before each LLM API call on a `structuredClone` of the conversation history (pi-mono guarantees non-destructive). Applies observation masking to tool results outside the rolling window. Placeholders are byte-identical across turns, so BP2 (last-user-message breakpoint) stabilizes after one miss per tool result.
-
-3. **Filter dispatch** — splits compound commands, strips pipes/redirects/env vars, and matches against registered filter prefixes. Longest prefix wins. Filters return `null` to decline (output passes through unchanged).
-
-### Adding Filters
-
-```typescript
-import { registerFilter, type FilterResult } from "./dispatch.js";
-
-function filterMyCommand(input: string): FilterResult | null {
-  if (input.length === 0) return null;
-  // Your compression logic here
-  return { output: "compressed", category: "fast" };
-}
-
-registerFilter("my-command", filterMyCommand, "fast");
-```
-
-Categories: `"fast"` (ls, grep), `"medium"` (test runners), `"slow"` (git log), `"immutable"` (never changes), `"mutation"` (git add/commit/push).
-
-## What's NOT Supported
-
-These filters exist in [ztk](https://github.com/codejunkie99/ztk) but are intentionally not ported:
-
-| Filter | Why not |
-|--------|---------|
-| `cat` / file content | **Harmful for coding agents.** The model needs full file content to write correct edits. Stripping function bodies breaks line numbers. |
-| `cargo test/build` | Rust stack — add if you need it |
-| `go test` | Go stack — add if you need it |
-| `zig build/test` | Zig stack — add if you need it |
-| `kubectl`, `docker` | Container orchestration — add if you need it |
-| `gh` (GitHub CLI) | Low frequency |
-| `curl` JSON schema | Too risky — model often needs actual values |
-| `make`, `terraform`, `helm`, `gradle`, `mvn`, `dotnet`, etc. | 25 regex-based runtime filters for stacks we don't use. See ztk for patterns. |
-| Session dedup (mmap) | Context retroactive compression handles this more effectively |
-
-**Contributing stack-specific filters is welcome.** The dispatch system is designed for easy extension — register a prefix and a function.
-
-## vs ztk and RTK
-
-| | [ztk](https://github.com/codejunkie99/ztk) | [RTK](https://github.com/rtk-ai/rtk) | Condensed Milk |
-|---|-----|-----|----------------|
-| Language | Zig | Rust | TypeScript |
-| Target | Claude Code | Claude Code | pi terminal |
-| Architecture | Standalone binary, PreToolUse hook | Standalone binary, PreToolUse hook | Native extension, tool_result + context hooks |
-| Context compression | ❌ | ❌ | ✅ Retroactively compresses stale results (**biggest savings**) |
-| Read compression | ❌ | ✅ Language-aware file filtering | ✅ Smart file-ops-aware staleness (keeps files being edited) |
-| Secret masking | ❌ | ❌ | ✅ env filter masks API keys/tokens/passwords |
-| JSON structure | ❌ | ✅ Schema extraction | ✅ Content-based schema extraction |
-| Session dedup | ✅ mmap shared memory | ❌ | Unnecessary (context compression subsumes it) |
-| Code filtering | ✅ Strips function bodies | ✅ 3 filter levels (None/Minimal/Aggressive) | ❌ Intentionally — harmful for coding agents |
-| TOML filter DSL | ❌ | ✅ 60+ declarative filters | ❌ All filters are code |
-| Log normalization | Timestamps only | ✅ UUIDs, hex, numbers, paths | ✅ UUIDs, hex, numbers (from RTK) |
-| Adaptive learning | ❌ | ✅ Mistake detection + suggestions | ❌ |
-| Analytics | ❌ | ✅ Rich per-day/week/month + API cost | Basic session stats in status bar |
-| Traceback compression | ❌ | ❌ (pytest only) | ✅ Generic Python traceback (first 2 + last 2 frames) |
-| Performance | ⚡ Zig + SIMD | ⚡ Rust | Fast enough (TypeScript on <50KB post-truncation) |
-| Stack coverage | Broad (Rust, Go, Zig, Docker, K8s) | Very broad (60+ TOML filters) | Python/TypeScript/Git focused |
-| Install | Homebrew / zig build | Homebrew / cargo install | `pi install npm:@tomooshi/condensed-milk-pi` or `npm i -g @tomooshi/condensed-milk-pi` |
-
-### Where Condensed Milk wins
-
-- **Context retroactive compression** — ztk and RTK are standalone proxies that only see output once. Condensed Milk compresses stale tool results in conversation history before each LLM call. This saved **1.4MB in a single session** — more than all tool-result filters combined.
-- **Smart read staleness** — tracks file operations across the session. Keeps reads where the file was subsequently edited (model is working on it). Compresses old exploratory reads.
-- **Python traceback compression** — generic crash output compression (first 2 + last 2 frames + exception). RTK only has pytest-specific filtering. Handles Python 3.13 pointer lines.
-- **Secret masking** — prevents API keys from entering the LLM context sent to Anthropic.
-- **Compound command dispatch** — handles `source && pytest | tail` chains that real coding sessions produce.
-
-### Where RTK wins
-
-- **Breadth** — 60+ TOML filters covering Rust, Go, .NET, Ruby, Docker, K8s, Terraform, Ansible, and more.
-- **TOML DSL** — declarative filter definitions with `strip_lines_matching`, `match_output`, `max_lines`, and inline tests.
-- **Adaptive learning** — watches for repeated CLI mistakes and suggests corrections.
-- **Analytics** — rich per-day/week/month reporting with API cost integration.
-- **File read filtering** — language-aware comment/import stripping (though we consider this harmful for coding agents).
-
-## Measured Results
-
-From a real coding session:
-
-```
-Token Compressor Stats
-  Commands processed: 42
-  Commands compressed: 15
-  Original: 11.0KB → Compressed: 4.8KB (56% saved)
-  Context retroactive: 1.4MB saved (8 compressions)
-```
-
-The context retroactive compression is the dominant savings — **1.4MB in one session** from compressing stale file reads and old command outputs.
+The extension intentionally does not filter file content such as `cat`. Full source text is needed for reliable coding edits.
 
 ## License
 

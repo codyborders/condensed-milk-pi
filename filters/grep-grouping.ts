@@ -15,63 +15,46 @@ interface SearchResult {
 
 const MIN_RESULTS_TO_GROUP = 15;
 const MAX_MATCHES_PER_FILE = 10;
-const MAX_TOTAL_SHOWN = 50;
-const MAX_LINE_LENGTH = 70;
-
-function compactPath(path: string, maxLen: number): string {
-  if (path.length <= maxLen) return path;
-  const parts = path.split("/");
-  if (parts.length <= 2) return `...${path.slice(-(maxLen - 3))}`;
-  return `.../${parts.slice(-2).join("/")}`.slice(-maxLen);
-}
-
 function filterGrep(stdout: string, _command: string): FilterResult | null {
+  const lines = stdout.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  if (lines.length === 0 || lines.some((line) => line.length === 0)) return null;
+
   const results: SearchResult[] = [];
-  for (const line of stdout.split("\n")) {
-    if (!line.trim()) continue;
-    // file:linenum:content
-    const match = line.match(/^(.+?):(\d+):(.+)$/);
-    if (!match) continue;
-    results.push({
-      file: match[1] ?? "unknown",
-      lineNumber: match[2] ?? "?",
-      content: match[3] ?? "",
-    });
+  for (const line of lines) {
+    if (!isSafeSearchLine(line)) return null;
+    // Grep and rg default line output: complete-file-path:line-number:match.
+    // Greedy path capture preserves colons in filenames.
+    const match = line.match(/^(.+):(\d+):(.*)$/);
+    if (!match) return null;
+    results.push({ file: match[1] ?? "", lineNumber: match[2] ?? "", content: match[3] ?? "" });
   }
 
   if (results.length < MIN_RESULTS_TO_GROUP) return null;
 
   const byFile = new Map<string, SearchResult[]>();
-  for (const r of results) {
-    const existing = byFile.get(r.file) ?? [];
-    existing.push(r);
-    byFile.set(r.file, existing);
-  }
+  for (const result of results) byFile.set(result.file, [...(byFile.get(result.file) ?? []), result]);
 
-  const lines = [`${results.length} matches in ${byFile.size} files:`, ""];
-  const sortedFiles = [...byFile.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-
+  const out = [`${results.length} matches in ${byFile.size} files:`, ""];
   let shown = 0;
-  for (const [file, matches] of sortedFiles) {
-    if (shown >= MAX_TOTAL_SHOWN) break;
-    lines.push(`> ${compactPath(file, 50)} (${matches.length} matches):`);
-    for (const m of matches.slice(0, MAX_MATCHES_PER_FILE)) {
-      let cleaned = m.content.trim();
-      if (cleaned.length > MAX_LINE_LENGTH) cleaned = `${cleaned.slice(0, MAX_LINE_LENGTH - 3)}...`;
-      lines.push(`    ${m.lineNumber}: ${cleaned}`);
+  for (const [file, matches] of [...byFile.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    out.push(`> ${file} (${matches.length} matches):`);
+    for (const match of matches.slice(0, MAX_MATCHES_PER_FILE)) {
+      out.push(`    ${match.lineNumber}: ${match.content}`);
       shown++;
     }
-    if (matches.length > MAX_MATCHES_PER_FILE) {
-      lines.push(`  +${matches.length - MAX_MATCHES_PER_FILE} more`);
-    }
-    lines.push("");
+    out.push("");
   }
 
-  if (results.length > shown) {
-    lines.push(`... +${results.length - shown} more matches`);
-  }
+  const omitted = results.length - shown;
+  if (omitted > 0) out.push(`[${omitted} matches omitted]`);
+  return { output: out.join("\n"), category: "fast" };
+}
 
-  return { output: lines.join("\n"), category: "fast" };
+function isSafeSearchLine(line: string): boolean {
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\r]/.test(line)) return false;
+  return !/^(?:grep|rg):\s/i.test(line) &&
+    !/^(?:binary file|error:|warning:|permission denied|no such file)/i.test(line);
 }
 
 // Register for grep/rg command prefixes

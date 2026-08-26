@@ -1,0 +1,1097 @@
+{
+  "generatedAt": "2026-08-26T22:23:21.002Z",
+  "nodeVersion": "v25.8.2",
+  "platform": {
+    "name": "darwin",
+    "release": "23.5.0",
+    "arch": "arm64"
+  },
+  "cpu": {
+    "model": "Apple M1 Pro",
+    "logicalCores": 10
+  },
+  "config": {
+    "seed": 1296649291,
+    "warmupIterations": 5,
+    "measuredIterations": 20,
+    "hookOptions": {
+      "contextUsage": 1,
+      "previousCutoff": 0,
+      "zoneEntered": -1
+    },
+    "p95BudgetsMs": {
+      "100": 25,
+      "1000": 75,
+      "5000": 250,
+      "10000": 500
+    },
+    "garbageCollectionExposed": true
+  },
+  "inputs": {
+    "messageCounts": [
+      100,
+      1000,
+      5000,
+      10000
+    ],
+    "bashDensities": [
+      0.25,
+      0.5,
+      0.9
+    ],
+    "cwdDistributions": [
+      "single",
+      "balanced",
+      "skewed"
+    ],
+    "historyGenerator": "fixed synthetic tool-result histories; deterministic seed and payload"
+  },
+  "measurements": [
+    {
+      "messageCount": 100,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 25,
+        "cwdCounts": [
+          25,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "72a1999f9aa5efbe4fcc7490fe600560b05c9eadef1075620c3a4e103e5a9803"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.055,
+      "p95Ms": 0.099,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 338672,
+      "totalMasks": 25,
+      "totalMasksMeasured": 500,
+      "masksPerRun": 25,
+      "outputHash": "c14f5df42c6a407c8dd36ffbe6c5a3d65ecc097aa7b31d4a8ed8784b8e7df33f",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 25,
+        "cwdCounts": [
+          6,
+          5,
+          6,
+          8
+        ],
+        "inputHash": "1dd1f9f0ec018cf9cc5120fa7ffb1c4abb6d1259bbb8bd1f95a211d113258804"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.036,
+      "p95Ms": 0.049,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 80656,
+      "totalMasks": 25,
+      "totalMasksMeasured": 500,
+      "masksPerRun": 25,
+      "outputHash": "50d8cdf956f54237a5eb51d0568917069366a3096056b11bd6c1dd5f8c6a54e3",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 25,
+        "cwdCounts": [
+          22,
+          1,
+          1,
+          1
+        ],
+        "inputHash": "8efd9e7657c96bd7e6243e7331cadd7e1eb02da8c579b12044564af9037e1b53"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.038,
+      "p95Ms": 0.042,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 79728,
+      "totalMasks": 25,
+      "totalMasksMeasured": 500,
+      "masksPerRun": 25,
+      "outputHash": "4edbe47e778fd96c055b50c7fd50284ab5a732b8c3ba848ab8e46a3567c6b7f8",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 50,
+        "cwdCounts": [
+          50,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "5aae1b522361826eadef72ab75f78d09468d9e4a8fab2df15a80f9c6b3332ddc"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.071,
+      "p95Ms": 0.088,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 151944,
+      "totalMasks": 47,
+      "totalMasksMeasured": 940,
+      "masksPerRun": 47,
+      "outputHash": "126b206ee11de096c4f8b28610b9fed8225411c1656f736468aca19d116bfe6c",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 50,
+        "cwdCounts": [
+          14,
+          12,
+          11,
+          13
+        ],
+        "inputHash": "785cd37ef512afda31134ae69ed578da44d37421f3be3ef73cc0009bcc76bfed"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.06,
+      "p95Ms": 0.079,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 165032,
+      "totalMasks": 47,
+      "totalMasksMeasured": 940,
+      "masksPerRun": 47,
+      "outputHash": "7a907ae8ee5e070cbd131c53814934c92fb90751941d5647f51db7b161e56afc",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 50,
+        "cwdCounts": [
+          44,
+          2,
+          2,
+          2
+        ],
+        "inputHash": "4259b89779472896b49c635c02119a28dbd5c5c1b846e42a974a8265be7e2187"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.063,
+      "p95Ms": 0.07,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 150016,
+      "totalMasks": 47,
+      "totalMasksMeasured": 940,
+      "masksPerRun": 47,
+      "outputHash": "53ac5870a96bc1ad7645b6b860b25e8da020052b1f737040c34ed916f7145bf4",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 90,
+        "cwdCounts": [
+          90,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "f1b4aca2e8221f89c96acfc104bfece387f4fa89b40fb045949be8e36a8a15ed"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.104,
+      "p95Ms": 0.138,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 271320,
+      "totalMasks": 85,
+      "totalMasksMeasured": 1700,
+      "masksPerRun": 85,
+      "outputHash": "bfd76aa4d879d90ad0d6fe40efebbc4496a7c7c0444ec5cb127a4f73c37be0d2",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 90,
+        "cwdCounts": [
+          23,
+          21,
+          22,
+          24
+        ],
+        "inputHash": "69a7e17f884a16a601850cc78dabd0b1e49200dc0ea383148854f26b3441513c"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.099,
+      "p95Ms": 0.136,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 263712,
+      "totalMasks": 85,
+      "totalMasksMeasured": 1700,
+      "masksPerRun": 85,
+      "outputHash": "c10beb9f2157d554f730cf744538cdcc375ed7bf9d583481c7336d0c5021df3d",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 90,
+        "cwdCounts": [
+          77,
+          4,
+          4,
+          5
+        ],
+        "inputHash": "57b32ac022dec8b431af2452bc172074e06aea23c51174b7a4b37a51ba4093af"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.099,
+      "p95Ms": 0.116,
+      "p95BudgetMs": 25,
+      "observedHeapDeltaBytes": 235968,
+      "totalMasks": 85,
+      "totalMasksMeasured": 1700,
+      "masksPerRun": 85,
+      "outputHash": "0dcdc84158f3ae4bdf376d966f073f2fb70ccf6250ccb7027624121d5306c902",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 250,
+        "cwdCounts": [
+          250,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "5ad9a7c7ae9552314772167eb81e6d13d7e37db24d29b850e78ab25e9c4c524d"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.314,
+      "p95Ms": 0.448,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 652976,
+      "totalMasks": 238,
+      "totalMasksMeasured": 4760,
+      "masksPerRun": 238,
+      "outputHash": "4ed76816a56a09504519d12a0c970f16505300a9d828e52d643b9d8551bd6642",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 250,
+        "cwdCounts": [
+          62,
+          62,
+          63,
+          63
+        ],
+        "inputHash": "7790dc91614273879d43454ff5f91045a2f9842acab9c576070012a7dab06c3a"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.307,
+      "p95Ms": 0.334,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 648032,
+      "totalMasks": 238,
+      "totalMasksMeasured": 4760,
+      "masksPerRun": 238,
+      "outputHash": "0c48c4355c89e3c93bbda595f9ea62b0131786bb68b4da80c1924e1fbda02ab3",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 250,
+        "cwdCounts": [
+          213,
+          13,
+          12,
+          12
+        ],
+        "inputHash": "d0f4f8fbba9745b91969b2393c10a5a6a9c61e04593e42b1f89f23a13d1c896f"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.302,
+      "p95Ms": 0.353,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 651288,
+      "totalMasks": 238,
+      "totalMasksMeasured": 4760,
+      "masksPerRun": 238,
+      "outputHash": "31f875b309b6ac5985b4d89cd981bd88d71213a1738b1ecdc185e7be99b7cea6",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 500,
+        "cwdCounts": [
+          500,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "94b4d1d34c9e6d5b22289f616649eca4ce5b4d31e7a788b621d42c49a97f2b81"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.438,
+      "p95Ms": 0.586,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 1264928,
+      "totalMasks": 475,
+      "totalMasksMeasured": 9500,
+      "masksPerRun": 475,
+      "outputHash": "0a118046aefabc79da0e5bdac93bf46525caf5dba2257bb9dd8e3a8200005b18",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 500,
+        "cwdCounts": [
+          125,
+          125,
+          125,
+          125
+        ],
+        "inputHash": "bef1bfd40661d67eb539d4760ae07ccfe0fb255a69faceb06d5d93e21d15aeef"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.527,
+      "p95Ms": 0.733,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 1218064,
+      "totalMasks": 475,
+      "totalMasksMeasured": 9500,
+      "masksPerRun": 475,
+      "outputHash": "3405718e94cb8d4cd6be45d737748e66f286cdb1d4d65aa6ed59441b40cd8de5",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 500,
+        "cwdCounts": [
+          425,
+          25,
+          25,
+          25
+        ],
+        "inputHash": "19417c6f01f084d94daefe2bf73fe80d184230ff45d010c858b1f875f6237809"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.534,
+      "p95Ms": 0.724,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 1216344,
+      "totalMasks": 475,
+      "totalMasksMeasured": 9500,
+      "masksPerRun": 475,
+      "outputHash": "f9fba6e3fd5bf1c4cce3aea49f63b1e4c9d675093d382509a366322168ab9fa4",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 900,
+        "cwdCounts": [
+          900,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "43bbf13258743eebfe04f372e1ce1d3e37d7ccba85d18ffa4599229ac7c2e118"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.886,
+      "p95Ms": 1.202,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 2191312,
+      "totalMasks": 855,
+      "totalMasksMeasured": 17100,
+      "masksPerRun": 855,
+      "outputHash": "c4280b38b28da79bab74ef63d64fe5688e28b2f293a03e30dfe44cfdb921d93e",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 900,
+        "cwdCounts": [
+          225,
+          225,
+          225,
+          225
+        ],
+        "inputHash": "bf4b2b33a66a33a86c562503c0be8f16f632121dce0b553a5ac755b15be6a837"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.98,
+      "p95Ms": 1.215,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 2195256,
+      "totalMasks": 855,
+      "totalMasksMeasured": 17100,
+      "masksPerRun": 855,
+      "outputHash": "5cf7d0ef68d89ec72fe87323f6d0b4e96c249d6b1847a6072240726aa25a4676",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 900,
+        "cwdCounts": [
+          765,
+          45,
+          45,
+          45
+        ],
+        "inputHash": "b735c45c13671c6b010a3dcd17a4d0468d9f93d37d330e9e0bbc1a97073225e0"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 0.868,
+      "p95Ms": 1.049,
+      "p95BudgetMs": 75,
+      "observedHeapDeltaBytes": 2195256,
+      "totalMasks": 855,
+      "totalMasksMeasured": 17100,
+      "masksPerRun": 855,
+      "outputHash": "6a82cc2f804fe81622443f2ed85facc2854430d6c463552be6894df0ae6d0be3",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 1250,
+        "cwdCounts": [
+          1250,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "d74e3f9ab2f5d5f69b6b44ba44a1453bba16ff6e6ac8829d19abbf0c2991fd2a"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 1.159,
+      "p95Ms": 1.592,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 3071008,
+      "totalMasks": 1188,
+      "totalMasksMeasured": 23760,
+      "masksPerRun": 1188,
+      "outputHash": "ce7ddc0d9fc166b5db6284062ffc450e3e00c8b43f3c674fee855d7568e62012",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 1250,
+        "cwdCounts": [
+          310,
+          310,
+          315,
+          315
+        ],
+        "inputHash": "4af3f712fb9a918704d5ad7d689fdefa18bf4c97b15f6db5c005560336a50303"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 1.268,
+      "p95Ms": 1.69,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 3061960,
+      "totalMasks": 1188,
+      "totalMasksMeasured": 23760,
+      "masksPerRun": 1188,
+      "outputHash": "e08305af0083246c0eb88916388997936d06bf528a5d195ba6f73b3d2ec3c548",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 1250,
+        "cwdCounts": [
+          1065,
+          65,
+          60,
+          60
+        ],
+        "inputHash": "99fc82ebe20c9b054a715df90c8211bee31f5c4e3a0a142f314f775145cf41aa"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 1.211,
+      "p95Ms": 1.623,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 3061960,
+      "totalMasks": 1188,
+      "totalMasksMeasured": 23760,
+      "masksPerRun": 1188,
+      "outputHash": "7131faf33a3e14da0c690451557fe257d4e1822dac930de9a3393a000db36616",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 2500,
+        "cwdCounts": [
+          2500,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "c2593c291261ed6110987b5eddf11b12aacd727869790253a7d4b06353b30b07"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 2.633,
+      "p95Ms": 3.04,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 6100616,
+      "totalMasks": 2374,
+      "totalMasksMeasured": 47480,
+      "masksPerRun": 2374,
+      "outputHash": "6d168ee916d51642a3ce4969c08bdaed2502c4a1f4a3473ebfdcc572a74edb29",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 2500,
+        "cwdCounts": [
+          625,
+          625,
+          625,
+          625
+        ],
+        "inputHash": "358177ae6f8fe1093ab95f635d40858766acc52d028c4b70e657e2eaa5dd95c5"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 2.367,
+      "p95Ms": 3.047,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 6091096,
+      "totalMasks": 2374,
+      "totalMasksMeasured": 47480,
+      "masksPerRun": 2374,
+      "outputHash": "47d52c00f795180ca136c0d2f1f0fcfcf8ff99f87386e7d30d2d9894e767705a",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 2500,
+        "cwdCounts": [
+          2125,
+          125,
+          125,
+          125
+        ],
+        "inputHash": "eef99888590fdbb83200a7e389b7f8aaeda253dccea6b29d34b90cadb4e22da7"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 2.395,
+      "p95Ms": 2.898,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 6091096,
+      "totalMasks": 2374,
+      "totalMasksMeasured": 47480,
+      "masksPerRun": 2374,
+      "outputHash": "d97a08df74ed6b6c550f6aaf2d28396059707a20a86ae9a83a27d80c3e11262f",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 4500,
+        "cwdCounts": [
+          4500,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "04211728489508f4a31c145e3e173c5193f729d97df14ff6fcc75ac419f5e071"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 4.3,
+      "p95Ms": 4.709,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 10916776,
+      "totalMasks": 4274,
+      "totalMasksMeasured": 85480,
+      "masksPerRun": 4274,
+      "outputHash": "941c065091340d9fadaa4953ecc87d9bd438dba14f8a3191214b9ae105c1beac",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 4500,
+        "cwdCounts": [
+          1125,
+          1125,
+          1125,
+          1125
+        ],
+        "inputHash": "359e44d8d64079cdf683307316dd9c801bdce2f5d8e83acb8bb2a978e8aa9e8e"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 4.123,
+      "p95Ms": 4.75,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 10955264,
+      "totalMasks": 4274,
+      "totalMasksMeasured": 85480,
+      "masksPerRun": 4274,
+      "outputHash": "ce55f803d2f48cc7b8d3eca139610d7f0457647ec32cd9a1c405061e3b93ac10",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 4500,
+        "cwdCounts": [
+          3825,
+          225,
+          225,
+          225
+        ],
+        "inputHash": "15fc6f47ddd12d442a085fc96fd95b7efd721a86270fb89069ceb8013f0ace46"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 4.424,
+      "p95Ms": 5.762,
+      "p95BudgetMs": 250,
+      "observedHeapDeltaBytes": 10944824,
+      "totalMasks": 4274,
+      "totalMasksMeasured": 85480,
+      "masksPerRun": 4274,
+      "outputHash": "7bda7483e83740053092d9cbfac69b28b6a7c8ba00a10c32beb3b6dddd49dfce",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 2500,
+        "cwdCounts": [
+          2500,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "8e4b2e496e5233199a730f4dd73e9613ddc0a66ad418cf459c8b5f2565bc7d1a"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 2.443,
+      "p95Ms": 3.143,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 6174544,
+      "totalMasks": 2378,
+      "totalMasksMeasured": 47560,
+      "masksPerRun": 2378,
+      "outputHash": "077f7578e3d8493bdaa2e826fa37632d0fa598f2be41c2f9eb6ac42327316dd9",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 2500,
+        "cwdCounts": [
+          620,
+          620,
+          630,
+          630
+        ],
+        "inputHash": "a22513edcb8cfc3845f8524ff958f2ac21a3cd638dd462a541f6e43161ccaff7"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 2.308,
+      "p95Ms": 3.1,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 6174544,
+      "totalMasks": 2378,
+      "totalMasksMeasured": 47560,
+      "masksPerRun": 2378,
+      "outputHash": "ebd2328311887a51e64518344e210e3c8edda88bcef864d8421b920fa93792d3",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 2500,
+        "cwdCounts": [
+          2130,
+          130,
+          120,
+          120
+        ],
+        "inputHash": "1938636ac4dd2ff7d6a90aec5ce264cc0e8f585915a476cefd0e2c0be168bb4a"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 2.416,
+      "p95Ms": 3.29,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 6174544,
+      "totalMasks": 2378,
+      "totalMasksMeasured": 47560,
+      "masksPerRun": 2378,
+      "outputHash": "b6956e31ab68c608f2a2a71686f3ec7458c5db8181cdd63ca03763223b7b29a1",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 5000,
+        "cwdCounts": [
+          5000,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "09e8f8843a9a4fd1bcc57d4ddc5dd0db50074b1920f0713b02b1be68d0c0a056"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 4.504,
+      "p95Ms": 5.441,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 12318784,
+      "totalMasks": 4752,
+      "totalMasksMeasured": 95040,
+      "masksPerRun": 4752,
+      "outputHash": "d9ed63759ff4085faf585e3e79f4dd397d7ff695b406b1c12bffc44e66c9c0ca",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 5000,
+        "cwdCounts": [
+          1250,
+          1250,
+          1250,
+          1250
+        ],
+        "inputHash": "5d28850d7d47401e8bf7a37cbe701e218bb23a2bfe9b70ab5abe8605f7d3a68d"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 4.323,
+      "p95Ms": 5.428,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 12318784,
+      "totalMasks": 4752,
+      "totalMasksMeasured": 95040,
+      "masksPerRun": 4752,
+      "outputHash": "8fc06bd770124e35a4d13e83f52063f09b3578c2d72ba905442a7a0b12cc2a99",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 5000,
+        "cwdCounts": [
+          4250,
+          250,
+          250,
+          250
+        ],
+        "inputHash": "9d6db20a03e7ac75a0d17deabaf62b8431c70ce1b1383ab7976a1bca9619c323"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 4.249,
+      "p95Ms": 5.279,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 12304896,
+      "totalMasks": 4752,
+      "totalMasksMeasured": 95040,
+      "masksPerRun": 4752,
+      "outputHash": "38e6c8046332ba2905e70181371170400cdf54c9c158b396f0cfa1ebc7f80a0e",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 9000,
+        "cwdCounts": [
+          9000,
+          0,
+          0,
+          0
+        ],
+        "inputHash": "8a3a8028a48b35980f14ab011bc51856dbf410c7609ce1dbf0962d5543ed275d"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 8.024,
+      "p95Ms": 9.56,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 21869976,
+      "totalMasks": 8551,
+      "totalMasksMeasured": 171020,
+      "masksPerRun": 8551,
+      "outputHash": "64384b23f2840913a108291d1ea58799739cc79e96cbfc4d00fecfe9a7dfe5ce",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 9000,
+        "cwdCounts": [
+          2250,
+          2250,
+          2250,
+          2250
+        ],
+        "inputHash": "de382f328900dec8ba9e939aa39950a4b4d0157982a1c7740372619ac5235678"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 7.961,
+      "p95Ms": 9.827,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 21870152,
+      "totalMasks": 8551,
+      "totalMasksMeasured": 171020,
+      "masksPerRun": 8551,
+      "outputHash": "65198418978a51a955348aee57b53d93cb25050145d4886f0085df148eb6499f",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "input": {
+        "seed": 1296649291,
+        "bashMessages": 9000,
+        "cwdCounts": [
+          7650,
+          450,
+          450,
+          450
+        ],
+        "inputHash": "b66fd4f72b694978f072665c34bad06f4341f71dc4ef02d3ad585ba98ca8698a"
+      },
+      "warmupIterations": 5,
+      "measuredIterations": 20,
+      "medianMs": 7.71,
+      "p95Ms": 9.058,
+      "p95BudgetMs": 500,
+      "observedHeapDeltaBytes": 21870632,
+      "totalMasks": 8551,
+      "totalMasksMeasured": 171020,
+      "masksPerRun": 8551,
+      "outputHash": "65d7961fcf2ab13ebdc83ac4c62609d688507158988fb294d585a926ea56a167",
+      "outputHashCount": 1,
+      "repeatedOutputHashesMatch": true,
+      "budgetPassed": true
+    }
+  ],
+  "allBudgetsPassed": true,
+  "budgetFailures": []
+}

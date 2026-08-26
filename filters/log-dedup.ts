@@ -3,7 +3,6 @@
  *
  * Collapses consecutive identical lines (modulo timestamps) to "line [xN]".
  * Catches journalctl, tail, docker logs, tmux capture-pane output.
- * Caps at 100 unique lines.
  */
 import { registerFilter, type FilterResult } from "./dispatch.js";
 
@@ -41,36 +40,23 @@ function filterLogOutput(input: string): FilterResult | null {
   if (lines.length <= 15) return null;
 
   const out: string[] = [];
-  let prevCanonical = "";
-  let prevLine = "";
-  let dupCount = 0;
-  let emitted = 0;
+  let previous: { canonical: string; line: string; count: number } | null = null;
+
+  const emit = (): void => {
+    if (!previous) return;
+    out.push(previous.count > 1 ? `${previous.line}  [x${previous.count}]` : previous.line);
+  };
 
   for (const line of lines) {
-    if (line.length === 0) continue;
-    if (emitted >= 100) break;
-
     const canonical = normalize(line);
-
-    if (canonical === prevCanonical && canonical.length > 0) {
-      dupCount++;
-      prevLine = line;
+    if (canonical.length > 0 && previous !== null && previous.canonical === canonical) {
+      previous.count++;
       continue;
     }
-
-    if (prevLine.length > 0) {
-      out.push(dupCount > 0 ? `${prevLine}  [x${dupCount + 1}]` : prevLine);
-      emitted++;
-    }
-
-    prevCanonical = canonical;
-    prevLine = line;
-    dupCount = 0;
+    emit();
+    previous = { canonical, line, count: 1 };
   }
-
-  if (prevLine.length > 0 && emitted < 100) {
-    out.push(dupCount > 0 ? `${prevLine}  [x${dupCount + 1}]` : prevLine);
-  }
+  emit();
 
   const result = out.join("\n");
   return result.length < input.length ? { output: result, category: "fast" } : null;

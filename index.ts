@@ -13,7 +13,8 @@ import { readFileSync, writeFileSync, mkdirSync, appendFileSync, existsSync, sta
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
-import { dispatch, registeredCommands, registerContentFallback } from "./filters/dispatch.js";
+import { dispatch, registeredCommands, configureGlobalFilters, configureProjectFilters, redactPrivacyLines, resetFilters } from "./filters/dispatch.js";
+import { registerJsonSchemaConfig } from "./filters/json-schema.js";
 
 // Import filter modules — each self-registers via registerFilter()
 import "./filters/pytest.js";
@@ -32,16 +33,17 @@ import "./filters/grep-grouping.js";
 import "./filters/build.js";
 import "./filters/test-runners.js";
 import "./filters/install.js";
-import { filterJsonOutput } from "./filters/json-schema.js";
 import {
   compressStaleToolResults,
   decideCutoff,
   resolveRules,
   emptyUserConfig,
+  validateUserConfig,
   type UserConfig,
   type ResolvedRules,
 } from "./filters/context-compress.js";
 import { stripAnsi } from "./filters/ansi-strip.js";
+import { BoundedMap, BoundedSet, MAX_TRACKER_ENTRIES } from "./filters/bounded-tracker.js";
 import {
   resolveProfile,
   BUILT_IN_PROFILES,
@@ -174,10 +176,33 @@ function loadProfile(): { profile: Profile; activeName: string; warnings: string
   });
 }
 
+function reportFilterWarnings(sourcePath: string, warnings: string[]): void {
+  for (const warning of warnings) {
+    try {
+      process.stderr.write(`condensed-milk: ${sourcePath}: ${warning}.\n`);
+    } catch { /* warning output must not break extension startup */ }
+  }
+}
+
 function loadConfig(): CompressorConfig {
   try {
     const raw = readFileSync(CONFIG_PATH, "utf-8");
     const parsed = JSON.parse(raw);
+    // v1.10.0 (milestone 3C1): global-only explicit JSON allowlist. Registers
+    // each jsonSchemaCommands prefix under the stable json-schema ID
+    // (default off) BEFORE the filters toggle below can enable them. Project
+    // configs never reach this path — the allowlist is global-only.
+    reportFilterWarnings(CONFIG_PATH, registerJsonSchemaConfig(parsed.jsonSchemaCommands));
+    if (parsed?.filters && typeof parsed.filters === "object" && !Array.isArray(parsed.filters)) {
+      reportFilterWarnings(CONFIG_PATH, configureGlobalFilters(parsed.filters as Record<string, unknown>));
+    }
+    try {
+      const projectPath = join(process.cwd(), "condensed-milk.config.json");
+      const project = JSON.parse(readFileSync(projectPath, "utf-8"));
+      if (project?.filters && typeof project.filters === "object" && !Array.isArray(project.filters)) {
+        reportFilterWarnings(projectPath, configureProjectFilters(project.filters as Record<string, unknown>));
+      }
+    } catch { /* project filter settings optional */ }
     const isValidArr = (v: unknown, len?: number) =>
       Array.isArray(v) && v.every((x) => typeof x === "number" && x >= 0 && x <= 1) &&
       (len === undefined || v.length === len);
@@ -208,6 +233,13 @@ function loadConfig(): CompressorConfig {
     }
     return cfg;
   } catch {
+    try {
+      const projectPath = join(process.cwd(), "condensed-milk.config.json");
+      const project = JSON.parse(readFileSync(projectPath, "utf-8"));
+      if (project?.filters && typeof project.filters === "object" && !Array.isArray(project.filters)) {
+        reportFilterWarnings(projectPath, configureProjectFilters(project.filters as Record<string, unknown>));
+      }
+    } catch { /* project filter settings optional */ }
     return { thresholds: [...DEFAULT_CONFIG.thresholds], coverage: [...DEFAULT_CONFIG.coverage], showStatus: DEFAULT_CONFIG.showStatus };
   }
 }
@@ -252,19 +284,21 @@ function loadUserRulesConfig(): UserConfig {
       if (e?.code === "ENOENT") continue;
       throw new Error(`condensed-milk: cannot read rules config '${p}': ${e?.message ?? e}`);
     }
-    const c = JSON.parse(raw);
-    if (Array.isArray(c.referenceBasenames)) cfg.referenceBasenames.push(...c.referenceBasenames);
-    if (Array.isArray(c.referencePathSubstrings)) cfg.referencePathSubstrings.push(...c.referencePathSubstrings);
-    if (Array.isArray(c.invalidationRules)) cfg.invalidationRules.push(...c.invalidationRules);
-    if (c.disableDefaults === true) cfg.disableDefaults = true;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e: any) {
+      throw new Error(`condensed-milk: invalid JSON in rules config '${p}': ${e?.message ?? e}`);
+    }
+    const c = validateUserConfig(parsed, p);
+    cfg.referenceBasenames.push(...c.referenceBasenames);
+    cfg.referencePathSubstrings.push(...c.referencePathSubstrings);
+    cfg.invalidationRules.push(...c.invalidationRules);
+    if (c.disableDefaults) cfg.disableDefaults = true;
   }
   return cfg;
 }
 
-// Resolved once at extension load. pi reloads the extension on each
-// session start, so cwd-based project-local config is captured per
-// session — good enough for the single-cwd-per-session common case.
-const USER_RULES: ResolvedRules = resolveRules(loadUserRulesConfig());
 
 // v1.9.0 (ADR-029): constant system-prompt addendum that teaches a
 // self-sufficient looping agent what `[cm-masked …]` placeholders mean
@@ -291,9 +325,6 @@ interface TurnCacheData {
 }
 
 export default function tokenCompressor(pi: ExtensionAPI) {
-  // Register content-based fallback filters
-  registerContentFallback("json", filterJsonOutput);
-
   // v1.9.0 (ADR-029): append CM_EXPLAINER to every turn's system prompt.
   // Chained by pi across extensions (per BeforeAgentStartEventResult docs)
   // — safe to compose with other extensions contributing systemPrompt.
@@ -310,6 +341,7 @@ export default function tokenCompressor(pi: ExtensionAPI) {
 
   // Config
   let config: CompressorConfig = loadConfig();
+  let userRules: ResolvedRules = resolveRules(loadUserRulesConfig());
   // v1.10.0: active profile (resolved at session start; reload on session_start).
   let activeProfile: Profile = BUILT_IN_PROFILES.default;
   let activeProfileName = "default";
@@ -355,6 +387,11 @@ export default function tokenCompressor(pi: ExtensionAPI) {
     totalInput = 0;
     totalOutput = 0;
     turnCounter = 0;
+    // Reload filter configuration for current global and project files. Reset
+    // first so removed project settings and dynamic JSON entries cannot persist.
+    resetFilters();
+    config = loadConfig();
+    userRules = resolveRules(loadUserRulesConfig());
     // v1.8.0: reset telemetry session state
     sessionStartIso = new Date().toISOString();
     sessionStartReason = (event as any)?.reason ?? "startup";
@@ -512,29 +549,41 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       maskedBashCommands.delete(command);
     }
 
-    // Extract text content from tool result (preserve non-text blocks like images)
-    const textParts = event.content
-      .filter((c): c is { type: "text"; text: string } => c.type === "text")
-      .map((c) => c.text);
-    const nonTextBlocks = event.content.filter((c) => c.type !== "text");
-    const originalText = textParts.join("\n");
-
-    if (originalText.length === 0) return;
-
-    // ANSI strip runs first on ALL bash output (zero info loss)
-    let stdout = stripAnsi(originalText);
-
+    // Semantic filters need the complete bash output. With multiple text
+    // blocks, only strip ANSI per block and apply mandatory line-preserving
+    // environment redaction (v1.10.1 blocker 1: privacy must not depend on
+    // single-block output). Keep every block in place.
+    const textBlockCount = event.content.filter((block) => block.type === "text").length;
+    const semanticCompression = textBlockCount === 1;
     totalCommands++;
+    let originalBytes = 0;
+    let compressedBytes = 0;
+    let changed = false;
+    const content = event.content.map((block) => {
+      if (block.type !== "text") return block;
+      const originalText = block.text;
+      const stdout = stripAnsi(originalText);
+      const result = semanticCompression
+        ? dispatch({
+            command,
+            stdout,
+            isError: Boolean(event.isError),
+            toolName: event.toolName,
+            details: event.details,
+          })
+        : redactPrivacyLines(stdout);
+      const finalOutput = typeof result === "string" ? result : result ? result.output : stdout;
+      if (finalOutput === originalText) return block;
+      originalBytes += originalText.length;
+      compressedBytes += finalOutput.length;
+      changed = true;
+      return { ...block, text: finalOutput };
+    });
 
-    // Try semantic compression
-    const result = dispatch(command, stdout);
-    const finalOutput = result ? result.output : stdout;
+    if (!changed) return;
 
-    const saved = originalText.length - finalOutput.length;
-    if (saved <= 0) return;
-
-    totalOriginal += originalText.length;
-    totalCompressed += finalOutput.length;
+    totalOriginal += originalBytes;
+    totalCompressed += compressedBytes;
     compressedCount++;
 
     const totalSaved = totalOriginal - totalCompressed;
@@ -546,10 +595,6 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       );
     }
 
-    const content: Record<string, unknown>[] = [
-      { type: "text" as const, text: finalOutput },
-      ...nonTextBlocks,
-    ];
     const ret: Record<string, unknown> = { content };
     if (event.isError) ret.isError = true;
     return ret;
@@ -567,12 +612,12 @@ export default function tokenCompressor(pi: ExtensionAPI) {
   // pi re-feeds original (unmasked) messages every context event, so we
   // re-apply masks every turn. maskedReadPaths / maskedBashCommands record
   // the FIRST turn we masked each path/command (only set if absent).
-  // When an item is re-read, we delete it from the tracker. Rate
-  // denominators use ever-masked sets which are never evicted.
-  const maskedReadPaths = new Map<string, number>();
-  const maskedBashCommands = new Map<string, number>();
-  const everMaskedReads = new Set<string>();
-  const everMaskedBashes = new Set<string>();
+  // When an item is re-read, we delete it from the tracker. All trackers
+  // have a fixed insertion-order bound; oldest entries evict deterministically.
+  const maskedReadPaths = new BoundedMap<string, number>(MAX_TRACKER_ENTRIES);
+  const maskedBashCommands = new BoundedMap<string, number>(MAX_TRACKER_ENTRIES);
+  const everMaskedReads = new BoundedSet<string>(MAX_TRACKER_ENTRIES);
+  const everMaskedBashes = new BoundedSet<string>(MAX_TRACKER_ENTRIES);
   let reReadByRead = 0;
   let reReadByBash = 0;
   let reReadTurnsDeltaSum = 0;  // sum of (currentTurn - firstMaskedTurn)
@@ -647,7 +692,7 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       contextUsage,
       previousCutoff: persistentCutoff,
       zoneEntered,
-      rules: USER_RULES,
+      rules: userRules,
       // v1.10.0: profile-driven knobs.
       placeholderFormat: activeProfile.placeholderFormat,
       maskOldThinking: activeProfile.maskOldThinking,

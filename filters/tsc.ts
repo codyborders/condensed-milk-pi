@@ -1,58 +1,47 @@
 /**
- * TypeScript compiler (tsc) output filter.
+ * TypeScript compiler output filter.
  *
- * Clean output → "tsc: ok"
- * Errors → group by file, count + first 3 samples per file.
+ * Only complete, recognized diagnostic sets are compressed. Success, watch,
+ * malformed, unknown, and failed command output pass through unchanged.
  */
-import { registerFilter, type FilterResult } from "./dispatch.js";
+import { registerFilter, type FilterContext, type FilterResult } from "./dispatch.js";
 
-interface FileErrors {
-  file: string;
-  count: number;
-  samples: string[];
-}
+const DIAGNOSTIC = /^(.+)\((\d+),(\d+)\):\s+error\s+(TS\d+):\s+(.+)$/;
+const SUMMARY = /^Found\s+(\d+)\s+errors?\.$/;
+const MAX_RETAINED_DIAGNOSTICS = 10;
 
-function filterTsc(input: string): FilterResult | null {
-  if (input.length === 0) return { output: "tsc: ok", category: "fast" };
+function filterTsc(context: FilterContext): FilterResult | null {
+  const input = context.stdout;
+  if (input.length === 0) return null;
+  if (/(?:^|\s)(?:-w|--watch|--watchFile|--watchDirectory)(?:\s|$)/.test(context.command)) return null;
+  if (/watch(?:ing| mode)|file changes detected|starting compilation in watch mode/i.test(input)) return null;
 
-  // No errors
-  if (!input.includes("error TS") && !input.includes("error ts")) {
-    return { output: "tsc: ok", category: "fast" };
+  const lines = input.split("\n");
+  let terminalIndex = lines.length - 1;
+  while (terminalIndex >= 0 && lines[terminalIndex].trim().length === 0) terminalIndex--;
+  if (terminalIndex < 0) return null;
+
+  const summaryLine = lines[terminalIndex].trim();
+  const summaryMatch = summaryLine.match(SUMMARY);
+  if (!summaryMatch) return null;
+  const expectedCount = Number(summaryMatch[1]);
+  if (!Number.isSafeInteger(expectedCount) || expectedCount < 1) return null;
+
+  const diagnostics: string[] = [];
+  for (let index = 0; index < terminalIndex; index++) {
+    const line = lines[index];
+    if (line.trim().length === 0) continue;
+    if (!DIAGNOSTIC.test(line)) return null;
+    diagnostics.push(line);
   }
+  if (diagnostics.length !== expectedCount) return null;
 
-  const files = new Map<string, FileErrors>();
-  let totalErrors = 0;
-
-  for (const line of input.split("\n")) {
-    // tsc error format: "src/foo.ts(12,5): error TS2345: ..."
-    const match = line.match(/^([^(]+)\(\d+,\d+\):\s*error\s+TS\d+/);
-    if (!match) continue;
-
-    const file = match[1];
-    totalErrors++;
-
-    let entry = files.get(file);
-    if (!entry) {
-      entry = { file, count: 0, samples: [] };
-      files.set(file, entry);
-    }
-    entry.count++;
-    if (entry.samples.length < 3) entry.samples.push(line.trim());
-  }
-
-  if (files.size === 0) return { output: "tsc: ok", category: "fast" };
-
-  const out: string[] = [`tsc: ${totalErrors} errors in ${files.size} files`];
-  const sorted = [...files.values()].sort((a, b) => b.count - a.count);
-  const fileSummaries = sorted.slice(0, 10).map((e) => {
-    const samples = e.samples.map((s) => `    ${s}`).join("\n");
-    return `  ${e.file}: ${e.count} errors\n${samples}`;
-  });
-  out.push(...fileSummaries);
-  if (sorted.length > 10) out.push(`  +${sorted.length - 10} more files`);
-
+  const retained = diagnostics.slice(0, MAX_RETAINED_DIAGNOSTICS);
+  const omitted = diagnostics.length - retained.length;
+  const out = [`tsc: ${summaryLine}`, ...retained];
+  if (omitted > 0) out.push(`+${omitted} more diagnostics`);
   return { output: out.join("\n"), category: "fast" };
 }
 
-registerFilter("tsc", filterTsc, "fast");
-registerFilter("npx tsc", filterTsc, "fast");
+registerFilter("tsc", filterTsc, "fast", { context: true });
+registerFilter("npx tsc", filterTsc, "fast", { context: true });

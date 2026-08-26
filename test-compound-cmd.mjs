@@ -51,13 +51,46 @@ for (const m of ["git-status", "git-diff", "git-log", "git-mutations",
                  "build", "test-runners", "install"]) {
   await import(join(tmp, "out", `${m}.js`));
 }
-const { dispatch } = await import(join(tmp, "out", "dispatch.js"));
+const { dispatch, registeredFilters, configureFilters, configureGlobalFilters, configureProjectFilters, registerContentFallback, registerFilter } = await import(join(tmp, "out", "dispatch.js"));
 
 let fails = 0;
 function check(name, pass, detail = "") {
   if (pass) console.log(`  PASS  ${name}`);
   else { console.error(`  FAIL  ${name}${detail ? " — " + detail : ""}`); fails++; }
 }
+
+// Safety contract: failed command output must not enter semantic filters.
+let failedResult;
+try {
+  failedResult = dispatch({
+    command: "pytest",
+    stdout: "================ 4 passed in 0.1s ================",
+    isError: true,
+    toolName: "bash",
+  });
+} catch {
+  failedResult = undefined;
+}
+check("failed output passes through", failedResult === null);
+const contextResult = dispatch({ command: "pytest", stdout: "================ 4 passed in 0.1s ================\n".repeat(20), isError: false, toolName: "bash", details: { exitCode: 0 } });
+check("structured FilterContext dispatches", contextResult !== null);
+const failedSummary = "================ FAILURES ================\nFAILED test_example.py::test_bad\n".repeat(10);
+check("pytest failure format passes through", dispatch({ command: "pytest", stdout: failedSummary, isError: false, toolName: "bash" }) === null);
+const buildResult = dispatch("npm run build", "Compiling source files\n".repeat(30));
+check("build filter disabled by default", buildResult === null);
+check("stable filter IDs exposed", typeof registeredFilters === "function" && registeredFilters().some((f) => f.id === "pytest"));
+if (typeof configureFilters === "function") configureFilters({ pytest: false });
+check("per-filter disable works", dispatch("pytest", "================ 4 passed in 0.1s ================\n".repeat(20)) === null);
+check("global config API exists", typeof configureGlobalFilters === "function");
+check("project config API exists", typeof configureProjectFilters === "function");
+if (typeof registerContentFallback === "function") registerContentFallback("test", () => ({ output: "compressed", category: "fast" }));
+check("content fallbacks disabled", dispatch("unknown && unknown", "output\n".repeat(30)) === null);
+check("tsc filter disabled by default", dispatch("tsc", "error TS1234: bad\n".repeat(20)) === null);
+if (typeof configureGlobalFilters === "function") configureGlobalFilters({ tsc: true });
+const validTscDiagnostics = Array.from({ length: 20 }, (_, index) =>
+  `src/file-${index}.ts(1,1): error TS1234: bad`,
+).join("\n") + "\nFound 20 errors.\n";
+check("global config enables risky filter", dispatch("tsc", validTscDiagnostics) !== null);
 
 // Case 1: user's exact repro — compound command with git status at the end,
 // preceded by a bd update + echo producing combined stdout.
@@ -114,10 +147,11 @@ const plainStatus = [
 ].join("\n");
 const r3 = dispatch("cd /repo && git status", plainStatus);
 check(
-  "Case 3: `cd repo && git status` (1 non-silent) still compresses",
-  r3 !== null && /on main/.test(r3.output),
+  "Case 3: plain `cd repo && git status` passes through",
+  r3 === null,
   `result=${JSON.stringify(r3)}`,
 );
+check("plain git status disabled by default", dispatch("git status", plainStatus) === null);
 
 // Case 4: non-git-status input with a single coincidental v1-looking line
 // must NOT be falsely identified.
@@ -135,6 +169,122 @@ check(
   `result=${JSON.stringify(r4)}`,
 );
 
+// Case 5: separators inside quotes are arguments, not compound operators.
+const quotedSeparatorCommand = "git status --short --pathspec-from-file='foo;bar'";
+const r5 = dispatch(quotedSeparatorCommand, plainStatusShort);
+check(
+  "Case 5: quoted separator keeps one semantic producer",
+  r5 !== null,
+  `result=${JSON.stringify(r5)}`,
+);
+
+check(
+  "Case 6: unsupported pipe chain declines semantic dispatch",
+  dispatch("git status --short | grep foo", plainStatusShort) === null,
+);
+
+registerFilter("quoted-probe", (_input, command) => ({ output: command, category: "fast" }));
+configureFilters({ "quoted-probe": true });
+const quotedPipeCommand = 'quoted-probe "literal | head -1"';
+const quotedPipeResult = dispatch(quotedPipeCommand, "padding output ".repeat(10));
+check(
+  "Case 7: quoted pipe stays in command",
+  quotedPipeResult?.output === quotedPipeCommand,
+  `result=${JSON.stringify(quotedPipeResult)}`,
+);
+const quotedRedirectCommand = 'quoted-probe "2>&1"';
+const quotedRedirectResult = dispatch(quotedRedirectCommand, "padding output ".repeat(10));
+check(
+  "Case 8: quoted redirect stays in command",
+  quotedRedirectResult?.output === quotedRedirectCommand,
+  `result=${JSON.stringify(quotedRedirectResult)}`,
+);
+const quotedSpacesCommand = 'quoted-probe "hello  world"';
+const quotedSpacesResult = dispatch(quotedSpacesCommand, "padding output ".repeat(10));
+check(
+  "Case 9: quoted value spaces stay in command",
+  quotedSpacesResult?.output === quotedSpacesCommand,
+  `result=${JSON.stringify(quotedSpacesResult)}`,
+);
+
+const escapedSeparatorResult = dispatch("git status --short --pathspec-from-file=foo\\;bar", plainStatusShort);
+check(
+  "Case 10: escaped separator stays in command",
+  escapedSeparatorResult !== null,
+  `result=${JSON.stringify(escapedSeparatorResult)}`,
+);
+
+const envAssignmentOutput = Array.from({ length: 10 }, () =>
+  ["API_KEY=secret value", "SHELL=/bin/sh"].join("\n"),
+).join("\n");
+const envAssignmentResult = dispatch("API_KEY=\"secret value\" env 2>&1", envAssignmentOutput);
+check(
+  "Case 11: spaced env assignment and redirect still match env",
+  envAssignmentResult?.output.includes("API_KEY=[REDACTED]") === true,
+  `result=${JSON.stringify(envAssignmentResult)}`,
+);
+
+check(
+  "Case 12: unbalanced quotes decline semantic dispatch",
+  dispatch('git status --short --pathspec-from-file="unterminated', plainStatusShort) === null,
+);
+
+check(
+  "Case 13: command substitution declines semantic dispatch",
+  dispatch('git status --short --pathspec-from-file="$(date)"', plainStatusShort) === null,
+);
+check(
+  "Case 14: backticks decline semantic dispatch",
+  dispatch("git status --short --pathspec-from-file=`date`", plainStatusShort) === null,
+);
+check(
+  "Case 15: process substitution declines semantic dispatch",
+  dispatch("git status --short <(printf x)", plainStatusShort) === null,
+);
+check(
+  "Case 16: multiple output producers decline semantic dispatch",
+  dispatch("git status --short && echo done", plainStatusShort) === null,
+);
+check(
+  "Case 17: unsupported redirect declines semantic dispatch",
+  dispatch("git status --short > out.txt", plainStatusShort) === null,
+);
+check(
+  "Case 18: assignment-only segment stays silent",
+  dispatch("FOO=bar && git status --short", plainStatusShort) !== null,
+);
+check(
+  "Case 19: OR with silent fallback keeps one producer",
+  dispatch("git status --short || true", plainStatusShort) !== null,
+);
+
+// v1.10.1 blocker 2: environment-secrets is a privacy boundary, not a
+// compression preference. No configuration surface — global, direct, or
+// project — may disable it. Attempts produce an actionable warning and
+// the filter stays enabled and keeps redacting.
+const envEnabled = () => registeredFilters().find((f) => f.id === "environment-secrets")?.enabled;
+const globalDisableWarns = configureGlobalFilters({ "environment-secrets": false });
+check("global config cannot disable environment-secrets (warns)",
+  globalDisableWarns.some((w) => /cannot be disabled/.test(w)) === true, JSON.stringify(globalDisableWarns));
+check("environment-secrets still enabled after global disable attempt",
+  envEnabled() === true, JSON.stringify(registeredFilters().find((f) => f.id === "environment-secrets")));
+check("env redaction still active after global disable attempt",
+  dispatch({ command: "env", stdout: "DB_PASSWORD=hunter2000\nSHELL=/bin/zsh", isError: false, toolName: "bash" })?.output.includes("DB_PASSWORD=[REDACTED]") === true);
+const directDisableWarns = configureFilters({ "environment-secrets": false });
+check("direct configureFilters cannot disable environment-secrets (warns)",
+  directDisableWarns.some((w) => /cannot be disabled/.test(w)) === true, JSON.stringify(directDisableWarns));
+check("environment-secrets still enabled after direct disable attempt",
+  envEnabled() === true);
+const projectDisableWarns = configureProjectFilters({ "environment-secrets": false });
+check("project config cannot disable environment-secrets (warns)",
+  projectDisableWarns.some((w) => /cannot be disabled/.test(w)) === true, JSON.stringify(projectDisableWarns));
+check("environment-secrets still enabled after project disable attempt",
+  envEnabled() === true);
+// Global config keeps controlling every non-privacy default.
+check("global config still disables non-privacy filters",
+  configureGlobalFilters({ tsc: false }).length === 0 && dispatch("tsc", validTscDiagnostics) === null);
+check("global config still enables default-off filters",
+  configureGlobalFilters({ tsc: true }).length === 0 && dispatch("tsc", validTscDiagnostics) !== null);
 if (fails > 0) {
   console.error(`\nFAIL — ${fails} case(s) failed.`);
   process.exit(1);

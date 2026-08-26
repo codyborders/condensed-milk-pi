@@ -1,72 +1,34 @@
-/**
- * git log (verbose format) filter.
- *
- * When the model runs `git log` without `--oneline`, strips Author/Date/Merge
- * headers and commit bodies, emitting only "hash subject" per commit.
- * Passthrough for --oneline output (already compact).
- * Caps at 50 commits.
- */
 import { registerFilter, type FilterResult } from "./dispatch.js";
 
-function filterGitLog(input: string): FilterResult | null {
-  if (input.length === 0) return null;
-
-  // Detect if this is already --oneline format (no "commit " headers)
-  if (!input.includes("commit ") || !input.includes("Author:")) {
-    return null; // Already compact
-  }
-
+function filterGitLog(input: string, command: string): FilterResult | null {
+  if (input.length === 0 || /(?:--oneline|--pretty(?:=|\s)|--format(?:=|\s)|--decorate(?:=|\s))/.test(command)) return null;
   const lines = input.split("\n");
   const out: string[] = [];
-  let commits = 0;
   let i = 0;
-
-  while (i < lines.length && commits < 50) {
-    const line = lines[i];
-
-    if (isCommitHeader(line)) {
-      const hash = line.slice(7, 14);
-      const subject = findSubject(lines, i + 1);
-      out.push(`${hash} ${subject}`);
-      commits++;
+  while (i < lines.length) {
+    if (lines[i] === "") { i++; continue; }
+    const match = /^commit ([0-9a-f]{40})$/.exec(lines[i]);
+    if (!match) return null;
+    const start = i++;
+    let author = false;
+    let date = false;
+    while (i < lines.length && lines[i] !== "") {
+      if (lines[i].startsWith("Author: ")) author = true;
+      if (lines[i].startsWith("Date: ")) date = true;
+      i++;
     }
-    i++;
+    if (!author || !date) return null;
+    while (i < lines.length && lines[i] === "") i++;
+    if (i >= lines.length || !lines[i].startsWith("    ")) return null;
+    const subject = lines[i].trim();
+    if (subject.length === 0) return null;
+    out.push(`${match[1]} ${subject}`);
+    i = Math.max(i + 1, start + 1);
+    while (i < lines.length && !/^commit [0-9a-f]{40}$/.test(lines[i])) i++;
   }
-
   if (out.length === 0) return null;
-
-  const result = out.join("\n");
+  const result = out.slice(0, 50).join("\n");
   return result.length < input.length ? { output: result, category: "slow" } : null;
-}
-
-function isCommitHeader(line: string): boolean {
-  if (!line.startsWith("commit ")) return false;
-  const rest = line.slice(7);
-  if (rest.length < 40) return false;
-  return /^[0-9a-f]{40}/.test(rest);
-}
-
-function findSubject(lines: string[], startIdx: number): string {
-  for (let i = startIdx; i < lines.length; i++) {
-    const line = lines[i];
-    if (isCommitHeader(line)) return "(no subject)";
-    const trimmed = line.trim();
-    if (trimmed.length === 0) continue;
-    if (isMetadataLine(trimmed)) continue;
-    return trimmed.length > 72 ? trimmed.slice(0, 72) + "..." : trimmed;
-  }
-  return "(no subject)";
-}
-
-function isMetadataLine(line: string): boolean {
-  return (
-    line.startsWith("Author:") ||
-    line.startsWith("Date:") ||
-    line.startsWith("Merge:") ||
-    line.startsWith("Signed-off-by:") ||
-    line.startsWith("Co-authored-by:") ||
-    line.startsWith("Reviewed-by:")
-  );
 }
 
 registerFilter("git log", filterGitLog, "slow");
