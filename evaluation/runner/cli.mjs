@@ -24,8 +24,9 @@ import {
   writeSync,
 } from "node:fs";
 import { loadManifestFile, loadTaskData } from "../lib/manifest.mjs";
+import { fixturesCacheRoot, publishFixtureCache, verifyFixtureCacheEntry } from "../lib/cache.mjs";
 import { createRun, loadRun, loadState, appendJournal, writeSnapshot, claimAttemptSlot } from "./state.mjs";
-import { generateFixture, applySolution, hashTree, publishFixtureCache, validateFixturePostconditions, gitStateHash } from "../lib/fixtures.mjs";
+import { applySolution, hashTree, gitStateHash } from "../lib/fixtures.mjs";
 import { scoreWorktree, scorerDefinitionSha256 } from "../lib/scorer.mjs";
 import { collectFinalState } from "./collect.mjs";
 import { buildAttemptPrompt, sha256Text } from "./prompt.mjs";
@@ -737,13 +738,17 @@ function selectedAttemptFor({ runDir, task, arm }) {
 function guardTaskFixture({ runDir, taskId }) {
   const manifest = loadManifest();
   const task = manifest.tasks.find((entry) => entry.id === taskId);
-  const fixtureDir = join(repoRoot, "evaluation", "cache", "fixtures", taskId);
-  const validation = validateFixturePostconditions({ task, fixtureDir });
-  if (!validation.ok) {
-    appendJournal(runDir, { type: "fixture-refused", taskId, errors: validation.errors });
+  const cacheRoot = fixturesCacheRoot(repoRoot);
+  let fixtureDir = join(cacheRoot, taskId);
+  if (!existsSync(join(fixtureDir, ".git"))) {
+    fixtureDir = publishFixtureCache({ repoRoot, task, cacheRoot });
+  }
+  const integrity = verifyFixtureCacheEntry({ task, entryDir: fixtureDir });
+  if (!integrity.ok) {
+    appendJournal(runDir, { type: "fixture-refused", taskId, errors: integrity.errors });
     process.stderr.write(
-      `cli: fixture for ${taskId} no longer matches its declared initial conditions; refusing:\n` +
-        validation.errors.map((error) => `  - ${error}\n`).join("") +
+      `cli: fixture for ${taskId} failed cache integrity validation; refusing:\n` +
+        integrity.errors.map((error) => `  - ${error}\n`).join("") +
         "  regenerate with: npm run evaluation:fixtures\n",
     );
     return { ok: false };
@@ -861,26 +866,27 @@ function latestRunId(runsDir) {
 
 function cmdFixtures() {
   const manifest = loadManifest();
+  const cacheRoot = fixturesCacheRoot(repoRoot);
   const rows = [];
   for (const task of manifest.tasks) {
-    const fixtureDir = join(repoRoot, "evaluation", "cache", "fixtures", task.id);
-    if (existsSync(fixtureDir)) {
-      rows.push({ taskId: task.id, treeSha256: hashTree(fixtureDir) });
-      continue;
-    }
-    const staging = join(repoRoot, "evaluation", "cache", `fixtures-tmp-${process.pid}-${Date.now()}`, task.id);
-    generateFixture({ repoRoot, task, outDir: staging });
-    mkdirSync(join(repoRoot, "evaluation", "cache", "fixtures"), { recursive: true });
-    try {
-      renameSync(staging, fixtureDir);
-    } catch (error) {
-      if (error?.code !== "ENOTEMPTY" && error?.code !== "EEXIST" && error?.code !== "EPERM") {
-        rmSync(join(staging, ".."), { recursive: true, force: true });
-        throw error;
+    const fixtureDir = join(cacheRoot, task.id);
+    if (existsSync(join(fixtureDir, ".git"))) {
+      const check = verifyFixtureCacheEntry({ task, entryDir: fixtureDir });
+      if (check.ok) {
+        rows.push({ taskId: task.id, treeSha256: check.record.contentSha256 });
+        continue;
       }
-      rmSync(join(staging, ".."), { recursive: true, force: true });
+      // Explicit regeneration: an invalid entry is removed and replaced
+      // by one fresh atomic publication. A concurrent writer that wins
+      // the race leaves an equivalent deterministic entry.
+      rmSync(fixtureDir, { recursive: true, force: true });
     }
-    rows.push({ taskId: task.id, treeSha256: hashTree(fixtureDir) });
+    const published = publishFixtureCache({ repoRoot, task, cacheRoot });
+    const check = verifyFixtureCacheEntry({ task, entryDir: published });
+    if (!check.ok) {
+      throw new Error(`fixture cache publication failed for ${task.id}: ${check.errors.join("; ")}`);
+    }
+    rows.push({ taskId: task.id, treeSha256: check.record.contentSha256 });
   }
   process.stdout.write(`fixtures: 20 tasks cached\n${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
   return 0;
@@ -897,19 +903,10 @@ async function executeSuccessAttempt({ runDir, runId, task, arm, attempt, attemp
   const evaluation = loadManifest().evaluation;
 
   const worktree = join(attemptDir, "worktree");
-  const fixtureDir = join(repoRoot, "evaluation", "cache", "fixtures", task.id);
+  const cacheRoot = fixturesCacheRoot(repoRoot);
+  let fixtureDir = join(cacheRoot, task.id);
   if (!existsSync(join(fixtureDir, ".git"))) {
-    const staging = join(repoRoot, "evaluation", "cache", `fixtures-tmp-${process.pid}-${Date.now()}`, task.id);
-    generateFixture({ repoRoot, task, outDir: staging });
-    mkdirSync(join(repoRoot, "evaluation", "cache", "fixtures"), { recursive: true });
-    try {
-      renameSync(staging, fixtureDir);
-    } catch (error) {
-      rmSync(join(staging, ".."), { recursive: true, force: true });
-      if (!existsSync(join(fixtureDir, ".git"))) {
-        throw error;
-      }
-    }
+    fixtureDir = publishFixtureCache({ repoRoot, task, cacheRoot });
   }
   cpSync(fixtureDir, worktree, { recursive: true, dot: true });
   const sessions = join(attemptDir, "sessions");
@@ -1045,19 +1042,10 @@ if (process.argv[1] && process.argv[1].endsWith("cli.mjs")) {
 export async function executeFaultAttempt({ runDir, runId, task, arm, attempt, attemptDir, behavior }) {
   const { runSubprocess } = await import("./spawn.mjs");
   const worktree = join(attemptDir, "worktree");
-  const fixtureDir = join(repoRoot, "evaluation", "cache", "fixtures", task.id);
+  const cacheRoot = fixturesCacheRoot(repoRoot);
+  let fixtureDir = join(cacheRoot, task.id);
   if (!existsSync(join(fixtureDir, ".git"))) {
-    const staging = join(repoRoot, "evaluation", "cache", `fixtures-tmp-${process.pid}-${Date.now()}`, task.id);
-    generateFixture({ repoRoot, task, outDir: staging });
-    mkdirSync(join(repoRoot, "evaluation", "cache", "fixtures"), { recursive: true });
-    try {
-      renameSync(staging, fixtureDir);
-    } catch (error) {
-      rmSync(join(staging, ".."), { recursive: true, force: true });
-      if (!existsSync(join(fixtureDir, ".git"))) {
-        throw error;
-      }
-    }
+    fixtureDir = publishFixtureCache({ repoRoot, task, cacheRoot });
   }
   cpSync(fixtureDir, worktree, { recursive: true, dot: true });
   const sessions = join(attemptDir, "sessions");

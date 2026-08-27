@@ -15,7 +15,6 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
-  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -110,38 +109,21 @@ export function generateFixture({ repoRoot, task, outDir }) {
   for (const file of fixture.untracked) {
     writeJoined(outDir, file.path, file.content);
   }
+  if (fixture.git.post.some((step) => step.argv?.[1] === "merge")) {
+    runGit(outDir, ["config", "user.name", fixture.git.author.name]);
+    runGit(outDir, ["config", "user.email", fixture.git.author.email]);
+  }
   for (const step of fixture.git.post) {
     runGit(outDir, step.argv.slice(1), {}, step.expectFailure, task.id);
   }
+  const postconditions = validateFixturePostconditions({ task, fixtureDir: outDir });
+  if (!postconditions.ok) {
+    throw new Error(
+      `task ${task.id}: generated fixture does not satisfy its declared postconditions:\n` +
+        postconditions.errors.map((error) => `  - ${error}`).join("\n"),
+    );
+  }
   return outDir;
-}
-
-/**
- * Publish one task fixture into the immutable cache. Staging happens in
- * a unique sibling directory; publication is one atomic rename. A lost
- * publish race cleans only its own staging tree and never touches the
- * published entry. Returns the published fixture directory.
- */
-export function publishFixtureCache({ repoRoot, task, cacheRoot }) {
-  const fixtureDir = join(cacheRoot, task.id);
-  if (existsSync(join(fixtureDir, ".git"))) {
-    return fixtureDir;
-  }
-  const stagingRoot = join(cacheRoot, `fixtures-tmp-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
-  const staging = join(stagingRoot, task.id);
-  try {
-    generateFixture({ repoRoot, task, outDir: staging });
-    mkdirSync(cacheRoot, { recursive: true });
-    renameSync(staging, fixtureDir);
-  } catch (error) {
-    rmSync(stagingRoot, { recursive: true, force: true });
-    if (!existsSync(join(fixtureDir, ".git"))) {
-      throw error;
-    }
-  } finally {
-    rmSync(stagingRoot, { recursive: true, force: true });
-  }
-  return fixtureDir;
 }
 
 /**
@@ -161,7 +143,8 @@ export function prepareArmWorktree({ repoRoot, task, arm, parentDir }) {
 }
 
 /** SHA-256 over the sorted relative paths and file bytes (skips .git). */
-export function hashTree(dir) {  const entries = [];
+export function hashTree(dir) {
+  const entries = [];
   collect(dir, "");
   entries.sort();
   const hash = createHash("sha256");
@@ -245,7 +228,7 @@ export function validateFixturePostconditions({ task, fixtureDir }) {
       stagedDeclared.push(...argv.slice(2));
     }
     if (argv.includes("merge") && step.expectFailure) {
-      mergeDeclared.push(argv);
+      mergeDeclared.push({ argv, conflictPaths: Array.isArray(step.conflictPaths) ? step.conflictPaths : [] });
     }
   }
   for (const path of stagedDeclared) {
@@ -264,14 +247,120 @@ export function validateFixturePostconditions({ task, fixtureDir }) {
     }
   }
   if (mergeDeclared.length > 0) {
-    if (!existsSync(join(fixtureDir, ".git", "MERGE_HEAD"))) {
-      errors.push("fixture postcondition failed: declared failed merge must leave .git/MERGE_HEAD");
-    }
-    if (!containsConflictMarkers(fixtureDir)) {
-      errors.push("fixture postcondition failed: declared failed merge must leave conflict markers in tracked files");
-    }
+    errors.push(...validateMergeConflictState({ task, fixtureDir, mergeDeclared }));
   }
   return { ok: errors.length === 0, errors };
+}
+
+/**
+ * Validate every precondition a declared failed merge must leave in a
+ * fixture: MERGE_HEAD present and equal to the intended branch head,
+ * unmerged index stages 1/2/3 for each declared conflict path, an
+ * unmerged status entry, and conflict markers in that path's working
+ * file. Without a conflictPaths declaration the merge's actual unmerged
+ * paths are used, plus the generic conflict-marker check.
+ */
+function validateMergeConflictState({ fixtureDir, mergeDeclared }) {
+  const errors = [];
+  for (const step of mergeDeclared) {
+    const branch = step.argv[2];
+    if (typeof branch !== "string" || branch.length === 0) {
+      errors.push(`fixture postcondition failed: declared failed merge must name a branch (got ${JSON.stringify(branch)})`);
+      continue;
+    }
+    if (!existsSync(join(fixtureDir, ".git", "MERGE_HEAD"))) {
+      errors.push("fixture postcondition failed: declared failed merge must leave .git/MERGE_HEAD");
+      continue;
+    }
+    const branchHead = spawnSync("git", ["rev-parse", `refs/heads/${branch}`], gitOptions(fixtureDir));
+    if (branchHead.status !== 0) {
+      errors.push(
+        `fixture postcondition failed: declared merge branch ${branch} must resolve to a commit`,
+      );
+      continue;
+    }
+    const mergeHead = readFileSync(join(fixtureDir, ".git", "MERGE_HEAD"), "utf8").trim();
+    const intended = branchHead.stdout.trim();
+    if (mergeHead !== intended) {
+      errors.push(
+        `fixture postcondition failed: .git/MERGE_HEAD must point at the head of the intended branch ${branch} ` +
+          `(got ${mergeHead}, intended ${intended})`,
+      );
+    }
+
+    const declared = step.conflictPaths;
+    const paths = declared.length > 0
+      ? declared
+      : [...unmergedPaths(fixtureDir)];
+    if (declared.length === 0 && paths.length === 0 && !containsConflictMarkers(fixtureDir)) {
+      errors.push("fixture postcondition failed: declared failed merge must leave conflict markers in tracked files");
+    }
+    const status = porcelainLines(fixtureDir);
+    for (const path of paths) {
+      const stages = unmergedStages(fixtureDir, path);
+      if (stages.join(",") !== "1,2,3") {
+        errors.push(
+          `fixture postcondition failed: merge conflict path ${path} must hold unmerged index stages 1, 2, and 3 ` +
+            `(got [${stages.join(", ")}])`,
+        );
+      }
+      if (!status.some((line) => isUnmergedEntry(line, path))) {
+        errors.push(`fixture postcondition failed: merge conflict path ${path} must keep an unmerged status entry`);
+      }
+      const working = readWorkingFile(fixtureDir, path);
+      if (working === null || !hasAllConflictMarkers(working)) {
+        errors.push(
+          `fixture postcondition failed: merge conflict path ${path} must keep conflict markers ` +
+            "<<<<<<<, =======, and >>>>>>>",
+        );
+      }
+    }
+  }
+  return errors;
+}
+
+/** Sorted stage numbers of one path's unmerged index entries. */
+function unmergedStages(fixtureDir, path) {
+  const result = spawnSync("git", ["ls-files", "--unmerged", "--", path], gitOptions(fixtureDir));
+  if (result.status !== 0) return [];
+  return (result.stdout ?? "")
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => Number(line.split("\t")[0].split(" ")[2]))
+    .sort((a, b) => a - b);
+}
+
+/** Every path with unmerged index entries. */
+function unmergedPaths(fixtureDir) {
+  const result = spawnSync("git", ["ls-files", "--unmerged"], gitOptions(fixtureDir));
+  if (result.status !== 0) return [];
+  const paths = new Set();
+  for (const line of (result.stdout ?? "").split("\n")) {
+    const path = line.slice(line.indexOf("\t") + 1).trim();
+    if (path.length > 0) paths.add(path);
+  }
+  return paths;
+}
+
+/** A porcelain entry is unmerged when either status column is U or both sides changed (AA/DD). */
+function isUnmergedEntry(line, path) {
+  if (line.length < 4) return false;
+  const code = line.slice(0, 2);
+  if (!/^(UU|AA|DD|AU|UA|DU|UD)$/.test(code)) return false;
+  return entryPath(line) === path;
+}
+
+function readWorkingFile(fixtureDir, path) {
+  try {
+    return readFileSync(join(fixtureDir, path), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/** A conflicted working file must carry all three marker kinds. */
+function hasAllConflictMarkers(text) {
+  return text.includes("<<<<<<<") && text.includes("=======") && text.includes(">>>>>>>");
 }
 
 function porcelainLines(fixtureDir) {

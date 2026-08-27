@@ -13,6 +13,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { loadManifestFile } from "../lib/manifest.mjs";
+import { fixturesCacheRoot } from "../lib/cache.mjs";
 import { hashTree, gitStateHash } from "../lib/fixtures.mjs";
 import { scorerDefinitionSha256 } from "../lib/scorer.mjs";
 import { appendJournal, writeSnapshot } from "./state.mjs";
@@ -264,7 +265,7 @@ export async function runRealArms({ flags, runsDir, runId, runDir, run, repoRoot
         arm: armName,
         armInfo: armInfos[armName],
         attemptDir: claim.attemptDir,
-        fixtureDir: join(repoRoot, "evaluation", "cache", "fixtures", task.id),
+        fixtureDir: join(fixturesCacheRoot(repoRoot), task.id),
         credentialSourcePath,
         piCliPath: pi.cliPath,
         piRuntimePin: pi.runtimeManifest,
@@ -357,7 +358,7 @@ export async function planRealRun({ flags, runId, runDir, run, repoRoot }) {
   const armCommits = Object.fromEntries(manifest.evaluation.arms.map((arm) => [arm.name, arm.commit]));
   const entries = [];
   for (const task of tasks) {
-    const fixtureDir = join(repoRoot, "evaluation", "cache", "fixtures", task.id);
+    const fixtureDir = join(fixturesCacheRoot(repoRoot), task.id);
     if (!existsSync(join(fixtureDir, ".git"))) {
       return fail(`fixture for ${task.id} is missing from the cache; regenerate with: npm run evaluation:fixtures`, 4);
     }
