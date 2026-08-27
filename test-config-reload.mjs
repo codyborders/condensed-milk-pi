@@ -88,9 +88,9 @@ assert.equal(output.sessionA.json.length, 1, "session A did not register current
 assert.equal(output.sessionA.json[0].enabled, true, "session A did not enable JSON filter");
 assert.equal(output.sessionA.gitLog, false, "session A did not apply project override");
 assert.equal(output.sessionB.json.length, 0, "session B retained stale dynamic JSON command");
-assert.equal(output.sessionB.gitLog, true, "session B retained stale project filter setting");
+assert.equal(output.sessionB.gitLog, false, "session B restored safe git-log default");
 assert.equal(output.sessionWithProject.gitLog, false, "project override did not apply after reload");
-assert.equal(output.sessionAfterRemoval.gitLog, true, "removing project file did not restore static default");
+assert.equal(output.sessionAfterRemoval.gitLog, false, "removing project file did not restore safe default");
 assert.equal(output.sessionAfterRemoval.json.length, 0, "removed global JSON command remained registered");
 
 const malformed = spawnSync(process.execPath, [runnerPath], {

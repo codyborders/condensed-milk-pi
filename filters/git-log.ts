@@ -1,7 +1,12 @@
 import { registerFilter, type FilterResult } from "./dispatch.js";
 
 function filterGitLog(input: string, command: string): FilterResult | null {
-  if (input.length === 0 || /(?:--oneline|--pretty(?:=|\s)|--format(?:=|\s)|--decorate(?:=|\s))/.test(command)) return null;
+  if (input.length === 0) return null;
+  // Any option can request details that this summary would discard. Preserve
+  // patches, stats, decorations, graph data, signatures, notes, formatting,
+  // short flags, and unknown options byte-for-byte.
+  if (command.slice("git log".length).trim().length > 0) return null;
+
   const lines = input.split("\n");
   const out: string[] = [];
   let i = 0;
@@ -9,7 +14,7 @@ function filterGitLog(input: string, command: string): FilterResult | null {
     if (lines[i] === "") { i++; continue; }
     const match = /^commit ([0-9a-f]{40})$/.exec(lines[i]);
     if (!match) return null;
-    const start = i++;
+    i++;
     let author = false;
     let date = false;
     while (i < lines.length && lines[i] !== "") {
@@ -23,11 +28,12 @@ function filterGitLog(input: string, command: string): FilterResult | null {
     const subject = lines[i].trim();
     if (subject.length === 0) return null;
     out.push(`${match[1]} ${subject}`);
-    i = Math.max(i + 1, start + 1);
-    while (i < lines.length && !/^commit [0-9a-f]{40}$/.test(lines[i])) i++;
+    i++;
+    while (i < lines.length && !/^commit /.test(lines[i])) i++;
+    if (i < lines.length && !/^commit [0-9a-f]{40}$/.test(lines[i])) return null;
   }
   if (out.length === 0) return null;
-  const result = out.slice(0, 50).join("\n");
+  const result = out.join("\n");
   return result.length < input.length ? { output: result, category: "slow" } : null;
 }
 
