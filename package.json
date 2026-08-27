@@ -1,20 +1,52 @@
 {
-  "name": "@tomooshi/condensed-milk-pi",
-  "version": "1.10.0",
-  "description": "Semantic token compression for pi terminal — filters noisy bash output and retroactively masks stale tool results in conversation history (per JetBrains Dec 2025 + Anthropic tool-result clearing)",
+  "name": "@codyborders/condensed-milk-pi",
+  "version": "1.10.1-remediated.0",
+  "description": "Maintained remediation fork of Condensed Milk, a semantic token compression extension for pi terminal",
   "author": "tomooshi",
+  "contributors": [
+    {
+      "name": "tomooshi",
+      "url": "https://github.com/tomooshi/condensed-milk-pi",
+      "role": "upstream author"
+    },
+    {
+      "name": "codyborders",
+      "url": "https://github.com/codyborders/condensed-milk-pi",
+      "role": "maintainer"
+    }
+  ],
+  "credits": {
+    "upstreamAuthor": {
+      "name": "tomooshi",
+      "url": "https://github.com/tomooshi/condensed-milk-pi"
+    },
+    "maintainer": {
+      "name": "codyborders",
+      "url": "https://github.com/codyborders/condensed-milk-pi"
+    }
+  },
+  "maintainer": {
+    "name": "codyborders",
+    "url": "https://github.com/codyborders/condensed-milk-pi"
+  },
+  "maintainers": [
+    {
+      "name": "codyborders",
+      "url": "https://github.com/codyborders/condensed-milk-pi"
+    }
+  ],
   "license": "MIT",
   "main": "index.ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tomooshi/condensed-milk-pi.git"
+    "url": "https://github.com/codyborders/condensed-milk-pi.git"
   },
   "bugs": {
-    "url": "https://github.com/tomooshi/condensed-milk-pi/issues"
+    "url": "https://github.com/codyborders/condensed-milk-pi/issues"
   },
-  "homepage": "https://github.com/tomooshi/condensed-milk-pi#readme",
+  "homepage": "https://github.com/codyborders/condensed-milk-pi#readme",
   "scripts": {
-    "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs",
+    "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs && node test-package-metadata.mjs",
     "typecheck": "tsc --noEmit",
     "benchmark": "node --expose-gc --import tsx benchmarks/context-hook.mjs",
     "benchmark:test": "node --test \"benchmarks/*.test.mjs\"",
