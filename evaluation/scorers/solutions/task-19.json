@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: strip matching surrounding quotes and re-read when mtime changes.",
+  "files": [
+    {
+      "path": "src/env-loader.js",
+      "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\n\nconst cache = new Map();\n\nfunction unquote(value) {\n  if (\n    (value.startsWith('\"') && value.endsWith('\"')) ||\n    (value.startsWith(\"'\") && value.endsWith(\"'\"))\n  ) {\n    return value.slice(1, -1);\n  }\n  return value;\n}\n\nfunction parse(raw) {\n  const result = {};\n  for (const line of raw.split(\"\\n\")) {\n    const trimmed = line.trim();\n    if (!trimmed || trimmed.startsWith(\"#\")) {\n      continue;\n    }\n    const eq = trimmed.indexOf(\"=\");\n    if (eq === -1) {\n      continue;\n    }\n    result[trimmed.slice(0, eq).trim()] = unquote(trimmed.slice(eq + 1).trim());\n  }\n  return result;\n}\n\nfunction loadEnv(envPath) {\n  const stats = fs.statSync(envPath);\n  const cached = cache.get(envPath);\n  if (cached && cached.mtimeMs === stats.mtimeMs) {\n    return cached.value;\n  }\n  const value = parse(fs.readFileSync(envPath, \"utf8\"));\n  cache.set(envPath, { mtimeMs: stats.mtimeMs, value });\n  return value;\n}\n\nmodule.exports = { loadEnv };\n"
+    }
+  ],
+  "commands": []
+}

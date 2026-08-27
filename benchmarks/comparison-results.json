@@ -1,0 +1,1433 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-27T17:45:54.552Z",
+  "upstream": {
+    "targetCommit": "71f9e396951c42687f0c3456727b2b5c8c625da1",
+    "implementationModuleSha256": "1549775786298952c176bdc49ae2447510b954cdcf9e681d299962fc9386ac01"
+  },
+  "fork": {
+    "targetCommit": "85e9af185c2a6416ea37791cf5d08e57c399c0e0",
+    "implementationModuleSha256": "f1c1f0c4fe9acced880bd9a2d07318e11ae0c069f922fcc72c41fec28cdfb046"
+  },
+  "harnessSha256": "5000fe2df46235999a3debcb8c56a9af6515f03fb5151169bb55f8e83247d6e7",
+  "nodeVersion": "v25.8.2",
+  "machine": {
+    "platform": {
+      "name": "darwin",
+      "release": "23.5.0",
+      "arch": "arm64"
+    },
+    "cpu": {
+      "model": "Apple M1 Pro",
+      "logicalCores": 10
+    }
+  },
+  "cases": [
+    {
+      "messageCount": 100,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "inputHash": "1dd1f9f0ec018cf9cc5120fa7ffb1c4abb6d1259bbb8bd1f95a211d113258804",
+      "upstream": {
+        "medianMs": 0.019,
+        "p95Ms": 0.029,
+        "p95BudgetMs": 25,
+        "masksPerRun": 25,
+        "outputHash": "50d8cdf956f54237a5eb51d0568917069366a3096056b11bd6c1dd5f8c6a54e3",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.039,
+        "p95Ms": 0.044,
+        "p95BudgetMs": 25,
+        "masksPerRun": 25,
+        "outputHash": "50d8cdf956f54237a5eb51d0568917069366a3096056b11bd6c1dd5f8c6a54e3",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.02,
+        "p95DeltaMs": 0.015,
+        "medianRatio": 2.052632,
+        "p95Ratio": 1.517241
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "inputHash": "72a1999f9aa5efbe4fcc7490fe600560b05c9eadef1075620c3a4e103e5a9803",
+      "upstream": {
+        "medianMs": 0.022,
+        "p95Ms": 0.051,
+        "p95BudgetMs": 25,
+        "masksPerRun": 25,
+        "outputHash": "c14f5df42c6a407c8dd36ffbe6c5a3d65ecc097aa7b31d4a8ed8784b8e7df33f",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.058,
+        "p95Ms": 0.121,
+        "p95BudgetMs": 25,
+        "masksPerRun": 25,
+        "outputHash": "c14f5df42c6a407c8dd36ffbe6c5a3d65ecc097aa7b31d4a8ed8784b8e7df33f",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.036,
+        "p95DeltaMs": 0.07,
+        "medianRatio": 2.636364,
+        "p95Ratio": 2.372549
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "inputHash": "8efd9e7657c96bd7e6243e7331cadd7e1eb02da8c579b12044564af9037e1b53",
+      "upstream": {
+        "medianMs": 0.019,
+        "p95Ms": 0.021,
+        "p95BudgetMs": 25,
+        "masksPerRun": 25,
+        "outputHash": "4edbe47e778fd96c055b50c7fd50284ab5a732b8c3ba848ab8e46a3567c6b7f8",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.041,
+        "p95Ms": 0.045,
+        "p95BudgetMs": 25,
+        "masksPerRun": 25,
+        "outputHash": "4edbe47e778fd96c055b50c7fd50284ab5a732b8c3ba848ab8e46a3567c6b7f8",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.022,
+        "p95DeltaMs": 0.024,
+        "medianRatio": 2.157895,
+        "p95Ratio": 2.142857
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "inputHash": "785cd37ef512afda31134ae69ed578da44d37421f3be3ef73cc0009bcc76bfed",
+      "upstream": {
+        "medianMs": 0.03,
+        "p95Ms": 0.043,
+        "p95BudgetMs": 25,
+        "masksPerRun": 47,
+        "outputHash": "7a907ae8ee5e070cbd131c53814934c92fb90751941d5647f51db7b161e56afc",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.063,
+        "p95Ms": 0.071,
+        "p95BudgetMs": 25,
+        "masksPerRun": 47,
+        "outputHash": "7a907ae8ee5e070cbd131c53814934c92fb90751941d5647f51db7b161e56afc",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.033,
+        "p95DeltaMs": 0.028,
+        "medianRatio": 2.1,
+        "p95Ratio": 1.651163
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "inputHash": "5aae1b522361826eadef72ab75f78d09468d9e4a8fab2df15a80f9c6b3332ddc",
+      "upstream": {
+        "medianMs": 0.031,
+        "p95Ms": 0.04,
+        "p95BudgetMs": 25,
+        "masksPerRun": 47,
+        "outputHash": "126b206ee11de096c4f8b28610b9fed8225411c1656f736468aca19d116bfe6c",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.069,
+        "p95Ms": 0.088,
+        "p95BudgetMs": 25,
+        "masksPerRun": 47,
+        "outputHash": "126b206ee11de096c4f8b28610b9fed8225411c1656f736468aca19d116bfe6c",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.038,
+        "p95DeltaMs": 0.048,
+        "medianRatio": 2.225806,
+        "p95Ratio": 2.2
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "inputHash": "4259b89779472896b49c635c02119a28dbd5c5c1b846e42a974a8265be7e2187",
+      "upstream": {
+        "medianMs": 0.03,
+        "p95Ms": 0.035,
+        "p95BudgetMs": 25,
+        "masksPerRun": 47,
+        "outputHash": "53ac5870a96bc1ad7645b6b860b25e8da020052b1f737040c34ed916f7145bf4",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.063,
+        "p95Ms": 0.079,
+        "p95BudgetMs": 25,
+        "masksPerRun": 47,
+        "outputHash": "53ac5870a96bc1ad7645b6b860b25e8da020052b1f737040c34ed916f7145bf4",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.033,
+        "p95DeltaMs": 0.044,
+        "medianRatio": 2.1,
+        "p95Ratio": 2.257143
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "inputHash": "69a7e17f884a16a601850cc78dabd0b1e49200dc0ea383148854f26b3441513c",
+      "upstream": {
+        "medianMs": 0.046,
+        "p95Ms": 0.064,
+        "p95BudgetMs": 25,
+        "masksPerRun": 85,
+        "outputHash": "c10beb9f2157d554f730cf744538cdcc375ed7bf9d583481c7336d0c5021df3d",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.108,
+        "p95Ms": 0.147,
+        "p95BudgetMs": 25,
+        "masksPerRun": 85,
+        "outputHash": "c10beb9f2157d554f730cf744538cdcc375ed7bf9d583481c7336d0c5021df3d",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.062,
+        "p95DeltaMs": 0.083,
+        "medianRatio": 2.347826,
+        "p95Ratio": 2.296875
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "inputHash": "f1b4aca2e8221f89c96acfc104bfece387f4fa89b40fb045949be8e36a8a15ed",
+      "upstream": {
+        "medianMs": 0.046,
+        "p95Ms": 0.057,
+        "p95BudgetMs": 25,
+        "masksPerRun": 85,
+        "outputHash": "bfd76aa4d879d90ad0d6fe40efebbc4496a7c7c0444ec5cb127a4f73c37be0d2",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.105,
+        "p95Ms": 0.124,
+        "p95BudgetMs": 25,
+        "masksPerRun": 85,
+        "outputHash": "bfd76aa4d879d90ad0d6fe40efebbc4496a7c7c0444ec5cb127a4f73c37be0d2",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.059,
+        "p95DeltaMs": 0.067,
+        "medianRatio": 2.282609,
+        "p95Ratio": 2.175439
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 100,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "inputHash": "57b32ac022dec8b431af2452bc172074e06aea23c51174b7a4b37a51ba4093af",
+      "upstream": {
+        "medianMs": 0.047,
+        "p95Ms": 0.062,
+        "p95BudgetMs": 25,
+        "masksPerRun": 85,
+        "outputHash": "0dcdc84158f3ae4bdf376d966f073f2fb70ccf6250ccb7027624121d5306c902",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.105,
+        "p95Ms": 0.113,
+        "p95BudgetMs": 25,
+        "masksPerRun": 85,
+        "outputHash": "0dcdc84158f3ae4bdf376d966f073f2fb70ccf6250ccb7027624121d5306c902",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.058,
+        "p95DeltaMs": 0.051,
+        "medianRatio": 2.234043,
+        "p95Ratio": 1.822581
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "inputHash": "7790dc91614273879d43454ff5f91045a2f9842acab9c576070012a7dab06c3a",
+      "upstream": {
+        "medianMs": 0.14,
+        "p95Ms": 0.191,
+        "p95BudgetMs": 75,
+        "masksPerRun": 238,
+        "outputHash": "0c48c4355c89e3c93bbda595f9ea62b0131786bb68b4da80c1924e1fbda02ab3",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.308,
+        "p95Ms": 0.364,
+        "p95BudgetMs": 75,
+        "masksPerRun": 238,
+        "outputHash": "0c48c4355c89e3c93bbda595f9ea62b0131786bb68b4da80c1924e1fbda02ab3",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.168,
+        "p95DeltaMs": 0.173,
+        "medianRatio": 2.2,
+        "p95Ratio": 1.905759
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "inputHash": "5ad9a7c7ae9552314772167eb81e6d13d7e37db24d29b850e78ab25e9c4c524d",
+      "upstream": {
+        "medianMs": 0.167,
+        "p95Ms": 0.21,
+        "p95BudgetMs": 75,
+        "masksPerRun": 238,
+        "outputHash": "4ed76816a56a09504519d12a0c970f16505300a9d828e52d643b9d8551bd6642",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.345,
+        "p95Ms": 0.461,
+        "p95BudgetMs": 75,
+        "masksPerRun": 238,
+        "outputHash": "4ed76816a56a09504519d12a0c970f16505300a9d828e52d643b9d8551bd6642",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.178,
+        "p95DeltaMs": 0.251,
+        "medianRatio": 2.065868,
+        "p95Ratio": 2.195238
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "inputHash": "d0f4f8fbba9745b91969b2393c10a5a6a9c61e04593e42b1f89f23a13d1c896f",
+      "upstream": {
+        "medianMs": 0.101,
+        "p95Ms": 0.18,
+        "p95BudgetMs": 75,
+        "masksPerRun": 238,
+        "outputHash": "31f875b309b6ac5985b4d89cd981bd88d71213a1738b1ecdc185e7be99b7cea6",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.312,
+        "p95Ms": 0.357,
+        "p95BudgetMs": 75,
+        "masksPerRun": 238,
+        "outputHash": "31f875b309b6ac5985b4d89cd981bd88d71213a1738b1ecdc185e7be99b7cea6",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.211,
+        "p95DeltaMs": 0.177,
+        "medianRatio": 3.089109,
+        "p95Ratio": 1.983333
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "inputHash": "bef1bfd40661d67eb539d4760ae07ccfe0fb255a69faceb06d5d93e21d15aeef",
+      "upstream": {
+        "medianMs": 0.246,
+        "p95Ms": 0.277,
+        "p95BudgetMs": 75,
+        "masksPerRun": 475,
+        "outputHash": "3405718e94cb8d4cd6be45d737748e66f286cdb1d4d65aa6ed59441b40cd8de5",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.58,
+        "p95Ms": 0.727,
+        "p95BudgetMs": 75,
+        "masksPerRun": 475,
+        "outputHash": "3405718e94cb8d4cd6be45d737748e66f286cdb1d4d65aa6ed59441b40cd8de5",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.334,
+        "p95DeltaMs": 0.45,
+        "medianRatio": 2.357724,
+        "p95Ratio": 2.624549
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "inputHash": "94b4d1d34c9e6d5b22289f616649eca4ce5b4d31e7a788b621d42c49a97f2b81",
+      "upstream": {
+        "medianMs": 0.192,
+        "p95Ms": 0.258,
+        "p95BudgetMs": 75,
+        "masksPerRun": 475,
+        "outputHash": "0a118046aefabc79da0e5bdac93bf46525caf5dba2257bb9dd8e3a8200005b18",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.438,
+        "p95Ms": 0.602,
+        "p95BudgetMs": 75,
+        "masksPerRun": 475,
+        "outputHash": "0a118046aefabc79da0e5bdac93bf46525caf5dba2257bb9dd8e3a8200005b18",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.246,
+        "p95DeltaMs": 0.344,
+        "medianRatio": 2.28125,
+        "p95Ratio": 2.333333
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "inputHash": "19417c6f01f084d94daefe2bf73fe80d184230ff45d010c858b1f875f6237809",
+      "upstream": {
+        "medianMs": 0.246,
+        "p95Ms": 0.297,
+        "p95BudgetMs": 75,
+        "masksPerRun": 475,
+        "outputHash": "f9fba6e3fd5bf1c4cce3aea49f63b1e4c9d675093d382509a366322168ab9fa4",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.557,
+        "p95Ms": 0.724,
+        "p95BudgetMs": 75,
+        "masksPerRun": 475,
+        "outputHash": "f9fba6e3fd5bf1c4cce3aea49f63b1e4c9d675093d382509a366322168ab9fa4",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.311,
+        "p95DeltaMs": 0.427,
+        "medianRatio": 2.264228,
+        "p95Ratio": 2.43771
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "inputHash": "bf4b2b33a66a33a86c562503c0be8f16f632121dce0b553a5ac755b15be6a837",
+      "upstream": {
+        "medianMs": 0.396,
+        "p95Ms": 0.452,
+        "p95BudgetMs": 75,
+        "masksPerRun": 855,
+        "outputHash": "5cf7d0ef68d89ec72fe87323f6d0b4e96c249d6b1847a6072240726aa25a4676",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.968,
+        "p95Ms": 1.351,
+        "p95BudgetMs": 75,
+        "masksPerRun": 855,
+        "outputHash": "5cf7d0ef68d89ec72fe87323f6d0b4e96c249d6b1847a6072240726aa25a4676",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.572,
+        "p95DeltaMs": 0.899,
+        "medianRatio": 2.444444,
+        "p95Ratio": 2.988938
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "inputHash": "43bbf13258743eebfe04f372e1ce1d3e37d7ccba85d18ffa4599229ac7c2e118",
+      "upstream": {
+        "medianMs": 0.384,
+        "p95Ms": 0.487,
+        "p95BudgetMs": 75,
+        "masksPerRun": 855,
+        "outputHash": "c4280b38b28da79bab74ef63d64fe5688e28b2f293a03e30dfe44cfdb921d93e",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.921,
+        "p95Ms": 1.238,
+        "p95BudgetMs": 75,
+        "masksPerRun": 855,
+        "outputHash": "c4280b38b28da79bab74ef63d64fe5688e28b2f293a03e30dfe44cfdb921d93e",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.537,
+        "p95DeltaMs": 0.751,
+        "medianRatio": 2.398438,
+        "p95Ratio": 2.542094
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 1000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "inputHash": "b735c45c13671c6b010a3dcd17a4d0468d9f93d37d330e9e0bbc1a97073225e0",
+      "upstream": {
+        "medianMs": 0.385,
+        "p95Ms": 0.437,
+        "p95BudgetMs": 75,
+        "masksPerRun": 855,
+        "outputHash": "6a82cc2f804fe81622443f2ed85facc2854430d6c463552be6894df0ae6d0be3",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 0.941,
+        "p95Ms": 1.131,
+        "p95BudgetMs": 75,
+        "masksPerRun": 855,
+        "outputHash": "6a82cc2f804fe81622443f2ed85facc2854430d6c463552be6894df0ae6d0be3",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.556,
+        "p95DeltaMs": 0.694,
+        "medianRatio": 2.444156,
+        "p95Ratio": 2.588101
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "inputHash": "4af3f712fb9a918704d5ad7d689fdefa18bf4c97b15f6db5c005560336a50303",
+      "upstream": {
+        "medianMs": 0.515,
+        "p95Ms": 0.872,
+        "p95BudgetMs": 250,
+        "masksPerRun": 1188,
+        "outputHash": "e08305af0083246c0eb88916388997936d06bf528a5d195ba6f73b3d2ec3c548",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 1.405,
+        "p95Ms": 1.844,
+        "p95BudgetMs": 250,
+        "masksPerRun": 1188,
+        "outputHash": "e08305af0083246c0eb88916388997936d06bf528a5d195ba6f73b3d2ec3c548",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.89,
+        "p95DeltaMs": 0.972,
+        "medianRatio": 2.728155,
+        "p95Ratio": 2.114679
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "inputHash": "d74e3f9ab2f5d5f69b6b44ba44a1453bba16ff6e6ac8829d19abbf0c2991fd2a",
+      "upstream": {
+        "medianMs": 0.488,
+        "p95Ms": 0.652,
+        "p95BudgetMs": 250,
+        "masksPerRun": 1188,
+        "outputHash": "ce7ddc0d9fc166b5db6284062ffc450e3e00c8b43f3c674fee855d7568e62012",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 1.223,
+        "p95Ms": 1.54,
+        "p95BudgetMs": 250,
+        "masksPerRun": 1188,
+        "outputHash": "ce7ddc0d9fc166b5db6284062ffc450e3e00c8b43f3c674fee855d7568e62012",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.735,
+        "p95DeltaMs": 0.888,
+        "medianRatio": 2.506148,
+        "p95Ratio": 2.361963
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "inputHash": "99fc82ebe20c9b054a715df90c8211bee31f5c4e3a0a142f314f775145cf41aa",
+      "upstream": {
+        "medianMs": 0.478,
+        "p95Ms": 0.818,
+        "p95BudgetMs": 250,
+        "masksPerRun": 1188,
+        "outputHash": "7131faf33a3e14da0c690451557fe257d4e1822dac930de9a3393a000db36616",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 1.291,
+        "p95Ms": 1.746,
+        "p95BudgetMs": 250,
+        "masksPerRun": 1188,
+        "outputHash": "7131faf33a3e14da0c690451557fe257d4e1822dac930de9a3393a000db36616",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.813,
+        "p95DeltaMs": 0.928,
+        "medianRatio": 2.700837,
+        "p95Ratio": 2.134474
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "inputHash": "358177ae6f8fe1093ab95f635d40858766acc52d028c4b70e657e2eaa5dd95c5",
+      "upstream": {
+        "medianMs": 0.877,
+        "p95Ms": 1.378,
+        "p95BudgetMs": 250,
+        "masksPerRun": 2374,
+        "outputHash": "47d52c00f795180ca136c0d2f1f0fcfcf8ff99f87386e7d30d2d9894e767705a",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 2.642,
+        "p95Ms": 3.171,
+        "p95BudgetMs": 250,
+        "masksPerRun": 2374,
+        "outputHash": "47d52c00f795180ca136c0d2f1f0fcfcf8ff99f87386e7d30d2d9894e767705a",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 1.765,
+        "p95DeltaMs": 1.793,
+        "medianRatio": 3.012543,
+        "p95Ratio": 2.301161
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "inputHash": "c2593c291261ed6110987b5eddf11b12aacd727869790253a7d4b06353b30b07",
+      "upstream": {
+        "medianMs": 0.893,
+        "p95Ms": 1.411,
+        "p95BudgetMs": 250,
+        "masksPerRun": 2374,
+        "outputHash": "6d168ee916d51642a3ce4969c08bdaed2502c4a1f4a3473ebfdcc572a74edb29",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 2.869,
+        "p95Ms": 3.217,
+        "p95BudgetMs": 250,
+        "masksPerRun": 2374,
+        "outputHash": "6d168ee916d51642a3ce4969c08bdaed2502c4a1f4a3473ebfdcc572a74edb29",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 1.976,
+        "p95DeltaMs": 1.806,
+        "medianRatio": 3.212766,
+        "p95Ratio": 2.279943
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "inputHash": "eef99888590fdbb83200a7e389b7f8aaeda253dccea6b29d34b90cadb4e22da7",
+      "upstream": {
+        "medianMs": 0.917,
+        "p95Ms": 1.454,
+        "p95BudgetMs": 250,
+        "masksPerRun": 2374,
+        "outputHash": "d97a08df74ed6b6c550f6aaf2d28396059707a20a86ae9a83a27d80c3e11262f",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 2.49,
+        "p95Ms": 3.08,
+        "p95BudgetMs": 250,
+        "masksPerRun": 2374,
+        "outputHash": "d97a08df74ed6b6c550f6aaf2d28396059707a20a86ae9a83a27d80c3e11262f",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 1.573,
+        "p95DeltaMs": 1.626,
+        "medianRatio": 2.715376,
+        "p95Ratio": 2.118294
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "inputHash": "359e44d8d64079cdf683307316dd9c801bdce2f5d8e83acb8bb2a978e8aa9e8e",
+      "upstream": {
+        "medianMs": 1.688,
+        "p95Ms": 2.159,
+        "p95BudgetMs": 250,
+        "masksPerRun": 4274,
+        "outputHash": "ce55f803d2f48cc7b8d3eca139610d7f0457647ec32cd9a1c405061e3b93ac10",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 4.457,
+        "p95Ms": 5.086,
+        "p95BudgetMs": 250,
+        "masksPerRun": 4274,
+        "outputHash": "ce55f803d2f48cc7b8d3eca139610d7f0457647ec32cd9a1c405061e3b93ac10",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 2.769,
+        "p95DeltaMs": 2.927,
+        "medianRatio": 2.640403,
+        "p95Ratio": 2.35572
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "inputHash": "04211728489508f4a31c145e3e173c5193f729d97df14ff6fcc75ac419f5e071",
+      "upstream": {
+        "medianMs": 1.736,
+        "p95Ms": 2.388,
+        "p95BudgetMs": 250,
+        "masksPerRun": 4274,
+        "outputHash": "941c065091340d9fadaa4953ecc87d9bd438dba14f8a3191214b9ae105c1beac",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 4.626,
+        "p95Ms": 5.019,
+        "p95BudgetMs": 250,
+        "masksPerRun": 4274,
+        "outputHash": "941c065091340d9fadaa4953ecc87d9bd438dba14f8a3191214b9ae105c1beac",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 2.89,
+        "p95DeltaMs": 2.631,
+        "medianRatio": 2.664747,
+        "p95Ratio": 2.101759
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 5000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "inputHash": "15fc6f47ddd12d442a085fc96fd95b7efd721a86270fb89069ceb8013f0ace46",
+      "upstream": {
+        "medianMs": 1.453,
+        "p95Ms": 2.181,
+        "p95BudgetMs": 250,
+        "masksPerRun": 4274,
+        "outputHash": "7bda7483e83740053092d9cbfac69b28b6a7c8ba00a10c32beb3b6dddd49dfce",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 4.781,
+        "p95Ms": 5.445,
+        "p95BudgetMs": 250,
+        "masksPerRun": 4274,
+        "outputHash": "7bda7483e83740053092d9cbfac69b28b6a7c8ba00a10c32beb3b6dddd49dfce",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 3.328,
+        "p95DeltaMs": 3.264,
+        "medianRatio": 3.290434,
+        "p95Ratio": 2.496561
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "balanced",
+      "inputHash": "a22513edcb8cfc3845f8524ff958f2ac21a3cd638dd462a541f6e43161ccaff7",
+      "upstream": {
+        "medianMs": 0.838,
+        "p95Ms": 1.672,
+        "p95BudgetMs": 500,
+        "masksPerRun": 2378,
+        "outputHash": "ebd2328311887a51e64518344e210e3c8edda88bcef864d8421b920fa93792d3",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 2.551,
+        "p95Ms": 3.409,
+        "p95BudgetMs": 500,
+        "masksPerRun": 2378,
+        "outputHash": "ebd2328311887a51e64518344e210e3c8edda88bcef864d8421b920fa93792d3",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 1.713,
+        "p95DeltaMs": 1.737,
+        "medianRatio": 3.044153,
+        "p95Ratio": 2.038876
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "single",
+      "inputHash": "8e4b2e496e5233199a730f4dd73e9613ddc0a66ad418cf459c8b5f2565bc7d1a",
+      "upstream": {
+        "medianMs": 0.844,
+        "p95Ms": 1.652,
+        "p95BudgetMs": 500,
+        "masksPerRun": 2378,
+        "outputHash": "077f7578e3d8493bdaa2e826fa37632d0fa598f2be41c2f9eb6ac42327316dd9",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 2.683,
+        "p95Ms": 3.58,
+        "p95BudgetMs": 500,
+        "masksPerRun": 2378,
+        "outputHash": "077f7578e3d8493bdaa2e826fa37632d0fa598f2be41c2f9eb6ac42327316dd9",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 1.839,
+        "p95DeltaMs": 1.928,
+        "medianRatio": 3.17891,
+        "p95Ratio": 2.16707
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.25,
+      "cwdDistribution": "skewed",
+      "inputHash": "1938636ac4dd2ff7d6a90aec5ce264cc0e8f585915a476cefd0e2c0be168bb4a",
+      "upstream": {
+        "medianMs": 0.816,
+        "p95Ms": 1.715,
+        "p95BudgetMs": 500,
+        "masksPerRun": 2378,
+        "outputHash": "b6956e31ab68c608f2a2a71686f3ec7458c5db8181cdd63ca03763223b7b29a1",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 2.305,
+        "p95Ms": 3.28,
+        "p95BudgetMs": 500,
+        "masksPerRun": 2378,
+        "outputHash": "b6956e31ab68c608f2a2a71686f3ec7458c5db8181cdd63ca03763223b7b29a1",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 1.489,
+        "p95DeltaMs": 1.565,
+        "medianRatio": 2.824755,
+        "p95Ratio": 1.912536
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "balanced",
+      "inputHash": "5d28850d7d47401e8bf7a37cbe701e218bb23a2bfe9b70ab5abe8605f7d3a68d",
+      "upstream": {
+        "medianMs": 2.014,
+        "p95Ms": 2.806,
+        "p95BudgetMs": 500,
+        "masksPerRun": 4752,
+        "outputHash": "8fc06bd770124e35a4d13e83f52063f09b3578c2d72ba905442a7a0b12cc2a99",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 4.61,
+        "p95Ms": 5.758,
+        "p95BudgetMs": 500,
+        "masksPerRun": 4752,
+        "outputHash": "8fc06bd770124e35a4d13e83f52063f09b3578c2d72ba905442a7a0b12cc2a99",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 2.596,
+        "p95DeltaMs": 2.952,
+        "medianRatio": 2.288977,
+        "p95Ratio": 2.052031
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "single",
+      "inputHash": "09e8f8843a9a4fd1bcc57d4ddc5dd0db50074b1920f0713b02b1be68d0c0a056",
+      "upstream": {
+        "medianMs": 1.495,
+        "p95Ms": 2.476,
+        "p95BudgetMs": 500,
+        "masksPerRun": 4752,
+        "outputHash": "d9ed63759ff4085faf585e3e79f4dd397d7ff695b406b1c12bffc44e66c9c0ca",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 4.612,
+        "p95Ms": 5.768,
+        "p95BudgetMs": 500,
+        "masksPerRun": 4752,
+        "outputHash": "d9ed63759ff4085faf585e3e79f4dd397d7ff695b406b1c12bffc44e66c9c0ca",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 3.117,
+        "p95DeltaMs": 3.292,
+        "medianRatio": 3.08495,
+        "p95Ratio": 2.329564
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.5,
+      "cwdDistribution": "skewed",
+      "inputHash": "9d6db20a03e7ac75a0d17deabaf62b8431c70ce1b1383ab7976a1bca9619c323",
+      "upstream": {
+        "medianMs": 2.16,
+        "p95Ms": 4.304,
+        "p95BudgetMs": 500,
+        "masksPerRun": 4752,
+        "outputHash": "38e6c8046332ba2905e70181371170400cdf54c9c158b396f0cfa1ebc7f80a0e",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 4.612,
+        "p95Ms": 5.871,
+        "p95BudgetMs": 500,
+        "masksPerRun": 4752,
+        "outputHash": "38e6c8046332ba2905e70181371170400cdf54c9c158b396f0cfa1ebc7f80a0e",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 2.452,
+        "p95DeltaMs": 1.567,
+        "medianRatio": 2.135185,
+        "p95Ratio": 1.36408
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "balanced",
+      "inputHash": "de382f328900dec8ba9e939aa39950a4b4d0157982a1c7740372619ac5235678",
+      "upstream": {
+        "medianMs": 2.683,
+        "p95Ms": 4.215,
+        "p95BudgetMs": 500,
+        "masksPerRun": 8551,
+        "outputHash": "65198418978a51a955348aee57b53d93cb25050145d4886f0085df148eb6499f",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 8.379,
+        "p95Ms": 9.848,
+        "p95BudgetMs": 500,
+        "masksPerRun": 8551,
+        "outputHash": "65198418978a51a955348aee57b53d93cb25050145d4886f0085df148eb6499f",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 5.696,
+        "p95DeltaMs": 5.633,
+        "medianRatio": 3.122997,
+        "p95Ratio": 2.336418
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "single",
+      "inputHash": "8a3a8028a48b35980f14ab011bc51856dbf410c7609ce1dbf0962d5543ed275d",
+      "upstream": {
+        "medianMs": 2.933,
+        "p95Ms": 5.033,
+        "p95BudgetMs": 500,
+        "masksPerRun": 8551,
+        "outputHash": "64384b23f2840913a108291d1ea58799739cc79e96cbfc4d00fecfe9a7dfe5ce",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 8.428,
+        "p95Ms": 9.859,
+        "p95BudgetMs": 500,
+        "masksPerRun": 8551,
+        "outputHash": "64384b23f2840913a108291d1ea58799739cc79e96cbfc4d00fecfe9a7dfe5ce",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 5.495,
+        "p95DeltaMs": 4.826,
+        "medianRatio": 2.873508,
+        "p95Ratio": 1.958871
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    },
+    {
+      "messageCount": 10000,
+      "bashDensity": 0.9,
+      "cwdDistribution": "skewed",
+      "inputHash": "b66fd4f72b694978f072665c34bad06f4341f71dc4ef02d3ad585ba98ca8698a",
+      "upstream": {
+        "medianMs": 2.553,
+        "p95Ms": 4.095,
+        "p95BudgetMs": 500,
+        "masksPerRun": 8551,
+        "outputHash": "65d7961fcf2ab13ebdc83ac4c62609d688507158988fb294d585a926ea56a167",
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 8.321,
+        "p95Ms": 9.744,
+        "p95BudgetMs": 500,
+        "masksPerRun": 8551,
+        "outputHash": "65d7961fcf2ab13ebdc83ac4c62609d688507158988fb294d585a926ea56a167",
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 5.768,
+        "p95DeltaMs": 5.649,
+        "medianRatio": 3.259303,
+        "p95Ratio": 2.379487
+      },
+      "maskCountDifference": 0,
+      "outputHashEqual": true,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    }
+  ],
+  "aggregates": {
+    "byMessageCount": [
+      {
+        "messageCount": 100,
+        "caseCount": 9,
+        "upstream": {
+          "medianMs": 0.03,
+          "p95Ms": 0.043,
+          "totalMasks": 471,
+          "budgetPassed": true
+        },
+        "fork": {
+          "medianMs": 0.063,
+          "p95Ms": 0.088,
+          "totalMasks": 471,
+          "budgetPassed": true
+        },
+        "timing": {
+          "medianDeltaMs": 0.033,
+          "p95DeltaMs": 0.045,
+          "medianRatio": 2.1,
+          "p95Ratio": 2.046512
+        },
+        "maskCountDifference": 0,
+        "budgetStatus": {
+          "upstream": true,
+          "fork": true,
+          "passed": true
+        }
+      },
+      {
+        "messageCount": 1000,
+        "caseCount": 9,
+        "upstream": {
+          "medianMs": 0.246,
+          "p95Ms": 0.277,
+          "totalMasks": 4704,
+          "budgetPassed": true
+        },
+        "fork": {
+          "medianMs": 0.557,
+          "p95Ms": 0.724,
+          "totalMasks": 4704,
+          "budgetPassed": true
+        },
+        "timing": {
+          "medianDeltaMs": 0.311,
+          "p95DeltaMs": 0.447,
+          "medianRatio": 2.264228,
+          "p95Ratio": 2.613718
+        },
+        "maskCountDifference": 0,
+        "budgetStatus": {
+          "upstream": true,
+          "fork": true,
+          "passed": true
+        }
+      },
+      {
+        "messageCount": 5000,
+        "caseCount": 9,
+        "upstream": {
+          "medianMs": 0.893,
+          "p95Ms": 1.411,
+          "totalMasks": 23508,
+          "budgetPassed": true
+        },
+        "fork": {
+          "medianMs": 2.642,
+          "p95Ms": 3.171,
+          "totalMasks": 23508,
+          "budgetPassed": true
+        },
+        "timing": {
+          "medianDeltaMs": 1.749,
+          "p95DeltaMs": 1.76,
+          "medianRatio": 2.958567,
+          "p95Ratio": 2.247342
+        },
+        "maskCountDifference": 0,
+        "budgetStatus": {
+          "upstream": true,
+          "fork": true,
+          "passed": true
+        }
+      },
+      {
+        "messageCount": 10000,
+        "caseCount": 9,
+        "upstream": {
+          "medianMs": 2.014,
+          "p95Ms": 2.806,
+          "totalMasks": 47043,
+          "budgetPassed": true
+        },
+        "fork": {
+          "medianMs": 4.612,
+          "p95Ms": 5.768,
+          "totalMasks": 47043,
+          "budgetPassed": true
+        },
+        "timing": {
+          "medianDeltaMs": 2.598,
+          "p95DeltaMs": 2.962,
+          "medianRatio": 2.28997,
+          "p95Ratio": 2.055595
+        },
+        "maskCountDifference": 0,
+        "budgetStatus": {
+          "upstream": true,
+          "fork": true,
+          "passed": true
+        }
+      }
+    ],
+    "total": {
+      "messageCount": null,
+      "caseCount": 36,
+      "upstream": {
+        "medianMs": 0.437,
+        "p95Ms": 0.5695,
+        "totalMasks": 75726,
+        "budgetPassed": true
+      },
+      "fork": {
+        "medianMs": 1.0955,
+        "p95Ms": 1.4455,
+        "totalMasks": 75726,
+        "budgetPassed": true
+      },
+      "timing": {
+        "medianDeltaMs": 0.6585,
+        "p95DeltaMs": 0.876,
+        "medianRatio": 2.506865,
+        "p95Ratio": 2.538191
+      },
+      "maskCountDifference": 0,
+      "budgetStatus": {
+        "upstream": true,
+        "fork": true,
+        "passed": true
+      }
+    }
+  },
+  "allBudgetsPassed": true,
+  "markdown": "# Context-hook benchmark comparison\n\n- Upstream commit: 71f9e396951c42687f0c3456727b2b5c8c625da1\n- Fork commit: 85e9af185c2a6416ea37791cf5d08e57c399c0e0\n- Node: v25.8.2\n- Budgets passed: yes\n\n## Cases\n\n| Messages | Bash density | CWD | Median delta (ms) | p95 delta (ms) | Median ratio | p95 ratio | Mask delta | Output hash equal | Budget |\n| ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | :---: | :---: |\n| 100 | 0.25 | balanced | 0.02 | 0.015 | 2.052632 | 1.517241 | 0 | yes | pass |\n| 100 | 0.25 | single | 0.036 | 0.07 | 2.636364 | 2.372549 | 0 | yes | pass |\n| 100 | 0.25 | skewed | 0.022 | 0.024 | 2.157895 | 2.142857 | 0 | yes | pass |\n| 100 | 0.5 | balanced | 0.033 | 0.028 | 2.1 | 1.651163 | 0 | yes | pass |\n| 100 | 0.5 | single | 0.038 | 0.048 | 2.225806 | 2.2 | 0 | yes | pass |\n| 100 | 0.5 | skewed | 0.033 | 0.044 | 2.1 | 2.257143 | 0 | yes | pass |\n| 100 | 0.9 | balanced | 0.062 | 0.083 | 2.347826 | 2.296875 | 0 | yes | pass |\n| 100 | 0.9 | single | 0.059 | 0.067 | 2.282609 | 2.175439 | 0 | yes | pass |\n| 100 | 0.9 | skewed | 0.058 | 0.051 | 2.234043 | 1.822581 | 0 | yes | pass |\n| 1000 | 0.25 | balanced | 0.168 | 0.173 | 2.2 | 1.905759 | 0 | yes | pass |\n| 1000 | 0.25 | single | 0.178 | 0.251 | 2.065868 | 2.195238 | 0 | yes | pass |\n| 1000 | 0.25 | skewed | 0.211 | 0.177 | 3.089109 | 1.983333 | 0 | yes | pass |\n| 1000 | 0.5 | balanced | 0.334 | 0.45 | 2.357724 | 2.624549 | 0 | yes | pass |\n| 1000 | 0.5 | single | 0.246 | 0.344 | 2.28125 | 2.333333 | 0 | yes | pass |\n| 1000 | 0.5 | skewed | 0.311 | 0.427 | 2.264228 | 2.43771 | 0 | yes | pass |\n| 1000 | 0.9 | balanced | 0.572 | 0.899 | 2.444444 | 2.988938 | 0 | yes | pass |\n| 1000 | 0.9 | single | 0.537 | 0.751 | 2.398438 | 2.542094 | 0 | yes | pass |\n| 1000 | 0.9 | skewed | 0.556 | 0.694 | 2.444156 | 2.588101 | 0 | yes | pass |\n| 5000 | 0.25 | balanced | 0.89 | 0.972 | 2.728155 | 2.114679 | 0 | yes | pass |\n| 5000 | 0.25 | single | 0.735 | 0.888 | 2.506148 | 2.361963 | 0 | yes | pass |\n| 5000 | 0.25 | skewed | 0.813 | 0.928 | 2.700837 | 2.134474 | 0 | yes | pass |\n| 5000 | 0.5 | balanced | 1.765 | 1.793 | 3.012543 | 2.301161 | 0 | yes | pass |\n| 5000 | 0.5 | single | 1.976 | 1.806 | 3.212766 | 2.279943 | 0 | yes | pass |\n| 5000 | 0.5 | skewed | 1.573 | 1.626 | 2.715376 | 2.118294 | 0 | yes | pass |\n| 5000 | 0.9 | balanced | 2.769 | 2.927 | 2.640403 | 2.35572 | 0 | yes | pass |\n| 5000 | 0.9 | single | 2.89 | 2.631 | 2.664747 | 2.101759 | 0 | yes | pass |\n| 5000 | 0.9 | skewed | 3.328 | 3.264 | 3.290434 | 2.496561 | 0 | yes | pass |\n| 10000 | 0.25 | balanced | 1.713 | 1.737 | 3.044153 | 2.038876 | 0 | yes | pass |\n| 10000 | 0.25 | single | 1.839 | 1.928 | 3.17891 | 2.16707 | 0 | yes | pass |\n| 10000 | 0.25 | skewed | 1.489 | 1.565 | 2.824755 | 1.912536 | 0 | yes | pass |\n| 10000 | 0.5 | balanced | 2.596 | 2.952 | 2.288977 | 2.052031 | 0 | yes | pass |\n| 10000 | 0.5 | single | 3.117 | 3.292 | 3.08495 | 2.329564 | 0 | yes | pass |\n| 10000 | 0.5 | skewed | 2.452 | 1.567 | 2.135185 | 1.36408 | 0 | yes | pass |\n| 10000 | 0.9 | balanced | 5.696 | 5.633 | 3.122997 | 2.336418 | 0 | yes | pass |\n| 10000 | 0.9 | single | 5.495 | 4.826 | 2.873508 | 1.958871 | 0 | yes | pass |\n| 10000 | 0.9 | skewed | 5.768 | 5.649 | 3.259303 | 2.379487 | 0 | yes | pass |\n\n## Aggregates\n\n| Group | Cases | Median delta (ms) | p95 delta (ms) | Median ratio | p95 ratio | Mask delta | Budget |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: |\n| 100 | 9 | 0.033 | 0.045 | 2.1 | 2.046512 | 0 | pass |\n| 1000 | 9 | 0.311 | 0.447 | 2.264228 | 2.613718 | 0 | pass |\n| 5000 | 9 | 1.749 | 1.76 | 2.958567 | 2.247342 | 0 | pass |\n| 10000 | 9 | 2.598 | 2.962 | 2.28997 | 2.055595 | 0 | pass |\n| total | 36 | 0.6585 | 0.876 | 2.506865 | 2.538191 | 0 | pass |\n\nTiming differences are descriptive only. Output-hash differences are allowed between algorithms.\n"
+}

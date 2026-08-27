@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["node", "tests/test_merge_driver.js"],
+      "expectExit": 0
+    },
+    {
+      "id": "both-helpers-present",
+      "kind": "fileContains",
+      "path": "src/merge-driver.js",
+      "all": ["function mainOnly(", "function featureOnly("],
+      "none": ["<<<<<<<", ">>>>>>>", "======="]
+    },
+    {
+      "id": "merge-concluded",
+      "kind": "gitLogStartsWith",
+      "prefix": "merge:"
+    }
+  ]
+}

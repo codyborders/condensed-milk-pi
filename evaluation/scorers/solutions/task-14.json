@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: validate entries before writing, then correct the invalid retries value.",
+  "files": [
+    {
+      "path": "build2.js",
+      "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\nconst path = require(\"node:path\");\n\nconst configPath = process.argv[2] || path.join(__dirname, \"config\", \"entries.json\");\nconst outputDir = path.join(__dirname, \"out\");\nconst entries = JSON.parse(fs.readFileSync(configPath, \"utf8\"));\n\nfor (const entry of entries) {\n  if (typeof entry.name !== \"string\" || entry.name.trim().length === 0) {\n    console.log(`invalid entry ${JSON.stringify(entry.name ?? null)}: name must be a non-empty string`);\n    process.exit(1);\n  }\n  if (!Number.isInteger(entry.retries) || entry.retries < 0 || entry.retries > 10) {\n    console.error(`invalid entry ${entry.name}: retries must be an integer between 0 and 10`);\n    process.exit(1);\n  }\n}\n\nfs.mkdirSync(outputDir, { recursive: true });\nfor (const entry of entries) {\n  fs.writeFileSync(path.join(outputDir, `${entry.name}.txt`), `${entry.name}:${entry.retries}\\n`);\n  console.log(`wrote ${entry.name}`);\n}\n"
+    },
+    {
+      "path": "config/entries.json",
+      "content": "[\n  {\"name\": \"alpha\", \"retries\": 3},\n  {\"name\": \"beta\", \"retries\": 2},\n  {\"name\": \"gamma\", \"retries\": 0}\n]\n"
+    }
+  ],
+  "commands": []
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: ANSWER.txt names the bug-introducing commit; boundary fixed forward in one commit.",
+  "files": [
+    {
+      "path": "lib/validate.js",
+      "content": "\"use strict\";\n\n/* fixture metadata: demo repo for history hunting */\n\nfunction validate_age(value) {\n  return value >= 18;\n}\n\nfunction validate_name(value) {\n  /* names must be nonempty strings after trimming */\n  return typeof value === \"string\" && value.trim().length > 0;\n}\n\nmodule.exports = { validate_name, validate_age };\n"
+    },
+    {
+      "path": "ANSWER.txt",
+      "content": "681d1dbfe0cfdc0c9ddcd82539cd416489d55ee3\n"
+    }
+  ],
+  "commands": [
+    ["git", "add", "-A"],
+    ["git", "-c", "user.name=Dev Agent", "-c", "user.email=agent@example.invalid", "commit", "-m", "fix: accept age 18 exactly"]
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: fold over all entries instead of dropping the first.",
+  "files": [
+    {
+      "path": "src/aggregate.js",
+      "content": "\"use strict\";\n\nconst { mergeTotals } = require(\"./services/service-23.js\");\n\nfunction aggregate(entries) {\n  let totals = { count: 0, sum: 0 };\n  for (const entry of entries) {\n    totals = mergeTotals(totals, entry);\n  }\n  return totals;\n}\n\nmodule.exports = { aggregate };\n"
+    }
+  ],
+  "commands": []
+}

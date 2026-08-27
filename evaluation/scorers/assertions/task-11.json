@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "answer-names-bug-commit",
+      "kind": "fileEquals",
+      "path": "ANSWER.txt",
+      "equals": "681d1dbfe0cfdc0c9ddcd82539cd416489d55ee3\n"
+    },
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["python3", "tests/test_validate.py"],
+      "expectExit": 0
+    },
+    {
+      "id": "history-preserved",
+      "kind": "command",
+      "argv": ["git", "merge-base", "--is-ancestor", "681d1dbfe0cfdc0c9ddcd82539cd416489d55ee3", "HEAD"],
+      "expectExit": 0
+    },
+    {
+      "id": "fix-committed-forward",
+      "kind": "command",
+      "argv": ["git", "rev-list", "--count", "HEAD"],
+      "expectExit": 0,
+      "stdoutContains": ["6"]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: median must sort before selecting the middle element.",
+  "files": [
+    {
+      "path": "stats.py",
+      "content": "\"\"\"Small statistics helpers used by the orders service.\"\"\"\n\n\ndef median(values):\n    if not values:\n        raise ValueError(\"median() requires at least one value\")\n    ordered = sorted(values)\n    if len(ordered) % 2 == 1:\n        return ordered[len(ordered) // 2]\n    return (ordered[len(ordered) // 2 - 1] + ordered[len(ordered) // 2]) / 2\n\n\ndef mean(values):\n    if not values:\n        raise ValueError(\"mean() requires at least one value\")\n    return sum(values) / len(values)\n"
+    }
+  ],
+  "commands": []
+}

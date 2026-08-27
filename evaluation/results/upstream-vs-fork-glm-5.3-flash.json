@@ -1,0 +1,655 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-08-27",
+  "title": "Upstream versus fork paired evaluation",
+  "commits": {
+    "upstream": "71f9e396951c42687f0c3456727b2b5c8c625da1",
+    "fork": "85e9af185c2a6416ea37791cf5d08e57c399c0e0"
+  },
+  "configuration": {
+    "provider": "z-ai",
+    "model": "glm-5.3-flash",
+    "thinking": "high",
+    "piVersion": "0.84.2",
+    "piRuntimeDigestPinned": false,
+    "profile": "qwen-vllm"
+  },
+  "counts": {
+    "tasks": 20,
+    "arms": 2,
+    "validPairs": 20,
+    "incompletePairs": 0,
+    "invalidPairs": 0,
+    "selectedAttempts": 40,
+    "completedSlots": 40
+  },
+  "quality": {
+    "outcomes": {
+      "bothPass": 20,
+      "upstreamOnly": 0,
+      "forkOnly": 0,
+      "bothFail": 0
+    },
+    "upstream": {
+      "passedTasks": 20,
+      "totalTasks": 20,
+      "passRate": 1,
+      "scorerPasses": 44,
+      "totalScoreChecks": 44
+    },
+    "fork": {
+      "passedTasks": 20,
+      "totalTasks": 20,
+      "passRate": 1,
+      "scorerPasses": 44,
+      "totalScoreChecks": 44
+    },
+    "qualityDifference": {
+      "passedTasks": 0,
+      "passRate": 0
+    }
+  },
+  "arms": {
+    "upstream": {
+      "attempts": 20,
+      "quality": {
+        "scorerPasses": 44,
+        "totalScoreChecks": 44
+      },
+      "usage": {
+        "input": 174611,
+        "cacheRead": 272128,
+        "cacheWrite": 0,
+        "output": 20821,
+        "combinedPrompt": 446739,
+        "totalReported": 467560
+      },
+      "durationMs": {
+        "total": 838166,
+        "mean": 41908.3,
+        "median": 41222,
+        "p95": 83233
+      },
+      "proxy": {
+        "requests": 137,
+        "rejected": 0
+      },
+      "tools": {
+        "calls": 158,
+        "errors": 3
+      },
+      "jsonl": {
+        "malformed": 0
+      },
+      "staticMaskPlaceholders": 5,
+      "missingUsageFields": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    },
+    "fork": {
+      "attempts": 20,
+      "quality": {
+        "scorerPasses": 44,
+        "totalScoreChecks": 44
+      },
+      "usage": {
+        "input": 181096,
+        "cacheRead": 255616,
+        "cacheWrite": 0,
+        "output": 19884,
+        "combinedPrompt": 436712,
+        "totalReported": 456596
+      },
+      "durationMs": {
+        "total": 872758,
+        "mean": 43637.9,
+        "median": 35436,
+        "p95": 80807
+      },
+      "proxy": {
+        "requests": 136,
+        "rejected": 0
+      },
+      "tools": {
+        "calls": 159,
+        "errors": 4
+      },
+      "jsonl": {
+        "malformed": 0
+      },
+      "staticMaskPlaceholders": 0,
+      "missingUsageFields": {
+        "input": 0,
+        "output": 0,
+        "cacheRead": 0,
+        "cacheWrite": 0
+      }
+    }
+  },
+  "deltas": {
+    "direction": "fork-minus-upstream",
+    "usage": {
+      "input": {
+        "upstream": 174611,
+        "fork": 181096,
+        "delta": 6485,
+        "percent": 3.71397
+      },
+      "cacheRead": {
+        "upstream": 272128,
+        "fork": 255616,
+        "delta": -16512,
+        "percent": -6.067733
+      },
+      "cacheWrite": {
+        "upstream": 0,
+        "fork": 0,
+        "delta": 0,
+        "percent": null
+      },
+      "output": {
+        "upstream": 20821,
+        "fork": 19884,
+        "delta": -937,
+        "percent": -4.500264
+      },
+      "combinedPrompt": {
+        "upstream": 446739,
+        "fork": 436712,
+        "delta": -10027,
+        "percent": -2.244487
+      },
+      "totalReported": {
+        "upstream": 467560,
+        "fork": 456596,
+        "delta": -10964,
+        "percent": -2.34494
+      }
+    },
+    "durationMs": {
+      "total": {
+        "upstream": 838166,
+        "fork": 872758,
+        "delta": 34592,
+        "percent": 4.127106
+      },
+      "mean": {
+        "upstream": 41908.3,
+        "fork": 43637.9,
+        "delta": 1729.5999999999985,
+        "percent": 4.127106
+      },
+      "median": {
+        "upstream": 41222,
+        "fork": 35436,
+        "delta": -5786,
+        "percent": -14.036194
+      },
+      "p95": {
+        "upstream": 83233,
+        "fork": 80807,
+        "delta": -2426,
+        "percent": -2.914709
+      }
+    },
+    "tools": {
+      "calls": {
+        "upstream": 158,
+        "fork": 159,
+        "delta": 1,
+        "percent": 0.632911
+      },
+      "errors": {
+        "upstream": 3,
+        "fork": 4,
+        "delta": 1,
+        "percent": 33.333333
+      }
+    },
+    "proxy": {
+      "requests": {
+        "upstream": 137,
+        "fork": 136,
+        "delta": -1,
+        "percent": -0.729927
+      },
+      "rejected": {
+        "upstream": 0,
+        "fork": 0,
+        "delta": 0,
+        "percent": null
+      }
+    },
+    "jsonl": {
+      "malformed": {
+        "upstream": 0,
+        "fork": 0,
+        "delta": 0,
+        "percent": null
+      }
+    },
+    "staticMaskPlaceholders": {
+      "upstream": 5,
+      "fork": 0,
+      "delta": -5,
+      "percent": -100
+    }
+  },
+  "pairedDeltas": {
+    "direction": "fork-minus-upstream",
+    "byTask": [
+      {
+        "taskId": "task-01",
+        "durationMs": 6724,
+        "inputTokens": -1777,
+        "cacheReadTokens": 2240,
+        "cacheWriteTokens": 0,
+        "outputTokens": -62,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-02",
+        "durationMs": -9927,
+        "inputTokens": -49,
+        "cacheReadTokens": 512,
+        "cacheWriteTokens": 0,
+        "outputTokens": 20,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-03",
+        "durationMs": 9409,
+        "inputTokens": 3252,
+        "cacheReadTokens": 320,
+        "cacheWriteTokens": 0,
+        "outputTokens": 72,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-04",
+        "durationMs": -213,
+        "inputTokens": -1367,
+        "cacheReadTokens": -896,
+        "cacheWriteTokens": 0,
+        "outputTokens": 166,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-05",
+        "durationMs": 18559,
+        "inputTokens": -7149,
+        "cacheReadTokens": 2304,
+        "cacheWriteTokens": 0,
+        "outputTokens": -277,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-06",
+        "durationMs": 26718,
+        "inputTokens": 2880,
+        "cacheReadTokens": -10304,
+        "cacheWriteTokens": 0,
+        "outputTokens": 270,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-07",
+        "durationMs": -1296,
+        "inputTokens": -148,
+        "cacheReadTokens": -384,
+        "cacheWriteTokens": 0,
+        "outputTokens": 21,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-08",
+        "durationMs": 10985,
+        "inputTokens": 3208,
+        "cacheReadTokens": -6656,
+        "cacheWriteTokens": 0,
+        "outputTokens": -251,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-09",
+        "durationMs": 9184,
+        "inputTokens": 2699,
+        "cacheReadTokens": -8128,
+        "cacheWriteTokens": 0,
+        "outputTokens": -170,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-10",
+        "durationMs": 2648,
+        "inputTokens": 2004,
+        "cacheReadTokens": 5504,
+        "cacheWriteTokens": 0,
+        "outputTokens": 148,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-11",
+        "durationMs": 433,
+        "inputTokens": -6306,
+        "cacheReadTokens": 16000,
+        "cacheWriteTokens": 0,
+        "outputTokens": 30,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-12",
+        "durationMs": 10559,
+        "inputTokens": 1234,
+        "cacheReadTokens": 3584,
+        "cacheWriteTokens": 0,
+        "outputTokens": -261,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-13",
+        "durationMs": 2009,
+        "inputTokens": 2853,
+        "cacheReadTokens": -5568,
+        "cacheWriteTokens": 0,
+        "outputTokens": -44,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-14",
+        "durationMs": -4512,
+        "inputTokens": 274,
+        "cacheReadTokens": -1344,
+        "cacheWriteTokens": 0,
+        "outputTokens": 419,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-15",
+        "durationMs": -16770,
+        "inputTokens": 2199,
+        "cacheReadTokens": -384,
+        "cacheWriteTokens": 0,
+        "outputTokens": 199,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-16",
+        "durationMs": 6905,
+        "inputTokens": -1716,
+        "cacheReadTokens": 5312,
+        "cacheWriteTokens": 0,
+        "outputTokens": 417,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-17",
+        "durationMs": -7817,
+        "inputTokens": -509,
+        "cacheReadTokens": -4672,
+        "cacheWriteTokens": 0,
+        "outputTokens": -312,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-18",
+        "durationMs": -1179,
+        "inputTokens": -1692,
+        "cacheReadTokens": -6976,
+        "cacheWriteTokens": 0,
+        "outputTokens": -185,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-19",
+        "durationMs": -25401,
+        "inputTokens": -3059,
+        "cacheReadTokens": -2432,
+        "cacheWriteTokens": 0,
+        "outputTokens": -847,
+        "upstreamPass": true,
+        "forkPass": true
+      },
+      {
+        "taskId": "task-20",
+        "durationMs": -2426,
+        "inputTokens": 9654,
+        "cacheReadTokens": -4544,
+        "cacheWriteTokens": 0,
+        "outputTokens": -290,
+        "upstreamPass": true,
+        "forkPass": true
+      }
+    ],
+    "summary": {
+      "durationMs": {
+        "total": 34592,
+        "mean": 1729.6,
+        "median": 1221,
+        "positivePairs": 11,
+        "negativePairs": 9,
+        "unchangedPairs": 0
+      },
+      "inputTokens": {
+        "total": 6485,
+        "mean": 324.25,
+        "median": 112.5,
+        "positivePairs": 10,
+        "negativePairs": 10,
+        "unchangedPairs": 0
+      },
+      "cacheReadTokens": {
+        "total": -16512,
+        "mean": -825.6,
+        "median": -640,
+        "positivePairs": 8,
+        "negativePairs": 12,
+        "unchangedPairs": 0
+      },
+      "cacheWriteTokens": {
+        "total": 0,
+        "mean": 0,
+        "median": 0,
+        "positivePairs": 0,
+        "negativePairs": 0,
+        "unchangedPairs": 20
+      },
+      "outputTokens": {
+        "total": -937,
+        "mean": -46.85,
+        "median": -12,
+        "positivePairs": 10,
+        "negativePairs": 10,
+        "unchangedPairs": 0
+      }
+    }
+  },
+  "hashEquality": {
+    "prompt": {
+      "allPairsEqual": true,
+      "allPairsHaveHash": true
+    },
+    "scorer": {
+      "allPairsEqual": true,
+      "allPairsHaveHash": true
+    },
+    "perPair": [
+      {
+        "taskId": "task-01",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "3c0d344539a6577cf51a2e0064b8acc51528022de7cab20af2669cc20cf07f8f",
+        "scorerSha256": "29b54352a156f55a69dcbda4c31552e2f2660a07290763a213892530e270fdfd"
+      },
+      {
+        "taskId": "task-02",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "27923f07be653bdac593325d16277b431292167d98ed2e338527ff3f5890f2e1",
+        "scorerSha256": "f6591c4905942335939654f59a3cfe13ff680f58cf17bc2663d9b6475a7ba88b"
+      },
+      {
+        "taskId": "task-03",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "37218d2f225ccd98b4c000bdbbddc9789fa8465b3b2fa5dca6d04f8f776ee590",
+        "scorerSha256": "9a757fbc833292a694d05fc8eaba8c563f908b2b8cf3b4da4ac32c77dcc4f073"
+      },
+      {
+        "taskId": "task-04",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "022a2357bc12b8756204dde52895f9c83c91b27a3fda299bf61951fbc14915dc",
+        "scorerSha256": "9ad641c91009f71ddf61d7f52b26c8ef055f069ecf800a0835674b6de48b5abb"
+      },
+      {
+        "taskId": "task-05",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "462d3b1b4117143a9578b8822d2ab59bec93f415a51dc73758f00965ee726363",
+        "scorerSha256": "44bf599a47cf5348fdf73c9f74b232ca463936c612dc343f2ded9e11de80d74a"
+      },
+      {
+        "taskId": "task-06",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "983fe78be4ebdc76388b3a25333764668023bc50aae33939748c328b4acfa7a8",
+        "scorerSha256": "9f1c708bafa5fe4a00d1967955841e6b24d7a0ddbe6602727373b7f88bf39936"
+      },
+      {
+        "taskId": "task-07",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "8e7c948a7238d918106d52dc249e8a4bfeb2fbaa00a75511b9e6ecbd1d672af2",
+        "scorerSha256": "1613cc56b8d8f3d404096529260305e92b0bc5e89d7e12107fcf20dece5c13d4"
+      },
+      {
+        "taskId": "task-08",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "85a0a7d28fce90227ae10e5e9e9ee813c569a168de4dc4e140ab824745b95d2d",
+        "scorerSha256": "770d9b32670f40f1c07123e6af9d26d35a414b468850e21046b5b4b315ec9e0c"
+      },
+      {
+        "taskId": "task-09",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "830f7b50f424e17adb0a6b34a45a41a7e3f0974d308461731896d11e0819eb5f",
+        "scorerSha256": "8f49666ce01ac9872d8e3c4c22b53d4d8e7bae1bf45fa601f7d74a36220571de"
+      },
+      {
+        "taskId": "task-10",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "984cdc625ed163f9229fa9a907676c3773b2186968f03d11a8c930295efda391",
+        "scorerSha256": "ff9db016ee4dc58677d42a911794841ce87cc77fc030b936d61ac72977ab5fbf"
+      },
+      {
+        "taskId": "task-11",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "903a01ede5af5e005b025672a2f592f43fef96bb672cb0617d3055ef3888d8e8",
+        "scorerSha256": "bddd57363adbac290c0797c6f2915734148165187ec9593932cb29bb802a92b4"
+      },
+      {
+        "taskId": "task-12",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "fcadcdaae0823ac0b0d96f53d65e4dba8a29ca77181d9c11479532c81cfea46d",
+        "scorerSha256": "3893edeca60d5fb9b028d7f627f07aac5ebceee754a045252265124f77e0f7bf"
+      },
+      {
+        "taskId": "task-13",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "9c7cb3bbe363683d396e09a976dced0fd49df8420aa3a0ed8ffa19fb44948c6b",
+        "scorerSha256": "5812cdc933921ebe8637c50a772747d12613665028f3a325c8372f4d14c4b23e"
+      },
+      {
+        "taskId": "task-14",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "7bcd0b7e04029ea75fb55392c1f7777a0ca60e5208b2e7a91132e695cc7e2d3f",
+        "scorerSha256": "7c50beccd4a6fc6a9c96815909692e49904faabc94dcc80cdb2e045ea1ceb818"
+      },
+      {
+        "taskId": "task-15",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "f821006e3d3fbc142129754c753cb2801cd40cb0f3b255b0617078e33ae02e0e",
+        "scorerSha256": "05cdca7ce9b8127ca265ecc53f10ac30ee3575a9497e83b15f0fc428b4a5cb26"
+      },
+      {
+        "taskId": "task-16",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "37852fdc950b44673389cb22e7b80486d61f736a76a1c83872774d67544a743d",
+        "scorerSha256": "711abe02b07fab3340e9ac9c21213a7ab2b463a2baab66dbba578c7455773346"
+      },
+      {
+        "taskId": "task-17",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "6ecda93e3deaac054b007f7c4627e8acd4329c8880c8e177d452f54f98f50628",
+        "scorerSha256": "49460f4a2ed38dd85b04671cdc1ecd29f60881b0fe51c05fa7f1539a10f05335"
+      },
+      {
+        "taskId": "task-18",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "231a31bd29366bc944ec94abfa71f05fe618b870337f05798d8e6567db13d0b6",
+        "scorerSha256": "ed1e2cb84137f7515a54c8b75ed6309ffbab64a3179de4c506e1b1d3d0929198"
+      },
+      {
+        "taskId": "task-19",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "341854fb492dd84f3e6a792ffe1d8a59b3781e8750b207c20184437acc01c394",
+        "scorerSha256": "c6d1c83a210539df08b15d9f8865308611a6f8b1504d9bb38490955191386e84"
+      },
+      {
+        "taskId": "task-20",
+        "promptEqual": true,
+        "scorerEqual": true,
+        "promptSha256": "1cf503068dca736415ba555d0f4b8ff56c7fad7167c28159c516068cfd62fcaf",
+        "scorerSha256": "adbbe800a962b7f59a1f5afc9ac190c737e349d2cd3eee83b5d8c77de09d8f4d"
+      }
+    ]
+  },
+  "checks": {
+    "noDuplicateInvocations": true,
+    "maxInvocationsPerAttempt": 1
+  },
+  "exclusions": [
+    "Two earlier private pilot runs are excluded because scorer definitions changed."
+  ],
+  "limitations": [
+    "One stochastic run; deltas are descriptive and do not establish causality.",
+    "Valid pairs use one model, thinking setting, profile, provider, and pi package version.",
+    "This paid run predates executable runtime digest pinning. Version equality does not establish identical Pi runtime bytes or dependency bytes.",
+    "First-event latency is omitted: the recorded values included fixture preparation. The evaluator now measures from the persisted spawn instant (piSpawnStartedAt), which this run predates.",
+    "Provider spend, safety, and production readiness require separate review.",
+    "Local synthetic benchmark covers 36 cases and passed all budgets, but does not establish provider economics or task quality."
+  ]
+}

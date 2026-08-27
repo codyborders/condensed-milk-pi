@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["python3", "tests/test_shellargs.py"],
+      "expectExit": 0
+    }
+  ]
+}

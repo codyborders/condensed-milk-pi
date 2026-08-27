@@ -2,11 +2,13 @@
 
 ## Status
 
-The planned evaluation contains 20 paired paid tasks. None of these tasks were run. This document records protocol and acceptance criteria. It records no task results, provider measurements, or fabricated metrics.
+The evaluation is complete for one run. It contains 20 valid task pairs and 40 selected attempts. All 20 tasks passed in both arms, with zero quality difference.
 
-No provider spend occurred. Paid provider use requires explicit approval. No approval was given for this evaluation, so no paid calls were made.
+The run used provider `z-ai`, model `glm-5.3-flash`, Pi `0.84.2`, `high` thinking, and `qwen-vllm` profile. Upstream and fork commits were pinned to `71f9e396951c42687f0c3456727b2b5c8c625da1` and `85e9af185c2a6416ea37791cf5d08e57c399c0e0`.
 
-Production-readiness gates remain unmet. Missing data includes paired task outcomes, independent quality review, provider accounting, safety review, and repeatability across environments.
+Results are sanitized and checked in under `evaluation/results/`. No raw transcripts, tool content, selection map, credentials, or file paths are included. Two earlier private pilots are excluded because scorer definitions changed.
+
+Production-readiness gates remain qualified. This run does not replace independent quality review, provider accounting review, broader safety review, or repeatability across environments.
 
 ## Exact protocol
 
@@ -24,7 +26,23 @@ The evaluator must use the 20 slots in `evaluation/task-manifest.json`. Each slo
 10. Reconcile provider usage with local usage records. Preserve the raw provider response and the pricing snapshot.
 11. Publish only an aggregate report after review. Keep task-level raw data private when it contains repository or prompt content.
 
-The baseline and treatment are paired by task slot. A result is valid only when both runs complete with matching task inputs and recorded provider metadata. An interrupted or incomplete pair is not a success or failure result.
+The baseline and treatment are paired by task slot. A result is valid only when both runs complete with matching task inputs and provider metadata. An interrupted or incomplete pair is not a success or failure result.
+
+Selected attempts must have matching prompt and scorer definition hashes.
+
+## Aggregate real-run reporting
+
+Reports use selected valid pairs for arm metrics. They write `summary.json`, `summary.md`, `pairs.csv`, `failures.json`, and `artifact-index.json`.
+
+Reports contain no raw tool inputs, outputs, or matching JSONL lines. Tool calls count `tool_execution_start` events. Tool errors count `tool_execution_end` events with `isError: true`. Malformed JSONL counts non-empty lines that do not parse. Static mask counts use exact `[cm-masked ` occurrences.
+
+Arm metrics cover scorer passes, score checks, duration statistics, first-event latency, token totals, and missing fields. They also cover proxy requests, tool calls, tool errors, malformed JSONL, and static mask placeholders.
+
+First-event latency is measured from the persisted `piSpawnStartedAt` instant, captured immediately before the Pi process spawn. It never includes fixture preparation or workspace setup. Attempts recorded before this timing basis was introduced report no first-event latency, and such values are excluded from comparisons rather than relabeled.
+
+Pair reports include fork-minus-upstream duration and token deltas. They include both-pass, upstream-only, fork-only, and both-fail outcomes. Numeric values remain `null` when unavailable. Incomplete and invalid pairs remain separate.
+
+Two previous private real-run IDs are excluded from primary metrics. Pilot runs affected by scorer definition changes are also excluded from primary metrics.
 
 ## Required provider fields
 
@@ -111,10 +129,12 @@ These thresholds apply only after all 20 pairs have valid records.
 | Accounting | Cost and cache values must reconcile with provider records. |
 | Recommendation | Any quality regression, safety incident, unreconciled spend, or repeatability failure blocks approval. |
 
-These thresholds define acceptance. No observed results exist because the evaluation was not run.
+These thresholds define acceptance. This run passed task success and recorded no malformed JSONL or duplicate invocation. Other gates still need separate review.
 
 ## Production-readiness gates
 
-All production-readiness gates remain open. The 20 paired tasks have not run, and no provider accounting exists. No blinded quality comparison or cross-environment safety review exists. Repeatability has not been measured. This work does not include an approved release, publication, or upstream pull request.
+The run supports a qualified evaluation result, not a production approval. One stochastic run cannot establish causality or repeatability. Independent quality review, provider accounting reconciliation, broader safety review, and cross-environment repeatability remain open. This work does not include an approved release, publication, or upstream pull request.
 
 The local synthetic benchmark is documented separately. It cannot close these gates because it excludes provider calls and task-quality judgment.
+
+See [the checked-in result](results/upstream-vs-fork-glm-5.3-flash.md) and [the local comparator result](../benchmarks/comparison-results.json) for sanitized metrics.

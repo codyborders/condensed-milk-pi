@@ -22,8 +22,18 @@ jobs:
         run: npm ci
       - name: Run tests
         run: npm test
+      - name: Validate evaluation manifest
+        run: npm run evaluation:validate
+      - name: Generate deterministic evaluation fixtures
+        run: npm run evaluation:fixtures
+      - name: Run evaluation tests
+        run: npm run evaluation:test
+      - name: Run free evaluation dry-run
+        run: npm run evaluation:dry-run
       - name: Typecheck
         run: npm run typecheck
+      - name: Run benchmark tests
+        run: npm run benchmark:test
       - name: Run performance benchmark
         run: npm run benchmark
       - name: Check package contents

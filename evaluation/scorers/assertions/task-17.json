@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["node", "tests/test_aggregate.js"],
+      "expectExit": 0
+    },
+    {
+      "id": "no-drop-left",
+      "kind": "fileContains",
+      "path": "src/aggregate.js",
+      "all": ["for (const entry of entries)"]
+    }
+  ]
+}

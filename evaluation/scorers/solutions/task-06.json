@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: add word-boundary truncate and export it.",
+  "files": [
+    {
+      "path": "src/url-utils.js",
+      "content": "\"use strict\";\n\nfunction slugify(text) {\n  return String(text)\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, \"-\")\n    .replace(/^-+|-+$/g, \"\");\n}\n\nfunction truncate(text, max) {\n  const value = String(text);\n  if (value.length <= max) {\n    return value;\n  }\n  const room = max - 3;\n  if (room <= 0) {\n    return value.slice(0, max);\n  }\n  const cut = value.slice(0, room);\n  const lastSpace = cut.lastIndexOf(\" \");\n  const base = lastSpace > 0 ? cut.slice(0, lastSpace) : cut;\n  return base.replace(/\\s+$/, \"\") + \"...\";\n}\n\nmodule.exports = { slugify, truncate };\n"
+    }
+  ],
+  "commands": []
+}

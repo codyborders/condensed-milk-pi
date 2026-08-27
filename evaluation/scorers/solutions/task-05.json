@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: both branches of the label conditional must be strings.",
+  "files": [
+    {
+      "path": "src/shapes.ts",
+      "content": "export interface Shape {\n  kind: \"circle\" | \"square\";\n  size: number;\n}\n\nexport function area(shape: Shape): number {\n  if (shape.kind === \"circle\") {\n    return 3.14159 * shape.size * shape.size;\n  }\n  return shape.size * shape.size;\n}\n\nexport function describe(shape: Shape): string {\n  const label: string = shape.kind === \"circle\" ? \"circle\" : \"square\";\n  return `a ${label} with area ${area(shape)}`;\n}\n"
+    }
+  ],
+  "commands": []
+}

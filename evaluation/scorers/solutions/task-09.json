@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: commit the staged finished work only, remove stray tmp files.",
+  "files": [],
+  "commands": [
+    ["git", "commit", "-m", "chore: commit finished work"],
+    ["rm", "-rf", "tmp"]
+  ]
+}

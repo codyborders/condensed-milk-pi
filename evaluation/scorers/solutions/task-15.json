@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: ConfigError with .path/.reason for missing, invalid JSON, and non-object roots.",
+  "files": [
+    {
+      "path": "src/config-loader.js",
+      "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\n\nclass ConfigError extends Error {}\n\nfunction loadConfig(configPath) {\n  let raw;\n  try {\n    raw = fs.readFileSync(configPath, \"utf8\");\n  } catch (error) {\n    if (error && error.code === \"ENOENT\") {\n      const err = new ConfigError(`config file is missing: ${configPath}`);\n      err.path = configPath;\n      err.reason = \"missing\";\n      throw err;\n    }\n    throw error;\n  }\n  let parsed;\n  try {\n    parsed = JSON.parse(raw);\n  } catch (error) {\n    const err = new ConfigError(`config file is not valid JSON: ${configPath}`);\n    err.path = configPath;\n    err.reason = \"invalid-json\";\n    throw err;\n  }\n  if (parsed === null || typeof parsed !== \"object\" || Array.isArray(parsed)) {\n    const err = new ConfigError(`config root must be an object: ${configPath}`);\n    err.path = configPath;\n    err.reason = \"not-an-object\";\n    throw err;\n  }\n  return parsed;\n}\n\nmodule.exports = { ConfigError, loadConfig };\n"
+    }
+  ],
+  "commands": []
+}

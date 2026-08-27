@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["node", "tests/test_kv_cache.js"],
+      "expectExit": 0,
+      "timeoutMs": 30000
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["node", "tests/test_url_utils.js"],
+      "expectExit": 0
+    }
+  ]
+}

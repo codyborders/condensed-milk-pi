@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "build-rejects-invalid-config-without-output",
+      "kind": "command",
+      "argv": [
+        "node",
+        "-e",
+        "const fs = require(\"node:fs\"); const cp = require(\"node:child_process\"); const result = cp.spawnSync(process.execPath, [\"build2.js\", process.argv[1]], { encoding: \"utf8\" }); if (result.status !== 1 || fs.existsSync(\"out\")) process.exit(2); process.stderr.write(result.stderr);",
+        "$SCORER_DATA/task-14-bad.json"
+      ],
+      "expectExit": 0,
+      "stderrContains": [
+        "beta",
+        "retries"
+      ]
+    },
+    {
+      "id": "build-passes-on-fixed-config",
+      "kind": "command",
+      "argv": [
+        "node",
+        "build2.js"
+      ],
+      "expectExit": 0,
+      "stdoutContains": [
+        "wrote alpha",
+        "wrote beta",
+        "wrote gamma"
+      ]
+    }
+  ]
+}

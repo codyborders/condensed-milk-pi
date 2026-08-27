@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "rates-suite-passes",
+      "kind": "command",
+      "argv": ["python3", "tests/test_rates.py"],
+      "expectExit": 0
+    },
+    {
+      "id": "stats-suite-passes",
+      "kind": "command",
+      "argv": ["node", "tests/test_stats.js"],
+      "expectExit": 0
+    },
+    {
+      "id": "changelog-section-added",
+      "kind": "fileContains",
+      "path": "CHANGELOG.md",
+      "all": ["## 1.2.3"]
+    },
+    {
+      "id": "release-commit",
+      "kind": "gitLog",
+      "headMessageEquals": "release: 1.2.3"
+    },
+    {
+      "id": "release-tag-exists",
+      "kind": "gitTagExists",
+      "tag": "v1.2.3"
+    },
+    {
+      "id": "worktree-clean",
+      "kind": "gitStatus",
+      "expect": []
+    }
+  ]
+}

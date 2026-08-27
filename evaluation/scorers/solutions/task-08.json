@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: get() deletes and returns undefined for entries older than ttlMs.",
+  "files": [
+    {
+      "path": "src/kv-cache.js",
+      "content": "\"use strict\";\n\n/** Tiny in-memory cache. Entries expire after ttlMs. */\nclass KvCache {\n  constructor(ttlMs) {\n    this.ttlMs = ttlMs;\n    this.store = new Map();\n  }\n\n  set(key, value) {\n    this.store.set(key, { value, at: Date.now() });\n  }\n\n  get(key) {\n    const entry = this.store.get(key);\n    if (!entry) {\n      return undefined;\n    }\n    if (Date.now() - entry.at >= this.ttlMs) {\n      this.store.delete(key);\n      return undefined;\n    }\n    return entry.value;\n  }\n}\n\nmodule.exports = { KvCache };\n"
+    }
+  ],
+  "commands": []
+}

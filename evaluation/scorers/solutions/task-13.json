@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: create dist/ on demand before writing entries.",
+  "files": [
+    {
+      "path": "build.js",
+      "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\nconst path = require(\"node:path\");\n\nconst distDir = path.join(__dirname, \"dist\");\nconst entries = JSON.parse(fs.readFileSync(path.join(__dirname, \"manifest.json\"), \"utf8\"));\n\nfs.mkdirSync(distDir, { recursive: true });\nfor (const entry of entries) {\n  const target = path.join(distDir, entry.output);\n  fs.writeFileSync(target, entry.contents);\n  console.log(`built ${entry.output}`);\n}\n"
+    }
+  ],
+  "commands": []
+}

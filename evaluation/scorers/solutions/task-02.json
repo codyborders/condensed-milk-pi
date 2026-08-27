@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: reject negative price and quantity and percent outside 0..100.",
+  "files": [
+    {
+      "path": "cart.py",
+      "content": "\"\"\"Order-line pricing for the storefront.\"\"\"\n\n\ndef apply_discount(price, quantity, percent):\n    \"\"\"Return the discounted total for one order line.\"\"\"\n    if price < 0:\n        raise ValueError(\"price must not be negative\")\n    if quantity < 0:\n        raise ValueError(\"quantity must not be negative\")\n    if percent < 0 or percent > 100:\n        raise ValueError(\"percent must be between 0 and 100\")\n    return price * quantity * (1 - percent / 100)\n"
+    }
+  ],
+  "commands": []
+}

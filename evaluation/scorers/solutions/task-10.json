@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: resolved file keeps both helpers; merge concluded with a merge: commit.",
+  "files": [
+    {
+      "path": "src/merge-driver.js",
+      "content": "\"use strict\";\n\nfunction pick(inputs) {\n  return inputs[0];\n}\n\nfunction featureOnly(records) {\n  return records.filter((record) => record.active);\n}\n\nfunction mainOnly(records) {\n  return records.filter((record) => record.kept);\n}\n\nmodule.exports = { pick, featureOnly, mainOnly };\n"
+    }
+  ],
+  "commands": [
+    ["git", "add", "src/merge-driver.js"],
+    ["git", "commit", "-m", "merge: combine filter helpers"]
+  ]
+}

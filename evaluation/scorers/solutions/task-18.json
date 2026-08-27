@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: collapse internal whitespace runs, then commit everything.",
+  "files": [
+    {
+      "path": "texts/normalizer.py",
+      "content": "\"\"\"User text normalization.\"\"\"\n\nimport re\n\n\ndef normalize(text):\n    return re.sub(r\"\\s+\", \" \", text.strip()).lower()\n"
+    }
+  ],
+  "commands": [
+    ["git", "add", "-A"],
+    ["git", "-c", "user.name=Dev Agent", "-c", "user.email=agent@example.invalid", "commit", "-m", "fix: collapse whitespace in normalizer"]
+  ]
+}

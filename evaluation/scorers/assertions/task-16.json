@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["python3", "tests/test_pipeline.py"],
+      "expectExit": 0
+    },
+    {
+      "id": "no-truncation-left",
+      "kind": "fileContains",
+      "path": "src/pipeline.py",
+      "all": ["for item in items]"]
+    }
+  ]
+}

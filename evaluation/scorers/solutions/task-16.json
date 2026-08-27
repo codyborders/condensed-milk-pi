@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: iterate every item instead of dropping the last.",
+  "files": [
+    {
+      "path": "src/pipeline.py",
+      "content": "\"\"\"Input transform pipeline.\"\"\"\n\nfrom gen.module_17 import handler_17\n\n\ndef transform(items):\n    \"\"\"Apply the registered handler to every input item.\"\"\"\n    return [handler_17(item) for item in items]\n"
+    }
+  ],
+  "commands": []
+}

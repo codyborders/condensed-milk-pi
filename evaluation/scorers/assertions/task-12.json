@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "local-email-configured",
+      "kind": "command",
+      "argv": ["git", "config", "--local", "user.email"],
+      "expectExit": 0
+    },
+    {
+      "id": "single-fix-commit",
+      "kind": "gitLog",
+      "headMessageEquals": "fix: apply staged correction"
+    },
+    {
+      "id": "worktree-clean",
+      "kind": "gitStatus",
+      "expect": []
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["python3", "tests/test_normalizer.py"],
+      "expectExit": 0
+    },
+    {
+      "id": "fix-committed",
+      "kind": "gitLog",
+      "headMessageEquals": "fix: collapse whitespace in normalizer"
+    },
+    {
+      "id": "worktree-clean",
+      "kind": "gitStatus",
+      "expect": []
+    }
+  ]
+}

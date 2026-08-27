@@ -6,3 +6,5 @@ dist/
 *.js.map
 *.d.ts
 .DS_Store
+evaluation/runs/
+evaluation/cache/

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: unknown items raise ValueError instead of leaking KeyError.",
+  "files": [
+    {
+      "path": "inventory.py",
+      "content": "\"\"\"Warehouse stock operations.\"\"\"\n\nSTOCK = {\"widget\": 12, \"gear\": 0}\n\n\ndef order(item, count):\n    if item not in STOCK:\n        raise ValueError(f\"unknown item: {item!r}\")\n    available = STOCK[item]\n    if count > available:\n        raise RuntimeError(f\"insufficient stock for {item!r}\")\n    STOCK[item] = available - count\n    return STOCK[item]\n"
+    }
+  ],
+  "commands": []
+}

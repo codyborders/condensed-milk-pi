@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: quote-aware tokenizer that keeps quoted empty arguments and skips empty unquoted tokens.",
+  "files": [
+    {
+      "path": "shellargs.py",
+      "content": "\"\"\"Split a command line into argument tokens.\"\"\"\n\n\ndef split_args(line):\n    \"\"\"Split `line` into arguments, honoring double quotes.\"\"\"\n    parts = []\n    current = \"\"\n    in_quotes = False\n    has_token = False\n    for ch in line:\n        if in_quotes:\n            if ch == '\"':\n                in_quotes = False\n            else:\n                current += ch\n            has_token = True\n        elif ch == '\"':\n            in_quotes = True\n            has_token = True\n        elif ch == \" \":\n            if has_token:\n                parts.append(current)\n            current = \"\"\n            has_token = False\n        else:\n            current += ch\n            has_token = True\n    if has_token:\n        parts.append(current)\n    return parts\n"
+    }
+  ],
+  "commands": []
+}

@@ -17,7 +17,14 @@
     "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs",
     "typecheck": "tsc --noEmit",
     "benchmark": "node --expose-gc --import tsx benchmarks/context-hook.mjs",
-    "benchmark:update": "node --expose-gc --import tsx benchmarks/context-hook.mjs --write"
+    "benchmark:test": "node --test \"benchmarks/*.test.mjs\"",
+    "benchmark:update": "node --expose-gc --import tsx benchmarks/context-hook.mjs --write",
+    "benchmark:compare": "node benchmarks/compare-context-hook.mjs",
+    "evaluation:validate": "node evaluation/runner/cli.mjs validate",
+    "evaluation:fixtures": "node evaluation/runner/cli.mjs fixtures",
+    "evaluation:test": "node --test \"evaluation/tests/*.test.mjs\"",
+    "evaluation:dry-run": "node evaluation/runner/dry-run.mjs",
+    "evaluation:report": "node evaluation/runner/cli.mjs report --latest"
   },
   "keywords": [
     "pi",

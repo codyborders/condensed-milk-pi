@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: one shared formatter, both currency wrappers call it.",
+  "files": [
+    {
+      "path": "src/prices.js",
+      "content": "\"use strict\";\n\nfunction formatCents(cents, symbol) {\n  const sign = cents < 0 ? \"-\" : \"\";\n  const abs = Math.abs(cents);\n  const dollars = Math.floor(abs / 100).toString();\n  const remainder = (abs % 100).toString().padStart(2, \"0\");\n  return `${sign}${symbol}${dollars}.${remainder}`;\n}\n\nfunction formatUsdCents(cents) {\n  return formatCents(cents, \"$\");\n}\n\nfunction formatEurCents(cents) {\n  return formatCents(cents, \"\\u20ac\");\n}\n\nmodule.exports = { formatUsdCents, formatEurCents };\n"
+    }
+  ],
+  "commands": []
+}

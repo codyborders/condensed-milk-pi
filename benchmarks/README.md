@@ -26,6 +26,33 @@ The command prints a report. It does not rewrite the checked-in result file. Upd
 npm run benchmark:update
 ```
 
+## Pinned commit comparison
+
+Both implementation worktrees must be clean. Pin each run to its exact commit and write results outside checked-in files:
+
+```bash
+mkdir -p evaluation/runs/local-comparison
+UPSTREAM_ROOT="$HOME/Library/Caches/condensed-milk-eval/cache/arms/upstream-71f9e396951c42687f0c3456727b2b5c8c625da1"
+FORK_ROOT="$HOME/Library/Caches/condensed-milk-eval/cache/arms/fork-85e9af185c2a6416ea37791cf5d08e57c399c0e0"
+node --expose-gc --import tsx benchmarks/context-hook.mjs \
+  --implementation-root "$UPSTREAM_ROOT" \
+  --expected-commit 71f9e396951c42687f0c3456727b2b5c8c625da1 \
+  --output evaluation/runs/local-comparison/upstream.json
+node --expose-gc --import tsx benchmarks/context-hook.mjs \
+  --implementation-root "$FORK_ROOT" \
+  --expected-commit 85e9af185c2a6416ea37791cf5d08e57c399c0e0 \
+  --output evaluation/runs/local-comparison/fork.json
+node benchmarks/compare-context-hook.mjs \
+  evaluation/runs/local-comparison/upstream.json \
+  evaluation/runs/local-comparison/fork.json \
+  --json-output evaluation/runs/local-comparison/comparison.json \
+  --markdown-output evaluation/runs/local-comparison/comparison.md
+```
+
+The comparator rejects mismatched case dimensions, input hashes, harness hashes, Node versions, machines, or nondeterministic arm output. Timing deltas are descriptive. Output hashes may differ between algorithms.
+
+The completed sanitized comparison is checked in at `benchmarks/comparison-results.json`. It records 36/36 equal output hashes and equal mask counts. The comparator verified every p95 value against its recorded budget. All cases passed. The aggregate fork delta is +0.6585 ms at median and +0.876 ms at p95. Aggregate ratios are about 2.51x and 2.54x. Absolute runtime remains far below budgets.
+
 ## Current local results
 
 `benchmarks/results.json` contains the checked-in local run. It records runtime details, input dimensions, output hashes, mask counts, and budgets. The recorded run used 36 cases and 20 measured iterations per case.
@@ -55,4 +82,4 @@ A case fails when its raw p95 exceeds the budget. The benchmark also fails when 
 
 Synthetic messages omit real tool data and provider activity. The 36 cases cover selected history sizes, bash densities, and working-directory patterns. They do not cover every command form or extension configuration.
 
-Results provide no provider-cost conclusion. They provide no task-quality conclusion. They provide no safety conclusion for arbitrary shell input. Passing local budgets does not establish production readiness.
+Results provide no provider-cost conclusion. They provide no task-quality conclusion. They provide no safety conclusion for arbitrary shell input. The paired evaluation is complete for 20 valid pairs, with results at `evaluation/results/upstream-vs-fork-glm-5.3-flash.md`. Two earlier private pilots were excluded because scorer definitions changed. One stochastic run and one synthetic workload do not establish production readiness.

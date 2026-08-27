@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: round in to_cents, sort in median, add changelog section, commit and tag.",
+  "files": [
+    {
+      "path": "rates.py",
+      "content": "\"\"\"Currency conversion helpers for billing.\"\"\"\n\n\ndef to_cents(dollars):\n    return int(round(dollars * 100))\n\n\ndef from_cents(cents):\n    return cents / 100\n"
+    },
+    {
+      "path": "src/stats.js",
+      "content": "\"use strict\";\n\nfunction median(values) {\n  if (values.length === 0) {\n    throw new Error(\"median() requires at least one value\");\n  }\n  const ordered = [...values].sort((left, right) => left - right);\n  if (ordered.length % 2 === 1) {\n    return ordered[(ordered.length - 1) / 2];\n  }\n  return (ordered[ordered.length / 2 - 1] + ordered[ordered.length / 2]) / 2;\n}\n\nmodule.exports = { median };\n"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "content": "# Changelog\n\n## 1.2.3\n\n- Fixed cent conversion in rates.to_cents to round instead of truncating.\n- Fixed the JavaScript median helper to sort values before selecting the midpoint.\n\n## 1.2.2\n\n- Internal dependency bumps.\n"
+    }
+  ],
+  "commands": [
+    ["git", "add", "-A"],
+    ["git", "-c", "user.name=Dev Agent", "-c", "user.email=agent@example.invalid", "commit", "-m", "release: 1.2.3"],
+    ["git", "-c", "user.name=Dev Agent", "-c", "user.email=agent@example.invalid", "tag", "-a", "v1.2.3", "-m", "release 1.2.3"]
+  ]
+}

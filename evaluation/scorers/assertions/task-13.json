@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "build-succeeds",
+      "kind": "command",
+      "argv": ["node", "build.js"],
+      "expectExit": 0,
+      "stdoutContains": ["built app.js", "built styles.css"]
+    },
+    {
+      "id": "dist-outputs-exist",
+      "kind": "fileExists",
+      "path": "dist/app.js"
+    },
+    {
+      "id": "dist-styles-exist",
+      "kind": "fileExists",
+      "path": "dist/styles.css"
+    }
+  ]
+}

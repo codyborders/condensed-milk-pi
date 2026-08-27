@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "strict-typecheck-passes",
+      "kind": "command",
+      "argv": ["node", "$REPO_ROOT/node_modules/typescript/bin/tsc", "-p", "."],
+      "expectExit": 0,
+      "timeoutMs": 120000
+    }
+  ]
+}

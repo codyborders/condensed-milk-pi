@@ -1,0 +1,5 @@
+[
+  {"name": "alpha", "retries": 3},
+  {"name": "beta", "retries": "many"},
+  {"name": "gamma", "retries": 0}
+]

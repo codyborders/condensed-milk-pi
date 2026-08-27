@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["python3", "tests/test_stats.py"],
+      "expectExit": 0
+    },
+    {
+      "id": "median-sorts",
+      "kind": "fileContains",
+      "path": "stats.py",
+      "all": ["sorted("]
+    }
+  ]
+}

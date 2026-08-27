@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "suite-passes",
+      "kind": "command",
+      "argv": ["node", "tests/test_prices.js"],
+      "expectExit": 0
+    },
+    {
+      "id": "duplication-removed",
+      "kind": "fileOccurrences",
+      "path": "src/prices.js",
+      "needle": "padStart",
+      "min": 1,
+      "max": 1
+    }
+  ]
+}

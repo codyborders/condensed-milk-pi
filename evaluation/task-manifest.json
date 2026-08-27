@@ -1,187 +1,734 @@
 {
-  "schemaVersion": 1,
-  "evaluationStatus": "not-run",
-  "taskCount": 20,
+  "schemaVersion": 2,
+  "evaluation": {
+    "provider": "z-ai",
+    "model": "glm-5.3-flash",
+    "thinking": "high",
+    "profile": "qwen-vllm",
+    "piVersion": "0.84.2",
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls"],
+    "timeoutMsPerAttempt": 3600000,
+    "arms": [
+      {
+        "name": "upstream",
+        "role": "baseline",
+        "commit": "71f9e396951c42687f0c3456727b2b5c8c625da1"
+      },
+      {
+        "name": "fork",
+        "role": "treatment",
+        "commit": "85e9af185c2a6416ea37791cf5d08e57c399c0e0"
+      }
+    ]
+  },
   "tasks": [
     {
       "number": 1,
       "id": "task-01",
       "category": "python",
+      "scale": "standard",
       "title": "Fix a failing Python unit test",
-      "description": "Locate the defect, make the smallest fix, and run the focused pytest command.",
-      "status": "not-run",
-      "result": null
+      "prompt": "python3 tests/test_stats.py currently fails: median([3, 1, 2]) returns 1 instead of 2. Locate the defect in stats.py, apply the smallest correct fix, and make the whole suite pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "stats.py",
+            "content": "\"\"\"Small statistics helpers used by the orders service.\"\"\"\n\n\ndef median(values):\n    if not values:\n        raise ValueError(\"median() requires at least one value\")\n    if len(values) % 2 == 1:\n        return values[len(values) // 2]\n    return (values[len(values) // 2 - 1] + values[len(values) // 2]) / 2\n\n\ndef mean(values):\n    if not values:\n        raise ValueError(\"mean() requires at least one value\")\n    return sum(values) / len(values)\n"
+          },
+          {
+            "path": "tests/test_stats.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))\n\nfrom stats import median, mean\n\n\ndef main():\n    assert median([1, 2, 3]) == 2\n    assert median([3, 1, 2]) == 2, \"median must sort inputs\"\n    assert median([1, 2, 3, 4]) == 2.5\n    assert median([4, 1, 3, 2]) == 2.5\n    assert mean([1, 2, 3]) == 2.0\n    print(\"test_stats: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import statistics utilities", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 2,
       "id": "task-02",
       "category": "python",
+      "scale": "standard",
       "title": "Add validation to a Python function",
-      "description": "Add input validation while preserving existing behavior and test the boundary cases.",
-      "status": "not-run",
-      "result": null
+      "prompt": "cart.apply_discount trusts its inputs. Add input validation so a negative price, a negative quantity, and a percent outside 0..100 each raise ValueError. Preserve the existing behavior for valid inputs; python3 tests/test_cart.py documents the contract and must pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "cart.py",
+            "content": "\"\"\"Order-line pricing for the storefront.\"\"\"\n\n\ndef apply_discount(price, quantity, percent):\n    \"\"\"Return the discounted total for one order line.\"\"\"\n    return price * quantity * (1 - percent / 100)\n"
+          },
+          {
+            "path": "tests/test_cart.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))\n\nimport cart\n\n\ndef expect_value_error(label, call):\n    try:\n        call()\n    except ValueError:\n        return\n    raise AssertionError(f\"expected ValueError for {label}\")\n\n\ndef main():\n    assert cart.apply_discount(10.0, 3, 20) == 24.0\n    expect_value_error(\"negative price\", lambda: cart.apply_discount(-1, 3, 20))\n    expect_value_error(\"negative quantity\", lambda: cart.apply_discount(10.0, -3, 20))\n    expect_value_error(\"percent above 100\", lambda: cart.apply_discount(10.0, 3, 120))\n    expect_value_error(\"percent below 0\", lambda: cart.apply_discount(10.0, 3, -5))\n    print(\"test_cart: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import cart utilities", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 3,
       "id": "task-03",
       "category": "python",
+      "scale": "standard",
       "title": "Trace a Python exception",
-      "description": "Use the traceback and nearby code to fix the reported exception without hiding errors.",
-      "status": "not-run",
-      "result": null
+      "prompt": "A caller reported this traceback:\n\nTraceback (most recent call last):\n  File \"orders.py\", line 4, in <module>\n    remaining = inventory.order(\"bolt\", 2)\n  File \"inventory.py\", line 5, in order\n    available = STOCK[item]\nKeyError: 'bolt'\n\nUnknown items must raise ValueError mentioning the item name instead of KeyError, while genuine stock shortfalls must keep raising RuntimeError. Fix inventory.py so python3 tests/test_inventory.py passes. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "inventory.py",
+            "content": "\"\"\"Warehouse stock operations.\"\"\"\n\nSTOCK = {\"widget\": 12, \"gear\": 0}\n\n\ndef order(item, count):\n    available = STOCK[item]\n    if count > available:\n        raise RuntimeError(f\"insufficient stock for {item!r}\")\n    STOCK[item] = available - count\n    return STOCK[item]\n"
+          },
+          {
+            "path": "tests/test_inventory.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))\n\nimport inventory\n\n\ndef main():\n    inventory.STOCK.clear()\n    inventory.STOCK.update({\"widget\": 12, \"gear\": 0})\n    assert inventory.order(\"widget\", 5) == 7\n    try:\n        inventory.order(\"bolt\", 1)\n    except ValueError as exc:\n        assert \"bolt\" in str(exc)\n    else:\n        raise AssertionError(\"expected ValueError for unknown item\")\n    try:\n        inventory.order(\"gear\", 1)\n    except RuntimeError:\n        pass\n    else:\n        raise AssertionError(\"expected RuntimeError for insufficient stock\")\n    print(\"test_inventory: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import inventory service", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 4,
       "id": "task-04",
-      "category": "typescript",
-      "title": "Resolve a TypeScript type error",
-      "description": "Find the source of a compiler error, apply a type-safe fix, and run typecheck.",
-      "status": "not-run",
-      "result": null
+      "category": "parser",
+      "scale": "standard",
+      "title": "Fix a Python shell-argument tokenizer",
+      "prompt": "shellargs.split_args mishandles quoted empty arguments and collapses repeated spaces; python3 tests/test_shellargs.py fails. Fix the tokenizer in shellargs.py so the quoting and spacing semantics expressed by the tests hold, including quoted strings that contain spaces. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "shellargs.py",
+            "content": "\"\"\"Split a command line into argument tokens.\"\"\"\n\n\ndef split_args(line):\n    \"\"\"Split `line` into arguments, honoring double quotes.\"\"\"\n    parts = []\n    current = \"\"\n    for ch in line:\n        if ch == \" \":\n            parts.append(current)\n            current = \"\"\n        elif ch == '\"':\n            continue\n        else:\n            current += ch\n    parts.append(current)\n    return parts\n"
+          },
+          {
+            "path": "tests/test_shellargs.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))\n\nfrom shellargs import split_args\n\n\ndef main():\n    assert split_args(\"ls -la\") == [\"ls\", \"-la\"]\n    assert split_args('echo \"hello world\"') == [\"echo\", \"hello world\"]\n    assert split_args('git commit -m \"fix: tokenizer bug\"') == [\n        \"git\",\n        \"commit\",\n        \"-m\",\n        \"fix: tokenizer bug\",\n    ]\n    assert split_args('tag \"\" notes') == [\"tag\", \"\", \"notes\"]\n    assert split_args(\"a  b\") == [\"a\", \"b\"]\n    print(\"test_shellargs: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import shell argument tokenizer", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 5,
       "id": "task-05",
       "category": "typescript",
-      "title": "Extend a TypeScript module",
-      "description": "Add one requested behavior with a focused test and preserve the public API.",
-      "status": "not-run",
-      "result": null
+      "scale": "standard",
+      "title": "Resolve a TypeScript strict-mode type error",
+      "prompt": "src/shapes.ts fails strict-mode typechecking (the project uses `tsc --strict --noEmit`; a TypeScript compiler may not be available in this sandbox, so reason from the code). The defect is in describe(): the label value does not always satisfy its declared string type. Fix the type error without changing the Shape interface or the runtime behavior of area().",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/shapes.ts",
+            "content": "export interface Shape {\n  kind: \"circle\" | \"square\";\n  size: number;\n}\n\nexport function area(shape: Shape): number {\n  if (shape.kind === \"circle\") {\n    return 3.14159 * shape.size * shape.size;\n  }\n  return shape.size * shape.size;\n}\n\nexport function describe(shape: Shape): string {\n  const label: string = shape.kind === \"circle\" ? \"circle\" : 7;\n  return `a ${label} with area ${area(shape)}`;\n}\n"
+          },
+          {
+            "path": "tsconfig.json",
+            "content": "{\n  \"compilerOptions\": {\n    \"strict\": true,\n    \"noEmit\": true,\n    \"target\": \"es2020\",\n    \"module\": \"es2020\",\n    \"moduleResolution\": \"bundler\",\n    \"types\": []\n  },\n  \"include\": [\"src/**/*.ts\"]\n}\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import shape helpers", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 6,
       "id": "task-06",
-      "category": "typescript",
-      "title": "Refactor duplicated TypeScript logic",
-      "description": "Remove local duplication without changing observable behavior or test coverage.",
-      "status": "not-run",
-      "result": null
+      "category": "javascript",
+      "scale": "standard",
+      "title": "Extend a JavaScript module",
+      "prompt": "src/url-utils.js exports slugify. Add a truncate(text, max) function that returns the text unchanged when it already fits, and otherwise cuts on the last word boundary so the result, including a trailing ellipsis of three dots, is at most max characters long. Export it alongside slugify. node tests/test_url_utils.js documents the expected behavior and must pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/url-utils.js",
+            "content": "\"use strict\";\n\nfunction slugify(text) {\n  return String(text)\n    .toLowerCase()\n    .replace(/[^a-z0-9]+/g, \"-\")\n    .replace(/^-+|-+$/g, \"\");\n}\n\nmodule.exports = { slugify };\n"
+          },
+          {
+            "path": "tests/test_url_utils.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst { slugify, truncate } = require(\"../src/url-utils\");\n\nassert.strictEqual(slugify(\"Hello World!\"), \"hello-world\");\nassert.strictEqual(truncate(\"hello world\", 8), \"hello...\");\nassert.strictEqual(truncate(\"short\", 10), \"short\");\nassert.strictEqual(truncate(\"one two three\", 11), \"one two...\");\nassert.strictEqual(truncate(\"exact-len\", 9), \"exact-len\");\nconsole.log(\"test_url_utils: all assertions passed\");\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import url utilities", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 7,
       "id": "task-07",
-      "category": "git",
-      "title": "Inspect a staged change",
-      "description": "Use Git status and diff output to identify the requested change and report its files.",
-      "status": "not-run",
-      "result": null
+      "category": "javascript",
+      "scale": "standard",
+      "title": "Refactor duplicated JavaScript logic",
+      "prompt": "formatUsdCents and formatEurCents in src/prices.js duplicate their sign, split, and padding logic. Remove the duplication by introducing one shared helper that both functions use, while keeping behavior identical; node tests/test_prices.js must pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/prices.js",
+            "content": "\"use strict\";\n\nfunction formatUsdCents(cents) {\n  const sign = cents < 0 ? \"-\" : \"\";\n  const abs = Math.abs(cents);\n  const dollars = Math.floor(abs / 100).toString();\n  const remainder = (abs % 100).toString().padStart(2, \"0\");\n  return `${sign}$${dollars}.${remainder}`;\n}\n\nfunction formatEurCents(cents) {\n  const sign = cents < 0 ? \"-\" : \"\";\n  const abs = Math.abs(cents);\n  const dollars = Math.floor(abs / 100).toString();\n  const remainder = (abs % 100).toString().padStart(2, \"0\");\n  return `${sign}\\u20ac${dollars}.${remainder}`;\n}\n\nmodule.exports = { formatUsdCents, formatEurCents };\n"
+          },
+          {
+            "path": "tests/test_prices.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst { formatUsdCents, formatEurCents } = require(\"../src/prices\");\n\nassert.strictEqual(formatUsdCents(1234), \"$12.34\");\nassert.strictEqual(formatUsdCents(-5), \"-$0.05\");\nassert.strictEqual(formatUsdCents(100), \"$1.00\");\nassert.strictEqual(formatEurCents(1234), \"\\u20ac12.34\");\nassert.strictEqual(formatEurCents(-5), \"-\\u20ac0.05\");\nconsole.log(\"test_prices: all assertions passed\");\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import price formatters", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 8,
       "id": "task-08",
-      "category": "git",
-      "title": "Resolve a merge conflict",
-      "description": "Resolve the supplied conflict, preserve both required behaviors, and verify the result.",
-      "status": "not-run",
-      "result": null
+      "category": "cache",
+      "scale": "standard",
+      "title": "Fix TTL expiry in a JavaScript cache",
+      "prompt": "KvCache is constructed with a ttlMs but its get() never expires entries, so stale values are served forever; node tests/test_kv_cache.js fails on the expiry case. Make get() honor the TTL: an entry older than ttlMs must be treated as absent. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/kv-cache.js",
+            "content": "\"use strict\";\n\n/** Tiny in-memory cache. Entries are supposed to expire after ttlMs. */\nclass KvCache {\n  constructor(ttlMs) {\n    this.ttlMs = ttlMs;\n    this.store = new Map();\n  }\n\n  set(key, value) {\n    this.store.set(key, { value, at: Date.now() });\n  }\n\n  get(key) {\n    const entry = this.store.get(key);\n    if (!entry) {\n      return undefined;\n    }\n    return entry.value;\n  }\n}\n\nmodule.exports = { KvCache };\n"
+          },
+          {
+            "path": "tests/test_kv_cache.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst { KvCache } = require(\"../src/kv-cache\");\n\nconst cache = new KvCache(20);\ncache.set(\"a\", 1);\nassert.strictEqual(cache.get(\"a\"), 1);\nsetTimeout(() => {\n  assert.strictEqual(cache.get(\"a\"), undefined, \"entry must expire after ttl\");\n  cache.set(\"b\", 2);\n  assert.strictEqual(cache.get(\"b\"), 2);\n  console.log(\"test_kv_cache: all assertions passed\");\n}, 60);\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import kv cache", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 9,
       "id": "task-09",
       "category": "git",
-      "title": "Review recent history",
-      "description": "Use Git log and status to summarize relevant changes without modifying the worktree.",
-      "status": "not-run",
-      "result": null
+      "scale": "standard",
+      "title": "Commit only the finished work",
+      "prompt": "The working tree mixes finished work with an experiment and stray temp files. Commit exactly the already staged finished work (the README status correction and the lib/util.js fix) as one commit titled 'chore: commit finished work'. Keep the src/app.js experiment uncommitted and unstaged. Delete the stray temporary files under tmp/. Leave docs/notes.md untouched. Nothing may remain staged afterwards.",
+      "fixture": {
+        "files": [
+          {
+            "path": "README.md",
+            "content": "# demo-service\n\nStatus: draft\n\nSmall demo service used for fixture purposes.\n"
+          },
+          {
+            "path": "src/app.js",
+            "content": "\"use strict\";\n\nfunction main() {\n  // primary entry point\n  return \"ok\";\n}\n\nmodule.exports = { main };\n"
+          },
+          {
+            "path": "lib/util.js",
+            "content": "\"use strict\";\n\nfunction clamp(value, low, high) {\n  if (value < low) {\n    return low;\n  }\n  if (value > high) {\n    return high;\n  }\n  return value;\n}\n\nmodule.exports = { clamp };\n"
+          },
+          {
+            "path": "docs/notes.md",
+            "content": "# Notes\n\nDo not edit this file.\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [
+          {
+            "path": "README.md",
+            "from": "Status: draft",
+            "to": "Status: maintained"
+          },
+          {
+            "path": "lib/util.js",
+            "from": "  if (value > high) {\n    return high;\n  }",
+            "to": "  if (value > high) {\n    return high;\n  }\n  if (Number.isNaN(value)) {\n    return low;\n  }"
+          },
+          {
+            "path": "src/app.js",
+            "from": "  // primary entry point",
+            "to": "  // primary entry point (experiment: retry wiring, do not ship yet)"
+          }
+        ],
+        "untracked": [
+          { "path": "tmp/debug-session.log", "content": "scratch output\n" },
+          { "path": "tmp/cache-snapshot.txt", "content": "scratch cache\n" }
+        ],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import demo service", "paths": ["all"] }],
+          "post": [
+            { "argv": ["git", "add", "README.md"], "expectFailure": false },
+            { "argv": ["git", "add", "lib/util.js"], "expectFailure": false }
+          ]
+        }
+      }
     },
     {
       "number": 10,
       "id": "task-10",
-      "category": "search",
-      "title": "Find all callers of an API",
-      "description": "Search the repository, group the matches, and identify every caller that needs review.",
-      "status": "not-run",
-      "result": null
+      "category": "git",
+      "scale": "standard",
+      "title": "Resolve a merge conflict",
+      "prompt": "A merge of branch 'feature' into the current branch stopped with a conflict in src/merge-driver.js. Resolve the conflict so BOTH the mainOnly and featureOnly helpers survive with their original bodies, complete the merge with a commit message beginning with 'merge:', and make node tests/test_merge_driver.js pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/merge-driver.js",
+            "content": "\"use strict\";\n\nfunction pick(inputs) {\n  return inputs[0];\n}\n\nmodule.exports = { pick };\n"
+          },
+          {
+            "path": "tests/test_merge_driver.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst { pick, mainOnly, featureOnly } = require(\"../src/merge-driver\");\n\nassert.strictEqual(pick([7, 8]), 7);\nassert.deepStrictEqual(mainOnly([{ kept: true }, { kept: false }]), [{ kept: true }]);\nassert.deepStrictEqual(featureOnly([{ active: true }, { active: false }]), [{ active: true }]);\nconsole.log(\"test_merge_driver: all assertions passed\");\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [
+            { "message": "chore: import merge driver", "paths": ["all"] },
+            {
+              "message": "feat: add featureOnly filter",
+              "branch": "feature",
+              "edits": [
+                {
+                  "path": "src/merge-driver.js",
+                  "from": "module.exports = { pick };",
+                  "to": "function featureOnly(records) {\n  return records.filter((record) => record.active);\n}\n\nmodule.exports = { pick, featureOnly };"
+                }
+              ]
+            },
+            {
+              "message": "feat: add mainOnly filter",
+              "branch": "master",
+              "edits": [
+                {
+                  "path": "src/merge-driver.js",
+                  "from": "module.exports = { pick };",
+                  "to": "function mainOnly(records) {\n  return records.filter((record) => record.kept);\n}\n\nmodule.exports = { pick, mainOnly };"
+                }
+              ]
+            }
+          ],
+          "post": [
+            { "argv": ["git", "merge", "feature"], "expectFailure": true }
+          ]
+        }
+      }
     },
     {
       "number": 11,
       "id": "task-11",
-      "category": "search",
-      "title": "Trace a configuration value",
-      "description": "Search definitions and uses to explain how one configuration value reaches runtime behavior.",
-      "status": "not-run",
-      "result": null
+      "category": "git",
+      "scale": "standard",
+      "title": "Hunt a regression through Git history",
+      "prompt": "Users report that validate_age now rejects callers who are exactly 18 years old. Use the Git history (git log, git blame, or git log -S) to find the commit that introduced the bug, write its full 40-character commit id as the only line of a new file ANSWER.txt, then fix the bug forward on top of HEAD (do not rewrite or rebase existing history) so python3 tests/test_validate.py passes. Commit the fix and ANSWER.txt together with a message starting with 'fix:'. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "lib/validate.js",
+            "content": "\"use strict\";\n\nfunction validate_age(value) {\n  return value >= 18;\n}\n\nfunction validate_name(value) {\n  return typeof value === \"string\" && value.trim().length > 0;\n}\n\nmodule.exports = { validate_age, validate_name };\n"
+          },
+          {
+            "path": "tests/test_validate.py",
+            "content": "import pathlib\nimport subprocess\nimport sys\n\n\nREPO = pathlib.Path(__file__).resolve().parent.parent\n\n\ndef run_node(script):\n    return subprocess.run(\n        [\"node\", \"-e\", script],\n        cwd=REPO,\n        capture_output=True,\n        text=True,\n    )\n\n\ndef main():\n    ok = run_node(\"const v = require('./lib/validate.js'); process.exit(v.validate_age(18) ? 0 : 1);\")\n    assert ok.returncode == 0, \"validate_age must accept 18\"\n    ok = run_node(\"const v = require('./lib/validate.js'); process.exit(v.validate_age(17) ? 1 : 0);\")\n    assert ok.returncode == 0, \"validate_age must reject 17\"\n    ok = run_node(\"const v = require('./lib/validate.js'); process.exit(v.validate_name('x') ? 0 : 1);\")\n    assert ok.returncode == 0, \"validate_name must accept nonempty strings\"\n    print(\"test_validate: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [
+            { "message": "chore: import validators", "paths": ["all"] },
+            {
+              "message": "docs: expand validate_name docblock",
+              "edits": [
+                {
+                  "path": "lib/validate.js",
+                  "from": "function validate_name(value) {\n  return typeof value === \"string\" && value.trim().length > 0;\n}",
+                  "to": "function validate_name(value) {\n  /* names must be nonempty strings after trimming */\n  return typeof value === \"string\" && value.trim().length > 0;\n}"
+                }
+              ]
+            },
+            {
+              "message": "fix: tighten age boundary handling",
+              "edits": [
+                {
+                  "path": "lib/validate.js",
+                  "from": "  return value >= 18;",
+                  "to": "  return value > 18;"
+                }
+              ]
+            },
+            {
+              "message": "style: reorder helper exports",
+              "edits": [
+                {
+                  "path": "lib/validate.js",
+                  "from": "module.exports = { validate_age, validate_name };",
+                  "to": "module.exports = { validate_name, validate_age };"
+                }
+              ]
+            },
+            {
+              "message": "chore: bump fixture metadata",
+              "edits": [
+                {
+                  "path": "lib/validate.js",
+                  "from": "\"use strict\";",
+                  "to": "\"use strict\";\n\n/* fixture metadata: demo repo for history hunting */"
+                }
+              ]
+            }
+          ],
+          "post": []
+        }
+      }
     },
     {
       "number": 12,
       "id": "task-12",
-      "category": "search",
-      "title": "Locate stale documentation",
-      "description": "Search for an obsolete option, update its references, and check related documentation.",
-      "status": "not-run",
-      "result": null
+      "category": "git",
+      "scale": "standard",
+      "title": "Configure a repo-local committer identity",
+      "prompt": "This repository clone has no committer identity configured anywhere: `git config user.email` prints nothing and `git commit` fails with an identity error. Configure a repository-local identity with name 'Dev Agent' and email 'agent@example.invalid' without touching any global or system configuration, then create exactly one commit with the message 'fix: apply staged correction' that contains the staged change. The working tree and index must be clean afterwards.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/report.js",
+            "content": "\"use strict\";\n\nfunction render(rows) {\n  return rows.map((row) => `${row.id}: ${row.value}`).join(\"\\n\");\n}\n\nmodule.exports = { render };\n"
+          },
+          {
+            "path": "README.md",
+            "content": "# report-demo\n\nFixture repository with a staged correction.\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [
+          {
+            "path": "src/report.js",
+            "from": "  return rows.map((row) => `${row.id}: ${row.value}`).join(\"\\n\");",
+            "to": "  return rows.map((row) => `${row.id}: ${row.value ?? 0}`).join(\"\\n\");"
+          }
+        ],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import report demo", "paths": ["all"] }],
+          "post": [
+            { "argv": ["git", "add", "src/report.js"], "expectFailure": false }
+          ]
+        }
+      }
     },
     {
       "number": 13,
       "id": "task-13",
       "category": "build",
-      "title": "Fix a build-script failure",
-      "description": "Inspect the build error, correct the minimal configuration or source issue, and rerun the build.",
-      "status": "not-run",
-      "result": null
+      "scale": "standard",
+      "title": "Fix a failing build script",
+      "prompt": "node build.js crashes with ENOENT because the dist/ output directory does not exist. Make the build create its output directory on demand and complete successfully, printing one 'built' line per manifest entry. Do not change manifest.json.",
+      "fixture": {
+        "files": [
+          {
+            "path": "build.js",
+            "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\nconst path = require(\"node:path\");\n\nconst distDir = path.join(__dirname, \"dist\");\nconst entries = JSON.parse(fs.readFileSync(path.join(__dirname, \"manifest.json\"), \"utf8\"));\n\nfor (const entry of entries) {\n  const target = path.join(distDir, entry.output);\n  fs.writeFileSync(target, entry.contents);\n  console.log(`built ${entry.output}`);\n}\n"
+          },
+          {
+            "path": "manifest.json",
+            "content": "[\n  {\"output\": \"app.js\", \"contents\": \"console.log('app');\\n\"},\n  {\"output\": \"styles.css\", \"contents\": \"body { margin: 0; }\\n\"}\n]\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import build script", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 14,
       "id": "task-14",
       "category": "build",
-      "title": "Add a build validation step",
-      "description": "Add the requested validation while keeping normal build output and failure signals intact.",
-      "status": "not-run",
-      "result": null
+      "scale": "standard",
+      "title": "Add build configuration validation",
+      "prompt": "build2.js must refuse invalid configuration before writing any output: each entry needs a non-empty string name and an integer retries between 0 and 10; violations must exit with code 1 and print a message that names the offending entry and the invalid field. The checked-in config/entries.json currently contains one invalid entry (a non-integer retries value). Implement the validation and correct that one entry so node build2.js exits 0.",
+      "fixture": {
+        "files": [
+          {
+            "path": "build2.js",
+            "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\nconst path = require(\"node:path\");\n\nconst configPath = process.argv[2] || path.join(__dirname, \"config\", \"entries.json\");\nconst outputDir = path.join(__dirname, \"out\");\nconst entries = JSON.parse(fs.readFileSync(configPath, \"utf8\"));\n\nfs.mkdirSync(outputDir, { recursive: true });\nfor (const entry of entries) {\n  fs.writeFileSync(path.join(outputDir, `${entry.name}.txt`), `${entry.name}:${entry.retries}\\n`);\n  console.log(`wrote ${entry.name}`);\n}\n"
+          },
+          {
+            "path": "config/entries.json",
+            "content": "[\n  {\"name\": \"alpha\", \"retries\": 3},\n  {\"name\": \"beta\", \"retries\": \"many\"},\n  {\"name\": \"gamma\", \"retries\": 0}\n]\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import build2 script", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 15,
       "id": "task-15",
-      "category": "debugging",
-      "title": "Diagnose a regression",
-      "description": "Reproduce the reported regression, identify its cause, and implement a narrow correction.",
-      "status": "not-run",
-      "result": null
+      "category": "parser",
+      "scale": "standard",
+      "title": "Make a JSON config loader fail closed",
+      "prompt": "loadConfig in src/config-loader.js is documented to throw a ConfigError carrying string .path and .reason fields for missing files, invalid JSON, and non-object roots. Today it leaks raw ENOENT and SyntaxError errors and silently accepts arrays. Fix the loader so node tests/test_config_loader.js passes. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/config-loader.js",
+            "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\n\nclass ConfigError extends Error {}\n\nfunction loadConfig(configPath) {\n  const raw = fs.readFileSync(configPath, \"utf8\");\n  return JSON.parse(raw);\n}\n\nmodule.exports = { ConfigError, loadConfig };\n"
+          },
+          {
+            "path": "tests/test_config_loader.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst fs = require(\"node:fs\");\nconst os = require(\"node:os\");\nconst path = require(\"node:path\");\nconst { ConfigError, loadConfig } = require(\"../src/config-loader\");\n\nconst dir = fs.mkdtempSync(path.join(os.tmpdir(), \"cfg-\"));\n\nconst good = path.join(dir, \"good.json\");\nfs.writeFileSync(good, JSON.stringify({ port: 8080 }));\nassert.deepStrictEqual(loadConfig(good), { port: 8080 });\n\nfunction expectConfigError(label, target, body) {\n  if (body !== undefined) {\n    fs.writeFileSync(target, body);\n  }\n  try {\n    loadConfig(target);\n  } catch (err) {\n    assert.ok(err instanceof ConfigError, `${label}: expected ConfigError, got ${err}`);\n    assert.ok(typeof err.path === \"string\" && err.path.length > 0, `${label}: .path missing`);\n    assert.ok(typeof err.reason === \"string\" && err.reason.length > 0, `${label}: .reason missing`);\n    return;\n  }\n  throw new assert.AssertionError({ message: `${label}: expected ConfigError` });\n}\n\nexpectConfigError(\"missing file\", path.join(dir, \"absent.json\"), undefined);\nexpectConfigError(\"invalid json\", path.join(dir, \"broken.json\"), \"{\\\"a\\\":\");\nexpectConfigError(\"array root\", path.join(dir, \"array.json\"), \"[1, 2]\");\nconsole.log(\"test_config_loader: all assertions passed\");\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import config loader", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 16,
       "id": "task-16",
-      "category": "debugging",
-      "title": "Investigate an intermittent failure",
-      "description": "Inspect logs and tests, isolate the failure condition, and document remaining uncertainty.",
-      "status": "not-run",
-      "result": null
+      "category": "python",
+      "scale": "long",
+      "title": "Long tool-heavy Python pipeline fix",
+      "prompt": "python3 tests/test_pipeline.py fails: transform() silently drops the last input item. The pipeline is wired through src/runner.py and exactly one of the 45 generated modules under src/gen/ (follow the import in src/pipeline.py to find it; do not guess from names alone). data/server.log is a 9000-line operational log whose entry 4172 records the incident. Find the truncation, fix it without changing the handler module, and make the suite pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/pipeline.py",
+            "content": "\"\"\"Input transform pipeline.\"\"\"\n\nfrom gen.module_17 import handler_17\n\n\ndef transform(items):\n    \"\"\"Apply the registered handler to every input item.\"\"\"\n    return [handler_17(item) for item in items[: len(items) - 1]]\n"
+          },
+          {
+            "path": "src/runner.py",
+            "content": "\"\"\"Batch runner used by operators to replay a transform over sample inputs.\"\"\"\n\nimport sys\n\nfrom pipeline import transform\n\n\ndef load_inputs():\n    return [1, 2, 3, 4]\n\n\ndef main():\n    result = transform(load_inputs())\n    for value in result:\n        sys.stdout.write(f\"{value}\\n\")\n    return 0\n\n\nif __name__ == \"__main__\":\n    raise SystemExit(main())\n"
+          },
+          {
+            "path": "tests/test_pipeline.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / \"src\"))\n\nfrom pipeline import transform\n\n\ndef main():\n    assert transform([1, 2, 3]) == [2, 4, 6]\n    assert transform([]) == []\n    assert transform([5]) == [10]\n    assert transform([-2, 0, 2]) == [-4, 0, 4]\n    print(\"test_pipeline: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [
+          { "path": "src/gen/module_<NN>.py", "template": "python-module", "count": 45, "seed": 11 },
+          { "path": "data/server.log", "template": "log-lines", "count": 9000, "seed": 12 }
+        ],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import pipeline fixture", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 17,
       "id": "task-17",
-      "category": "debugging",
-      "title": "Repair a boundary-case bug",
-      "description": "Use the failing example to fix boundary handling and verify nearby cases.",
-      "status": "not-run",
-      "result": null
+      "category": "javascript",
+      "scale": "long",
+      "title": "Long tool-heavy JavaScript aggregation fix",
+      "prompt": "node tests/test_aggregate.js fails: aggregate() silently drops the first entry of its input. The fold runs through one of the 60 generated services under src/services/ (src/aggregate.js names it in its import; verify rather than reading all 60 files). data/events.jsonl is a 7000-line audit trail whose entry with id 417 belongs to the failing batch. Find the drop, fix it without modifying the service module, and make the suite pass. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/aggregate.js",
+            "content": "\"use strict\";\n\nconst { mergeTotals } = require(\"./services/service-23.js\");\n\nfunction aggregate(entries) {\n  let totals = { count: 0, sum: 0 };\n  for (const entry of entries.slice(1)) {\n    totals = mergeTotals(totals, entry);\n  }\n  return totals;\n}\n\nmodule.exports = { aggregate };\n"
+          },
+          {
+            "path": "tests/test_aggregate.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst { aggregate } = require(\"../src/aggregate\");\n\nassert.deepStrictEqual(aggregate([{ count: 1, sum: 2 }, { count: 1, sum: 3 }]), {\n  count: 2,\n  sum: 5,\n});\nassert.deepStrictEqual(aggregate([{ count: 1, sum: 9 }]), { count: 1, sum: 9 });\nassert.deepStrictEqual(aggregate([]), { count: 0, sum: 0 });\nconsole.log(\"test_aggregate: all assertions passed\");\n"
+          }
+        ],
+        "generate": [
+          { "path": "src/services/service-<NN>.js", "template": "js-service", "count": 60, "seed": 21 },
+          { "path": "data/events.jsonl", "template": "jsonl-events", "count": 7000, "seed": 22 }
+        ],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import aggregation fixture", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 18,
       "id": "task-18",
-      "category": "long-context",
-      "title": "Navigate a large repository history",
-      "description": "Find the relevant implementation and references in a large context without losing task constraints.",
-      "status": "not-run",
-      "result": null
+      "category": "mixed-tool",
+      "scale": "standard",
+      "title": "Search, edit, test, and commit",
+      "prompt": "python3 tests/test_normalizer.py fails: normalize('A  B') must produce two words separated by a single space, but runs of internal whitespace are currently preserved. Fix texts/normalizer.py, run the suite, then commit every change in the repository as a single commit with the exact message 'fix: collapse whitespace in normalizer'. The working tree and index must be clean afterwards. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "texts/normalizer.py",
+            "content": "\"\"\"User text normalization.\"\"\"\n\n\ndef normalize(text):\n    return text.strip().lower()\n"
+          },
+          {
+            "path": "tests/test_normalizer.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / \"texts\"))\n\nfrom normalizer import normalize\n\n\ndef main():\n    assert normalize(\"  Hello World  \") == \"hello world\"\n    assert normalize(\"A  B\") == \"a b\"\n    assert normalize(\"tab\\tseparated\\twords\") == \"tab separated words\"\n    assert normalize(\"single\") == \"single\"\n    print(\"test_normalizer: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import text utilities", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 19,
       "id": "task-19",
-      "category": "mixed-tool",
-      "title": "Search, edit, test, and inspect Git",
-      "description": "Complete a small change that requires search, editing, a focused test, and Git verification.",
-      "status": "not-run",
-      "result": null
+      "category": "cache",
+      "scale": "standard",
+      "title": "Fix dotenv parsing and cache staleness",
+      "prompt": "src/env-loader.js has two defects: values keep their surrounding quotes, and the cache serves stale values after the underlying file changes. node tests/test_env_loader.js fails on both. Fix value unquoting (single or double quotes) and cache invalidation based on file modification time. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "src/env-loader.js",
+            "content": "\"use strict\";\n\nconst fs = require(\"node:fs\");\n\nconst cache = new Map();\n\nfunction loadEnv(envPath) {\n  if (cache.has(envPath)) {\n    return cache.get(envPath);\n  }\n  const raw = fs.readFileSync(envPath, \"utf8\");\n  const result = {};\n  for (const line of raw.split(\"\\n\")) {\n    const trimmed = line.trim();\n    if (!trimmed || trimmed.startsWith(\"#\")) {\n      continue;\n    }\n    const eq = trimmed.indexOf(\"=\");\n    if (eq === -1) {\n      continue;\n    }\n    result[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();\n  }\n  cache.set(envPath, result);\n  return result;\n}\n\nmodule.exports = { loadEnv };\n"
+          },
+          {
+            "path": "tests/test_env_loader.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst fs = require(\"node:fs\");\nconst os = require(\"node:os\");\nconst path = require(\"node:path\");\nconst { loadEnv } = require(\"../src/env-loader\");\n\nconst dir = fs.mkdtempSync(path.join(os.tmpdir(), \"env-\"));\nconst file = path.join(dir, \"a.env\");\n\nfs.writeFileSync(file, 'GREETING=\"hello\"\\nCOUNT=2\\n');\nassert.deepStrictEqual(loadEnv(file), { GREETING: \"hello\", COUNT: \"2\" });\n\nfs.writeFileSync(file, 'GREETING=\"goodbye\"\\nCOUNT=3\\n');\nassert.deepStrictEqual(\n  loadEnv(file),\n  { GREETING: \"goodbye\", COUNT: \"3\" },\n  \"cache must not serve stale values after the file changes\",\n);\nconsole.log(\"test_env_loader: all assertions passed\");\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import env loader", "paths": ["all"] }],
+          "post": []
+        }
+      }
     },
     {
       "number": 20,
       "id": "task-20",
       "category": "mixed-tool",
-      "title": "Debug and validate a cross-file change",
-      "description": "Trace a failure across files, apply the fix, run relevant checks, and report the final state.",
-      "status": "not-run",
-      "result": null
+      "scale": "standard",
+      "title": "Release checklist across two stacks",
+      "prompt": "Release checklist: (1) python3 tests/test_rates.py and node tests/test_stats.js both fail; find each defect at its source and fix it. (2) Add a new top-level section for version 1.2.3 at the top of CHANGELOG.md summarizing the two fixes in your own words. (3) Commit all changes as one commit with the message 'release: 1.2.3' and create an annotated tag named v1.2.3 pointing at that commit. The working tree and index must be clean at the end. Do not modify the tests.",
+      "fixture": {
+        "files": [
+          {
+            "path": "rates.py",
+            "content": "\"\"\"Currency conversion helpers for billing.\"\"\"\n\n\ndef to_cents(dollars):\n    return int(dollars * 100)\n\n\ndef from_cents(cents):\n    return cents / 100\n"
+          },
+          {
+            "path": "src/stats.js",
+            "content": "\"use strict\";\n\nfunction median(values) {\n  if (values.length === 0) {\n    throw new Error(\"median() requires at least one value\");\n  }\n  if (values.length % 2 === 1) {\n    return values[(values.length - 1) / 2];\n  }\n  return (values[values.length / 2 - 1] + values[values.length / 2]) / 2;\n}\n\nmodule.exports = { median };\n"
+          },
+          {
+            "path": "CHANGELOG.md",
+            "content": "# Changelog\n\n## 1.2.2\n\n- Internal dependency bumps.\n"
+          },
+          {
+            "path": "tests/test_rates.py",
+            "content": "import pathlib\nimport sys\n\nsys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))\n\nfrom rates import to_cents, from_cents\n\n\ndef main():\n    assert to_cents(19.99) == 1999\n    assert to_cents(0.5) == 50\n    assert from_cents(1999) == 19.99\n    print(\"test_rates: all assertions passed\")\n\n\nif __name__ == \"__main__\":\n    main()\n"
+          },
+          {
+            "path": "tests/test_stats.js",
+            "content": "\"use strict\";\n\nconst assert = require(\"node:assert\");\nconst { median } = require(\"../src/stats\");\n\nassert.strictEqual(median([1, 2, 3]), 2);\nassert.strictEqual(median([3, 1, 2]), 2);\nassert.strictEqual(median([1, 2, 3, 4]), 2.5);\nassert.strictEqual(median([9, 2, 8, 1]), 5);\nconsole.log(\"test_stats: all assertions passed\");\n"
+          }
+        ],
+        "generate": [],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import release fixture", "paths": ["all"] }],
+          "post": []
+        }
+      }
     }
   ]
 }

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference fix: configure repo-local identity and commit the staged change.",
+  "files": [],
+  "commands": [
+    ["git", "config", "user.name", "Dev Agent"],
+    ["git", "config", "user.email", "agent@example.invalid"],
+    ["git", "commit", "-m", "fix: apply staged correction"]
+  ]
+}
