@@ -22,7 +22,7 @@
     "benchmark:compare": "node benchmarks/compare-context-hook.mjs",
     "evaluation:validate": "node evaluation/runner/cli.mjs validate",
     "evaluation:fixtures": "node evaluation/runner/cli.mjs fixtures",
-    "evaluation:test": "node --test \"evaluation/tests/*.test.mjs\"",
+    "evaluation:test": "node --test --test-concurrency=1 \"evaluation/tests/*.test.mjs\"",
     "evaluation:dry-run": "node evaluation/runner/dry-run.mjs",
     "evaluation:report": "node evaluation/runner/cli.mjs report --latest"
   },
