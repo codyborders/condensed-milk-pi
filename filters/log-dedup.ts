@@ -7,30 +7,19 @@
 import { registerFilter, type FilterResult } from "./dispatch.js";
 
 const TIMESTAMP_PATTERNS = [
-  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\d]*\s*/,
-  /^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s*/,
-  /^\d{10,13}\s*/,
-  /^\[\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[.\d]*\]\s*/,
-  /^\d{2}:\d{2}:\d{2}[.\d]*\s*/,
+  /^\[\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\]\s*/,
+  /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\s+/,
+  /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+/i,
+  /^(?:\d{10}|\d{13})\s+/,
+  /^\d{2}:\d{2}:\d{2}(?:[.,]\d+)?\s+/,
 ];
 
-// Dynamic value patterns (from RTK) — normalize for better dedup matching
-const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
-const HEX_RE = /0x[0-9a-f]+/gi;
-const LARGE_NUM_RE = /\b\d{4,}\b/g;
-
 function normalize(line: string): string {
-  let s = line;
-  // Strip timestamps
-  for (const p of TIMESTAMP_PATTERNS) {
-    const match = p.exec(s);
-    if (match) { s = s.slice(match[0].length); break; }
+  for (const pattern of TIMESTAMP_PATTERNS) {
+    const match = pattern.exec(line);
+    if (match) return line.slice(match[0].length);
   }
-  // Normalize dynamic values for matching (not for display)
-  s = s.replace(UUID_RE, "<UUID>");
-  s = s.replace(HEX_RE, "<HEX>");
-  s = s.replace(LARGE_NUM_RE, "<NUM>");
-  return s;
+  return line;
 }
 
 function filterLogOutput(input: string): FilterResult | null {

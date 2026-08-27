@@ -5,7 +5,51 @@ import "./filters/git-status.js";
 import "./filters/git-diff.js";
 import "./filters/git-log.js";
 import "./filters/git-mutations.js";
-configureFilters({ "git-log-verbose": true, "git-add": true, "git-commit": true, "git-push": true });
+import "./filters/log-dedup.js";
+
+const defaultLog = "commit 0123456789abcdef0123456789abcdef01234567\nAuthor: A <a@example.com>\nDate:   Thu Jan 1 00:00:00 1970 +0000\n\n    first subject\n";
+assert.equal(dispatch({ command: "git log", stdout: defaultLog.repeat(4), isError: false, toolName: "bash" }), null);
+const defaultDedup = Array.from({ length: 20 }, () => "2024-01-01T00:00:00Z repeated line").join("\n");
+assert.equal(dispatch({ command: "journalctl", stdout: defaultDedup, isError: false, toolName: "bash" }), null);
+configureFilters({ "git-log-verbose": true, "log-deduplication": true, "git-add": true, "git-commit": true, "git-push": true });
+
+const optionOutput = defaultLog.repeat(4);
+const passthroughGitLogOptions = [
+  "--patch", "--stat", "--shortstat", "--numstat", "--name-only", "--name-status", "--raw",
+  "--decorate", "--graph", "--show-signature", "--show-notes", "--diff-merges", "--diff-merges=first-parent",
+  "--cc", "--combined-all-paths", "--pretty=full", "--format=%H", "--oneline", "-p", "-s", "-pS", "--unknown-output-format",
+];
+for (const option of passthroughGitLogOptions) {
+  assert.equal(dispatch({ command: `git log ${option}`, stdout: optionOutput, isError: false, toolName: "bash" }), null, option);
+}
+const manyCommits = Array.from({ length: 51 }, (_, index) => {
+  const hash = index.toString(16).padStart(40, "0");
+  return `commit ${hash}\nAuthor: A <a@example.com>\nDate:   Thu Jan 1 00:00:00 1970 +0000\n\n    subject-${index}`;
+}).join("\n");
+const manyCommitsResult = dispatch({ command: "git log", stdout: manyCommits, isError: false, toolName: "bash" });
+assert.ok(manyCommitsResult);
+assert.equal(manyCommitsResult.output.split("\n").length, 51);
+assert.match(manyCommitsResult.output, /subject-50$/);
+const distinctIdLines = Array.from({ length: 20 }, (_, index) => {
+  const uuid = `${index.toString(16).padStart(8, "0")}-0000-0000-0000-${index.toString(16).padStart(12, "0")}`;
+  const hash = `0x${index.toString(16).padStart(8, "0")}`;
+  const lineNumber = 10000 + index;
+  const embeddedTimestamp = `2024-02-${String(index + 1).padStart(2, "0")}T01:02:03Z`;
+  return `2024-01-01T00:00:${String(index).padStart(2, "0")}Z request-id=${uuid} hash=${hash} port=${5000 + index} line=${lineNumber} value=${20000 + index} embedded=${embeddedTimestamp}`;
+}).join("\n");
+const distinctIdResult = dispatch({ command: "journalctl", stdout: distinctIdLines, isError: false, toolName: "bash" });
+assert.equal(distinctIdResult, null);
+assert.equal(dispatch({ command: "journalctl", stdout: distinctIdLines, isError: true, toolName: "bash" }), null);
+const timestampDuplicateInput = Array.from({ length: 20 }, (_, index) =>
+  `2024-01-01T00:00:${String(index).padStart(2, "0")}Z exact repeated line`,
+).join("\n");
+const timestampDuplicateResult = dispatch({ command: "journalctl", stdout: timestampDuplicateInput, isError: false, toolName: "bash" });
+assert.ok(timestampDuplicateResult);
+assert.equal(timestampDuplicateResult.output, "2024-01-01T00:00:00Z exact repeated line  [x20]");
+const unknownTimestampInput = Array.from({ length: 20 }, (_, index) =>
+  `Foo 1 00:00:${String(index).padStart(2, "0")} unknown format`,
+).join("\n");
+assert.equal(dispatch({ command: "journalctl", stdout: unknownTimestampInput, isError: false, toolName: "bash" }), null);
 
 const input = [
   "## main...origin/main",
@@ -182,6 +226,7 @@ const logResult = dispatch({ command: "git log", stdout: log, isError: false, to
 assert.ok(logResult);
 assert.equal(logResult.output, "0123456789abcdef0123456789abcdef01234567 first subject\nfedcba9876543210fedcba9876543210fedcba98 second subject");
 assert.ok(logResult.output.length < log.length);
+assert.equal(dispatch({ command: "git log", stdout: log, isError: true, toolName: "bash" }), null);
 const decoratedLog = log.replace("commit 0123456789abcdef0123456789abcdef01234567", "commit 0123456789abcdef0123456789abcdef01234567 (HEAD -> main)");
 assert.equal(dispatch({ command: "git log --decorate", stdout: decoratedLog, isError: false, toolName: "bash" }), null);
 assert.equal(dispatch({ command: "git log", stdout: "not a git log\n".repeat(20), isError: false, toolName: "bash" }), null);
