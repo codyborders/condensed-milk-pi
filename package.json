@@ -14,7 +14,7 @@
   },
   "homepage": "https://github.com/tomooshi/condensed-milk-pi#readme",
   "scripts": {
-    "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs",
+    "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-handler-smoke.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs",
     "typecheck": "tsc --noEmit",
     "benchmark": "node --expose-gc --import tsx benchmarks/context-hook.mjs",
     "benchmark:test": "node --test \"benchmarks/*.test.mjs\"",
@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "0.84.2",
+    "@types/node": "22.19.19",
     "tsx": "4.19.2",
     "typescript": "5.9.3"
   }
