@@ -12,8 +12,8 @@ The fork recovered every required hidden diagnostic through `condensed_milk_retr
 
 | Field | Value |
 | --- | --- |
-| Run | `masking-final-v5-20260828T151106Z` |
-| Evaluator commit | `e84f0181720b83ce6dfcc6045f51539978ce3268` |
+| Run | `masking-final-v6-20260828T162330Z` |
+| Evaluator commit | `c36f9eed5ca6d8985a9b9479263b013e14686ab1` |
 | Provider | `z-ai` |
 | Model | `glm-5.3-flash` |
 | Thinking | `high` |
@@ -45,27 +45,27 @@ Semantic filter activation was recorded as a descriptive metric. It was not a re
 | Metric | Upstream | Fork | Fork minus upstream |
 | --- | ---: | ---: | ---: |
 | Correct attempts | 21 / 24 | 21 / 24 | 0 |
-| Original observed bytes | 11,562,442 | 14,742,198 | +3,179,756 |
-| Visible observed bytes | 3,599,900 | 6,840,351 | +3,240,451 |
-| Removed bytes | 7,962,542 | 7,901,847 | -60,695 |
-| Removed share | 68.87% | 53.60% | -15.27 points |
-| Archived bytes | 0 | 1,016,930 | +1,016,930 |
-| Estimated semantic tokens saved | 5,385 | 2,165 | -3,220 |
-| Estimated historical tokens saved | 1,985,244 | 1,973,285 | -11,959 |
-| Provider input tokens | 753,687 | 942,045 | +188,358 |
-| Provider output tokens | 27,108 | 32,531 | +5,423 |
-| Provider cache-read tokens | 489,536 | 1,575,744 | +1,086,208 |
-| Total reported tokens | 1,270,331 | 2,550,320 | +1,279,989 |
-| Total wall time | 1,158,879 ms | 1,686,115 ms | +527,236 ms |
-| Median wall time | 47,525 ms | 62,546 ms | +15,021 ms |
-| p95 wall time | 88,981 ms | 112,104 ms | +23,123 ms |
-| Median first-event latency | 1,174 ms | 1,283.5 ms | +109.5 ms |
-| Historical mask events | 164 | 196 | +32 |
-| Archive references | 0 | 331 | +331 |
-| Retrieval calls | 0 | 59 | +59 |
-| Returned archive bytes | 0 | 503,347 | +503,347 |
-| Reruns | 9 | 5 | -4 |
-| Rereads | 20 | 6 | -14 |
+| Original observed bytes | 13,924,372 | 13,627,267 | -297,105 |
+| Visible observed bytes | 4,383,755 | 5,905,237 | +1,521,482 |
+| Removed bytes | 9,540,617 | 7,722,030 | -1,818,587 |
+| Removed share | 68.52% | 56.67% | -11.85 points |
+| Archived bytes | 0 | 1,013,814 | +1,013,814 |
+| Estimated semantic tokens saved | 3,732 | 1,455 | -2,277 |
+| Estimated historical tokens saved | 2,381,414 | 1,929,042 | -452,372 |
+| Provider input tokens | 799,550 | 1,006,483 | +206,933 |
+| Provider output tokens | 31,339 | 30,888 | -451 |
+| Provider cache-read tokens | 758,912 | 1,222,976 | +464,064 |
+| Total reported tokens | 1,589,801 | 2,260,347 | +670,546 |
+| Total wall time | 1,456,406 ms | 1,547,735 ms | +91,329 ms |
+| Median wall time | 48,852 ms | 53,825 ms | +4,973 ms |
+| p95 wall time | 131,209 ms | 133,415 ms | +2,206 ms |
+| Median first-event latency | 1,187.5 ms | 1,323.5 ms | +136 ms |
+| Historical mask events | 185 | 191 | +6 |
+| Archive references | 0 | 286 | +286 |
+| Retrieval calls | 0 | 48 | +48 |
+| Returned archive bytes | 0 | 481,680 | +481,680 |
+| Reruns | 8 | 8 | 0 |
+| Rereads | 16 | 6 | -10 |
 | Privacy-sentinel incidents | 0 | 0 | 0 |
 | Non-text ordering incidents | 0 | 0 | 0 |
 
@@ -77,26 +77,27 @@ Intervals use a deterministic paired bootstrap percentile method over 24 fork-mi
 
 | Metric | Mean difference | 95% bootstrap interval |
 | --- | ---: | ---: |
-| Estimated semantic tokens saved | -134.17 | [-408.92, 15.09] |
-| Estimated historical tokens saved | -498.29 | [-19,331.63, 18,802.40] |
-| Provider input tokens | +7,848.25 | [4,992.83, 11,018.21] |
-| Provider output tokens | +225.96 | [-40.80, 520.59] |
-| Wall time | +21,968.17 ms | [10,429.20, 34,622.94] |
-| First-event latency | +35.25 ms | [-74.75, 118.59] |
-| Retrieval calls | +2.46 | [1.58, 3.42] |
-| Reruns | -0.17 | [-0.33, -0.04] |
-| Rereads | -0.58 | [-0.92, -0.29] |
+| Estimated semantic tokens saved | -94.88 | [-418.71, 126.38] |
+| Estimated historical tokens saved | -18,848.83 | [-38,118.81, -1,344.48] |
+| Provider input tokens | +8,622.21 | [2,580.43, 14,522.35] |
+| Provider output tokens | -18.79 | [-361.71, 326.46] |
+| Wall time | +3,805.38 ms | [-9,309.68, 17,288.64] |
+| First-event latency | +185.71 ms | [77.62, 310.00] |
+| Retrieval calls | +2.00 | [1.42, 2.58] |
+| Reruns | 0.00 | [-0.17, 0.17] |
+| Rereads | -0.42 | [-0.67, -0.17] |
 
-In this run, the fork matched quality and reduced reruns plus rereads. It used more provider input, more cache-read tokens, and more wall time. The study does not support a token-cost reduction claim for the recovery-enabled fork.
+In this run, the fork matched quality and reduced rereads. It used 42.18% more reported tokens. Its median wall time was 10.18% higher, while the paired wall-time interval included zero. The study does not support a token-cost reduction claim for the recovery-enabled fork.
 
 ## Excluded runs
 
-Four earlier paid runs were excluded from the final result:
+Five earlier paid runs were excluded from the final result:
 
 - `masking-final-20260828T104951Z`: thinking-content changes were misclassified as non-text order changes. Task 8 also exposed its expected answer.
 - `masking-final-v2-20260828T115526Z`: Task 2 upstream timed out during Cargo. Its fixed repetition slot was not retried.
 - `masking-final-v3-20260828T131901Z`: one fork build attempt omitted its output file. The local script was changed to record each run.
 - `masking-final-v4-20260828T141518Z`: historical context archive references were omitted from extracted recovery metrics.
+- `masking-final-v5-20260828T151106Z`: Task 2 used an unsupported `fileEquals` field name, so six correct files were scored as failures.
 
 Each replacement used a new run ID. No reserved or terminal paid slot was invoked again.
 

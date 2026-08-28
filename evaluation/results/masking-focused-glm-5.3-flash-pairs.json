@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "runId": "masking-final-v5-20260828T151106Z",
+  "runId": "masking-final-v6-20260828T162330Z",
   "metrics": [
     "estimatedTokensSavedSemantic",
     "estimatedTokensSavedHistorical",
@@ -21,9 +21,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -1008.3333333333334,
-            "low": -3181,
-            "high": 228,
+            "mean": -703.6666666666666,
+            "low": -3311,
+            "high": 1050,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -31,9 +31,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -1008.3333333333334,
-            "low": -5697.277559519464,
-            "high": 3680.610892852798,
+            "mean": -703.6666666666666,
+            "low": -6423.196353409946,
+            "high": 5015.863020076612,
             "level": 0.95
           },
           "n": 3
@@ -42,9 +42,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -6881.333333333333,
-            "low": -40948,
-            "high": 20362,
+            "mean": -13963.333333333334,
+            "low": -62162,
+            "high": 51005,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -52,9 +52,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -6881.333333333333,
-            "low": -84434.4828462415,
-            "high": 70671.81617957485,
+            "mean": -13963.333333333334,
+            "low": -159080.54286057965,
+            "high": 131153.87619391296,
             "level": 0.95
           },
           "n": 3
@@ -63,9 +63,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 5305,
-            "low": 866,
-            "high": 9635,
+            "mean": 2640.6666666666665,
+            "low": -12785,
+            "high": 23265,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -73,9 +73,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 5305,
-            "low": -5589.225798728199,
-            "high": 16199.2257987282,
+            "mean": 2640.6666666666665,
+            "low": -43511.525217076836,
+            "high": 48792.858550410165,
             "level": 0.95
           },
           "n": 3
@@ -84,9 +84,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 23.333333333333332,
-            "low": -358,
-            "high": 459,
+            "mean": 465.3333333333333,
+            "low": -730,
+            "high": 2532,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -94,9 +94,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 23.333333333333332,
-            "low": -998.1467921768564,
-            "high": 1044.813458843523,
+            "mean": 465.3333333333333,
+            "low": -3998.916716016281,
+            "high": 4929.583382682948,
             "level": 0.95
           },
           "n": 3
@@ -105,9 +105,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 15284.333333333334,
-            "low": -22359,
-            "high": 66867,
+            "mean": 29670.666666666668,
+            "low": -18846,
+            "high": 104937,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -115,9 +115,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 15284.333333333334,
-            "low": -99526.0654895122,
-            "high": 130094.73215617886,
+            "mean": 29670.666666666668,
+            "low": -134493.36816561763,
+            "high": 193834.70149895095,
             "level": 0.95
           },
           "n": 3
@@ -126,9 +126,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 130.66666666666666,
-            "low": 46,
-            "high": 210,
+            "mean": -50.333333333333336,
+            "low": -351,
+            "high": 193,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -136,9 +136,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 130.66666666666666,
-            "low": -73.35550966861703,
-            "high": 334.6888430019503,
+            "mean": -50.333333333333336,
+            "low": -737.1843085443692,
+            "high": 636.5176418777024,
             "level": 0.95
           },
           "n": 3
@@ -168,9 +168,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1,
-            "high": 0,
+            "mean": 0.6666666666666666,
+            "low": 0,
+            "high": 1,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-01"
@@ -178,9 +178,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1.7675509099774254,
-            "high": 1.1008842433107588,
+            "mean": 0.6666666666666666,
+            "low": -0.7675509099774255,
+            "high": 2.100884243310759,
             "level": 0.95
           },
           "n": 3
@@ -237,9 +237,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 75134.33333333333,
-            "low": 30577,
-            "high": 132755,
+            "mean": -78883,
+            "low": -134249,
+            "high": -10321,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-02"
@@ -247,9 +247,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 75134.33333333333,
-            "low": -54852.167515650464,
-            "high": 205120.83418231714,
+            "mean": -78883,
+            "low": -235406.1124687964,
+            "high": 77640.1124687964,
             "level": 0.95
           },
           "n": 3
@@ -258,9 +258,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 14174.333333333334,
-            "low": 8418,
-            "high": 20523,
+            "mean": 4862.666666666667,
+            "low": -14415,
+            "high": 26276,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-02"
@@ -268,9 +268,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 14174.333333333334,
-            "low": -914.8148709000379,
-            "high": 29263.481537566706,
+            "mean": 4862.666666666667,
+            "low": -45886.76353469636,
+            "high": 55612.09686802969,
             "level": 0.95
           },
           "n": 3
@@ -279,9 +279,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 1235.6666666666667,
-            "low": 576,
-            "high": 2154,
+            "mean": -1108,
+            "low": -2200,
+            "high": -70,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-02"
@@ -289,9 +289,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 1235.6666666666667,
-            "low": -801.7841553667404,
-            "high": 3273.117488700074,
+            "mean": -1108,
+            "low": -3756.156049430316,
+            "high": 1540.1560494303162,
             "level": 0.95
           },
           "n": 3
@@ -300,9 +300,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 59882,
-            "low": 20358,
-            "high": 119110,
+            "mean": -40845.333333333336,
+            "low": -69326,
+            "high": -3294,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-02"
@@ -310,9 +310,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 59882,
-            "low": -69893.09848002241,
-            "high": 189657.0984800224,
+            "mean": -40845.333333333336,
+            "low": -125151.12639570018,
+            "high": 43460.459729033515,
             "level": 0.95
           },
           "n": 3
@@ -321,9 +321,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -448.3333333333333,
-            "low": -937,
-            "high": -91,
+            "mean": 23.333333333333332,
+            "low": -348,
+            "high": 298,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-02"
@@ -331,9 +331,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -448.3333333333333,
-            "low": -1536.4461459488746,
-            "high": 639.7794792822081,
+            "mean": 23.333333333333332,
+            "low": -805.5550927231573,
+            "high": 852.221759389824,
             "level": 0.95
           },
           "n": 3
@@ -342,9 +342,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 5.666666666666667,
-            "low": 3,
-            "high": 8,
+            "mean": 1,
+            "low": 0,
+            "high": 3,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-02"
@@ -352,9 +352,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 5.666666666666667,
-            "low": -0.58494281297473,
-            "high": 11.918276146308063,
+            "mean": 1,
+            "low": -3.3026527299322757,
+            "high": 5.302652729932276,
             "level": 0.95
           },
           "n": 3
@@ -384,8 +384,8 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1,
+            "mean": -1,
+            "low": -2,
             "high": 0,
             "level": 0.95,
             "iterations": 2000,
@@ -394,9 +394,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1.7675509099774254,
-            "high": 1.1008842433107588,
+            "mean": -1,
+            "low": -3.484137711855878,
+            "high": 1.4841377118558778,
             "level": 0.95
           },
           "n": 3
@@ -432,9 +432,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 3512.6666666666665,
-            "low": 70,
-            "high": 10375,
+            "mean": 10353,
+            "low": 10353,
+            "high": 10353,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-03"
@@ -442,9 +442,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 3512.6666666666665,
-            "low": -11250.479598548967,
-            "high": 18275.8129318823,
+            "mean": 10353,
+            "low": 10353,
+            "high": 10353,
             "level": 0.95
           },
           "n": 3
@@ -453,9 +453,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 4600.666666666667,
-            "low": 2702,
-            "high": 7921,
+            "mean": 1699,
+            "low": -673,
+            "high": 4586,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-03"
@@ -463,9 +463,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 4600.666666666667,
-            "low": -2566.982142110247,
-            "high": 11768.315475443582,
+            "mean": 1699,
+            "low": -4926.334991328347,
+            "high": 8324.334991328347,
             "level": 0.95
           },
           "n": 3
@@ -474,9 +474,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 99.66666666666667,
-            "low": -193,
-            "high": 284,
+            "mean": 73,
+            "low": 24,
+            "high": 145,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-03"
@@ -484,9 +484,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 99.66666666666667,
-            "low": -536.991869129827,
-            "high": 736.3252024631603,
+            "mean": 73,
+            "low": -85.2261175521655,
+            "high": 231.2261175521655,
             "level": 0.95
           },
           "n": 3
@@ -495,9 +495,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 11936.333333333334,
-            "low": 8608,
-            "high": 15672,
+            "mean": -60,
+            "low": -7977,
+            "high": 5900,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-03"
@@ -505,9 +505,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 11936.333333333334,
-            "low": 3118.7066348672706,
-            "high": 20753.960031799397,
+            "mean": -60,
+            "low": -17802.929739368108,
+            "high": 17682.929739368108,
             "level": 0.95
           },
           "n": 3
@@ -516,9 +516,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 163.33333333333334,
-            "low": 95,
-            "high": 239,
+            "mean": 256.3333333333333,
+            "low": 42,
+            "high": 566,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-03"
@@ -526,9 +526,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 163.33333333333334,
-            "low": -16.219022362123894,
-            "high": 342.8856890287906,
+            "mean": 256.3333333333333,
+            "low": -426.0603963555996,
+            "high": 938.7270630222663,
             "level": 0.95
           },
           "n": 3
@@ -606,9 +606,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -6,
-            "low": -29,
-            "high": 20,
+            "mean": -9,
+            "low": -9,
+            "high": -9,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -616,9 +616,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -6,
-            "low": -67.20261991188764,
-            "high": 55.20261991188764,
+            "mean": -9,
+            "low": -9,
+            "high": -9,
             "level": 0.95
           },
           "n": 3
@@ -627,9 +627,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -17267,
-            "low": -20507,
-            "high": -10799,
+            "mean": -6689.666666666667,
+            "low": -50613,
+            "high": 40825,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -637,9 +637,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -17267,
-            "low": -31181.786911256815,
-            "high": -3352.213088743185,
+            "mean": -6689.666666666667,
+            "low": -120524.45312146448,
+            "high": 107145.11978813114,
             "level": 0.95
           },
           "n": 3
@@ -648,9 +648,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 8751.333333333334,
-            "low": 3505,
-            "high": 16313,
+            "mean": 19698.333333333332,
+            "low": 13175,
+            "high": 29958,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -658,9 +658,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 8751.333333333334,
-            "low": -7918.654558168457,
-            "high": 25421.321224835126,
+            "mean": 19698.333333333332,
+            "low": -2643.3627109150584,
+            "high": 42040.029377581726,
             "level": 0.95
           },
           "n": 3
@@ -669,9 +669,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -45.666666666666664,
-            "low": -475,
-            "high": 299,
+            "mean": 392,
+            "low": 120,
+            "high": 675,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -679,9 +679,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -45.666666666666664,
-            "low": -1024.1310604398514,
-            "high": 932.797727106518,
+            "mean": 392,
+            "low": -297.7542855244923,
+            "high": 1081.7542855244924,
             "level": 0.95
           },
           "n": 3
@@ -690,9 +690,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 7358.333333333333,
-            "low": -13812,
-            "high": 26317,
+            "mean": 25578.333333333332,
+            "low": 18883,
+            "high": 33610,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -700,9 +700,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 7358.333333333333,
-            "low": -42711.23318018073,
-            "high": 57427.8998468474,
+            "mean": 25578.333333333332,
+            "low": 7061.844717310269,
+            "high": 44094.821949356396,
             "level": 0.95
           },
           "n": 3
@@ -711,9 +711,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 36,
-            "low": -45,
-            "high": 102,
+            "mean": 447,
+            "low": 180,
+            "high": 968,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -721,9 +721,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 36,
-            "low": -149.41388215349207,
-            "high": 221.41388215349207,
+            "mean": 447,
+            "low": -673.9573366253182,
+            "high": 1567.9573366253182,
             "level": 0.95
           },
           "n": 3
@@ -732,9 +732,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 1.3333333333333333,
-            "low": 0,
-            "high": 2,
+            "mean": 2.6666666666666665,
+            "low": 2,
+            "high": 3,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-04"
@@ -742,9 +742,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 1.3333333333333333,
-            "low": -1.535101819954851,
-            "high": 4.201768486621518,
+            "mean": 2.6666666666666665,
+            "low": 1.2324490900225744,
+            "high": 4.100884243310759,
             "level": 0.95
           },
           "n": 3
@@ -774,7 +774,7 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -0.3333333333333333,
+            "mean": -0.6666666666666666,
             "low": -1,
             "high": 0,
             "level": 0.95,
@@ -784,9 +784,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1.7675509099774254,
-            "high": 1.1008842433107588,
+            "mean": -0.6666666666666666,
+            "low": -2.100884243310759,
+            "high": 0.7675509099774255,
             "level": 0.95
           },
           "n": 3
@@ -801,8 +801,8 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -12.666666666666666,
-            "low": -38,
+            "mean": 0,
+            "low": 0,
             "high": 0,
             "level": 0.95,
             "iterations": 2000,
@@ -811,9 +811,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -12.666666666666666,
-            "low": -67.16693457914216,
-            "high": 41.83360124580883,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
             "level": 0.95
           },
           "n": 3
@@ -822,9 +822,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 6482,
-            "low": -30952,
-            "high": 50464,
+            "mean": 3470,
+            "low": -30322,
+            "high": 40798,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-05"
@@ -832,9 +832,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 6482,
-            "low": -95618.7342083165,
-            "high": 108582.7342083165,
+            "mean": 3470,
+            "low": -85192.87605460836,
+            "high": 92132.87605460836,
             "level": 0.95
           },
           "n": 3
@@ -843,9 +843,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 12728,
-            "low": 3708,
-            "high": 29396,
+            "mean": 2561.3333333333335,
+            "low": 1301,
+            "high": 4778,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-05"
@@ -853,9 +853,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 12728,
-            "low": -23170.77799753564,
-            "high": 48626.77799753564,
+            "mean": 2561.3333333333335,
+            "low": -2222.365397367015,
+            "high": 7345.032064033681,
             "level": 0.95
           },
           "n": 3
@@ -864,9 +864,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 142.33333333333334,
-            "low": -137,
-            "high": 360,
+            "mean": 347,
+            "low": 28,
+            "high": 568,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-05"
@@ -874,9 +874,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 142.33333333333334,
-            "low": -489.06945080477396,
-            "high": 773.7361174714407,
+            "mean": 347,
+            "low": -356.0724148726256,
+            "high": 1050.0724148726256,
             "level": 0.95
           },
           "n": 3
@@ -885,9 +885,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 35233,
-            "low": 25876,
-            "high": 42025,
+            "mean": 8029.666666666667,
+            "low": -9659,
+            "high": 37719,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-05"
@@ -895,9 +895,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 35233,
-            "low": 14429.630445862698,
-            "high": 56036.3695541373,
+            "mean": 8029.666666666667,
+            "low": -56231.31834948053,
+            "high": 72290.65168281386,
             "level": 0.95
           },
           "n": 3
@@ -906,9 +906,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 93.66666666666667,
-            "low": 53,
-            "high": 133,
+            "mean": 87.33333333333333,
+            "low": -18,
+            "high": 211,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-05"
@@ -916,9 +916,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 93.66666666666667,
-            "low": -5.740235480879946,
-            "high": 193.07356881421327,
+            "mean": 87.33333333333333,
+            "low": -199.821954883977,
+            "high": 374.48862155064364,
             "level": 0.95
           },
           "n": 3
@@ -927,9 +927,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 1.3333333333333333,
+            "mean": 1,
             "low": 0,
-            "high": 4,
+            "high": 3,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-05"
@@ -937,9 +937,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 1.3333333333333333,
-            "low": -4.403536973243035,
-            "high": 7.0702036399097015,
+            "mean": 1,
+            "low": -3.3026527299322757,
+            "high": 5.302652729932276,
             "level": 0.95
           },
           "n": 3
@@ -969,8 +969,8 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1,
+            "mean": 0,
+            "low": 0,
             "high": 0,
             "level": 0.95,
             "iterations": 2000,
@@ -979,9 +979,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -0.3333333333333333,
-            "low": -1.7675509099774254,
-            "high": 1.1008842433107588,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
             "level": 0.95
           },
           "n": 3
@@ -1017,9 +1017,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -10235,
-            "low": -20518,
-            "high": 10153,
+            "mean": -16880.333333333332,
+            "low": -71608,
+            "high": 31554,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1027,9 +1027,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -10235,
-            "low": -54096.79913734949,
-            "high": 33626.79913734949,
+            "mean": -16880.333333333332,
+            "low": -145727.93947786803,
+            "high": 111967.27281120137,
             "level": 0.95
           },
           "n": 3
@@ -1038,9 +1038,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 9432,
-            "low": -930,
-            "high": 16053,
+            "mean": 5602.333333333333,
+            "low": -18395,
+            "high": 23508,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1048,9 +1048,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 9432,
-            "low": -13145.229193222869,
-            "high": 32009.22919322287,
+            "mean": 5602.333333333333,
+            "low": -48068.647896105926,
+            "high": 59273.3145627726,
             "level": 0.95
           },
           "n": 3
@@ -1059,9 +1059,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 719,
-            "low": -222,
-            "high": 1696,
+            "mean": 232,
+            "low": -505,
+            "high": 790,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1069,9 +1069,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 719,
-            "low": -1664.546639291826,
-            "high": 3102.546639291826,
+            "mean": 232,
+            "low": -1421.9339635511474,
+            "high": 1885.9339635511474,
             "level": 0.95
           },
           "n": 3
@@ -1080,9 +1080,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 28477.333333333332,
-            "low": 8228,
-            "high": 45589,
+            "mean": 26738,
+            "low": -5632,
+            "high": 56544,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1090,9 +1090,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 28477.333333333332,
-            "low": -18415.975424354492,
-            "high": 75370.64209102116,
+            "mean": 26738,
+            "low": -50685.615305258994,
+            "high": 104161.615305259,
             "level": 0.95
           },
           "n": 3
@@ -1101,9 +1101,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 187,
-            "low": 105,
-            "high": 348,
+            "mean": 289.3333333333333,
+            "low": 149,
+            "high": 565,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1111,9 +1111,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 187,
-            "low": -159.38358759298245,
-            "high": 533.3835875929824,
+            "mean": 289.3333333333333,
+            "low": -303.74815074245276,
+            "high": 882.4148174091195,
             "level": 0.95
           },
           "n": 3
@@ -1122,9 +1122,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 2.6666666666666665,
-            "low": 2,
-            "high": 3,
+            "mean": 3.3333333333333335,
+            "low": 3,
+            "high": 4,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1132,9 +1132,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 2.6666666666666665,
-            "low": 1.2324490900225744,
-            "high": 4.100884243310759,
+            "mean": 3.3333333333333335,
+            "low": 1.8991157566892414,
+            "high": 4.767550909977426,
             "level": 0.95
           },
           "n": 3
@@ -1165,8 +1165,8 @@
             "method": "paired-bootstrap-percentile",
             "n": 3,
             "mean": -1,
-            "low": -1,
-            "high": -1,
+            "low": -2,
+            "high": 0,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-06"
@@ -1175,8 +1175,8 @@
             "method": "paired-t",
             "n": 3,
             "mean": -1,
-            "low": -1,
-            "high": -1,
+            "low": -3.484137711855878,
+            "high": 1.4841377118558778,
             "level": 0.95
           },
           "n": 3
@@ -1212,9 +1212,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -65139.333333333336,
-            "low": -133910,
-            "high": -10315,
+            "mean": -10289.666666666666,
+            "low": -51177,
+            "high": 30597,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1222,9 +1222,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -65139.333333333336,
-            "low": -221557.30430820803,
-            "high": 91278.63764154134,
+            "mean": -10289.666666666666,
+            "low": -111858.60530144397,
+            "high": 91279.27196811062,
             "level": 0.95
           },
           "n": 3
@@ -1233,9 +1233,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -1039.3333333333333,
-            "low": -6745,
-            "high": 2482,
+            "mean": 27614,
+            "low": 12367,
+            "high": 40751,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1243,9 +1243,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -1039.3333333333333,
-            "low": -13425.909156946585,
-            "high": 11347.242490279918,
+            "mean": 27614,
+            "low": -7931.913486086691,
+            "high": 63159.91348608669,
             "level": 0.95
           },
           "n": 3
@@ -1254,9 +1254,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 59.666666666666664,
-            "low": -746,
-            "high": 1060,
+            "mean": -208,
+            "low": -444,
+            "high": 13,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1264,9 +1264,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 59.666666666666664,
-            "low": -2222.2681487623354,
-            "high": 2341.6014820956684,
+            "mean": -208,
+            "low": -776.5420099882549,
+            "high": 360.5420099882549,
             "level": 0.95
           },
           "n": 3
@@ -1275,9 +1275,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 15169.333333333334,
-            "low": -29892,
-            "high": 38738,
+            "mean": -18324,
+            "low": -29722,
+            "high": -5267,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1285,9 +1285,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 15169.333333333334,
-            "low": -81806.58806194378,
-            "high": 112145.25472861044,
+            "mean": -18324,
+            "low": -48907.7575158594,
+            "high": 12259.757515859394,
             "level": 0.95
           },
           "n": 3
@@ -1296,9 +1296,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 30,
-            "low": -141,
-            "high": 225,
+            "mean": 306.6666666666667,
+            "low": 55,
+            "high": 749,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1306,9 +1306,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 30,
-            "low": -427.51990290723876,
-            "high": 487.51990290723876,
+            "mean": 306.6666666666667,
+            "low": -647.9481644882414,
+            "high": 1261.2814978215747,
             "level": 0.95
           },
           "n": 3
@@ -1317,9 +1317,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 1.3333333333333333,
-            "low": 0,
-            "high": 2,
+            "mean": 2.3333333333333335,
+            "low": 2,
+            "high": 3,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1327,9 +1327,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 1.3333333333333333,
-            "low": -1.535101819954851,
-            "high": 4.201768486621518,
+            "mean": 2.3333333333333335,
+            "low": 0.8991157566892414,
+            "high": 3.767550909977426,
             "level": 0.95
           },
           "n": 3
@@ -1359,9 +1359,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -1,
+            "mean": -0.3333333333333333,
             "low": -1,
-            "high": -1,
+            "high": 0,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-07"
@@ -1369,9 +1369,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -1,
-            "low": -1,
-            "high": -1,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
             "level": 0.95
           },
           "n": 3
@@ -1407,9 +1407,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 10407.333333333334,
-            "low": -32299,
-            "high": 42749,
+            "mean": -37907.666666666664,
+            "low": -92677,
+            "high": -181,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-08"
@@ -1417,9 +1417,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 10407.333333333334,
-            "low": -85437.26424752087,
-            "high": 106251.93091418753,
+            "mean": -37907.666666666664,
+            "low": -158502.68647153777,
+            "high": 82687.35313820443,
             "level": 0.95
           },
           "n": 3
@@ -1428,9 +1428,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 8834,
-            "low": 6007,
-            "high": 12560,
+            "mean": 4299.333333333333,
+            "low": -4411,
+            "high": 17042,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-08"
@@ -1438,9 +1438,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 8834,
-            "low": 468.0957714361266,
-            "high": 17199.90422856387,
+            "mean": 4299.333333333333,
+            "low": -23723.302105310337,
+            "high": 32321.968771977,
             "level": 0.95
           },
           "n": 3
@@ -1449,9 +1449,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -426.3333333333333,
-            "low": -885,
-            "high": 31,
+            "mean": -343.6666666666667,
+            "low": -883,
+            "high": 590,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-08"
@@ -1459,9 +1459,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -426.3333333333333,
-            "low": -1564.0720212785573,
-            "high": 711.4053546118907,
+            "mean": -343.6666666666667,
+            "low": -2360.346413831496,
+            "high": 1673.013080498163,
             "level": 0.95
           },
           "n": 3
@@ -1470,9 +1470,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 2404.6666666666665,
-            "low": -7058,
-            "high": 9011,
+            "mean": -344.3333333333333,
+            "low": -21821,
+            "high": 12226,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-08"
@@ -1480,9 +1480,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 2404.6666666666665,
-            "low": -18478.669630835037,
-            "high": 23288.002964168372,
+            "mean": -344.3333333333333,
+            "low": -46771.241108051596,
+            "high": 46082.574441384924,
             "level": 0.95
           },
           "n": 3
@@ -1491,9 +1491,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 89.66666666666667,
-            "low": -21,
-            "high": 210,
+            "mean": 126,
+            "low": 27,
+            "high": 184,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-08"
@@ -1501,9 +1501,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 89.66666666666667,
-            "low": -198.0039169518132,
-            "high": 377.3372502851466,
+            "mean": 126,
+            "low": -88.02543982616038,
+            "high": 340.0254398261604,
             "level": 0.95
           },
           "n": 3
@@ -1512,9 +1512,9 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": 5.333333333333333,
-            "low": 4,
-            "high": 8,
+            "mean": 3.6666666666666665,
+            "low": 1,
+            "high": 5,
             "level": 0.95,
             "iterations": 2000,
             "seed": "masking:masking-task-08"
@@ -1522,9 +1522,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": 5.333333333333333,
-            "low": -0.4035369732430345,
-            "high": 11.0702036399097,
+            "mean": 3.6666666666666665,
+            "low": -2.070203639909702,
+            "high": 9.403536973243035,
             "level": 0.95
           },
           "n": 3
@@ -1533,7 +1533,7 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -0.6666666666666666,
+            "mean": -0.3333333333333333,
             "low": -1,
             "high": 0,
             "level": 0.95,
@@ -1543,9 +1543,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -0.6666666666666666,
-            "low": -2.100884243310759,
-            "high": 0.7675509099774255,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
             "level": 0.95
           },
           "n": 3
@@ -1554,8 +1554,8 @@
           "pairedBootstrap": {
             "method": "paired-bootstrap-percentile",
             "n": 3,
-            "mean": -1.6666666666666667,
-            "low": -3,
+            "mean": -0.3333333333333333,
+            "low": -1,
             "high": 0,
             "level": 0.95,
             "iterations": 2000,
@@ -1564,9 +1564,9 @@
           "pairedT": {
             "method": "paired-t",
             "n": 3,
-            "mean": -1.6666666666666667,
-            "low": -5.461249700424653,
-            "high": 2.12791636709132,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
             "level": 0.95
           },
           "n": 3
@@ -1578,162 +1578,162 @@
     "estimatedTokensSavedSemantic": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": -134.16666666666666,
-      "low": -408.91770833333334,
-      "high": 15.087499999999977,
+      "mean": -94.875,
+      "low": -418.70937499999997,
+      "high": 126.37604166666667,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": -134.16666666666666,
-        "low": -409.1407611249142,
-        "high": 140.80742779158092,
+        "mean": -94.875,
+        "low": -398.33283374039127,
+        "high": 208.58283374039127,
         "level": 0.95
       }
     },
     "estimatedTokensSavedHistorical": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": -498.2916666666667,
-      "low": -19331.633333333328,
-      "high": 18802.398958333328,
+      "mean": -18848.833333333332,
+      "low": -38118.81145833333,
+      "high": -1344.4822916666672,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": -498.2916666666667,
-        "low": -20952.24549681257,
-        "high": 19955.662163479235,
+        "mean": -18848.833333333332,
+        "low": -38859.51305869151,
+        "high": 1161.8463920248469,
         "level": 0.95
       }
     },
     "usageInput": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": 7848.25,
-      "low": 4992.833333333333,
-      "high": 11018.20625,
+      "mean": 8622.208333333334,
+      "low": 2580.4322916666697,
+      "high": 14522.34791666666,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": 7848.25,
-        "low": 4593.272766765263,
-        "high": 11103.227233234737,
+        "mean": 8622.208333333334,
+        "low": 2246.5775212019726,
+        "high": 14997.839145464695,
         "level": 0.95
       }
     },
     "usageOutput": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": 225.95833333333334,
-      "low": -40.80416666666664,
-      "high": 520.59375,
+      "mean": -18.791666666666668,
+      "low": -361.7125,
+      "high": 326.4645833333333,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": 225.95833333333334,
-        "low": -76.0280067103487,
-        "high": 527.9446733770154,
+        "mean": -18.791666666666668,
+        "low": -383.6528560599275,
+        "high": 346.06952272659413,
         "level": 0.95
       }
     },
     "wallTimeMs": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": 21968.166666666668,
-      "low": 10429.195833333333,
-      "high": 34622.938541666656,
+      "mean": 3805.375,
+      "low": -9309.684375,
+      "high": 17288.64375,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": 21968.166666666668,
-        "low": 8926.109222458761,
-        "high": 35010.22411087457,
+        "mean": 3805.375,
+        "low": -10964.945669251465,
+        "high": 18575.695669251465,
         "level": 0.95
       }
     },
     "firstEventLatencyMs": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": 35.25,
-      "low": -74.753125,
-      "high": 118.58749999999998,
+      "mean": 185.70833333333334,
+      "low": 77.61770833333334,
+      "high": 310.00312499999995,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": 35.25,
-        "low": -69.74286541165621,
-        "high": 140.24286541165623,
+        "mean": 185.70833333333334,
+        "low": 62.23630377067279,
+        "high": 309.1803628959939,
         "level": 0.95
       }
     },
     "retrievalCalls": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": 2.4583333333333335,
-      "low": 1.5833333333333333,
-      "high": 3.417708333333328,
+      "mean": 2,
+      "low": 1.4166666666666667,
+      "high": 2.5833333333333335,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": 2.4583333333333335,
-        "low": 1.470161367006094,
-        "high": 3.446505299660573,
+        "mean": 2,
+        "low": 1.3294470566212586,
+        "high": 2.670552943378741,
         "level": 0.95
       }
     },
     "reruns": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": -0.16666666666666666,
-      "low": -0.3333333333333333,
-      "high": -0.041666666666666664,
+      "mean": 0,
+      "low": -0.16666666666666666,
+      "high": 0.16666666666666666,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": -0.16666666666666666,
-        "low": -0.3274194306932232,
-        "high": -0.005913902640110075,
+        "mean": 0,
+        "low": -0.1760958300773001,
+        "high": 0.1760958300773001,
         "level": 0.95
       }
     },
     "rereads": {
       "method": "paired-bootstrap-percentile",
       "n": 24,
-      "mean": -0.5833333333333334,
-      "low": -0.9166666666666666,
-      "high": -0.2916666666666667,
+      "mean": -0.4166666666666667,
+      "low": -0.6666666666666666,
+      "high": -0.16666666666666666,
       "level": 0.95,
       "iterations": 2000,
-      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "seed": "masking:masking-final-v6-20260828T162330Z",
       "pairedT": {
         "method": "paired-t",
         "n": 24,
-        "mean": -0.5833333333333334,
-        "low": -0.9108116108419917,
-        "high": -0.25585505582467505,
+        "mean": -0.4166666666666667,
+        "low": -0.6927686059380606,
+        "high": -0.14056472739527281,
         "level": 0.95
       }
     }

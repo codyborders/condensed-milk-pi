@@ -8,7 +8,7 @@ This prerelease identifies the maintained remediation fork at `https://github.co
 
 One completed sanitized Z.AI run covered 20 valid task pairs and 40 selected attempts. This was one completed 20-pair stochastic study. Both arms passed all 20 tasks with zero measured quality difference. Results remain limited to one stochastic run, one model configuration, and the documented provider and review gaps. They do not establish broad savings or production readiness.
 
-A second masking-focused study completed 48 paid attempts and 24 valid pairs. Both arms passed 21 attempts. Every masking and recovery gate passed. The fork used more reported tokens and more wall time, while making fewer reruns and rereads. The result does not support a token-cost reduction claim.
+A second masking-focused study completed 48 paid attempts and 24 valid pairs. Both arms passed 21 attempts. Every masking and recovery gate passed. The fork used more reported tokens and more wall time. Rerun counts were equal, while the fork made fewer rereads. The result does not support a token-cost reduction claim.
 
 This prerelease includes bounded output recovery.
 
