@@ -112,7 +112,7 @@ const tsxBin = join(repoRoot, "node_modules", ".bin", "tsx");
 const probeCode = `
 import tokenCompressor from ${JSON.stringify(join(repoRoot, "index.ts"))};
 import { dispatch, registeredFilters, registeredCommands } from ${JSON.stringify(join(repoRoot, "filters/dispatch.ts"))};
-tokenCompressor({ on: () => ({}), registerCommand: () => {} });
+tokenCompressor({ on: () => ({}), registerCommand: () => {}, registerTool: () => {} });
 const specs = registeredFilters().filter((f) => f.id === "json-schema");
 const bigJson = JSON.stringify({ users: Array.from({ length: 20 }, (_, i) => ({ id: i, name: "user-" + i })), total: 20, page: 1 });
 console.log(JSON.stringify({

@@ -30,7 +30,7 @@ try {
 
   const mod = await import(join(outputDirectory, "index.js"));
   const handlers = new Map();
-  const fakeApi = { on(name, fn) { handlers.set(name, fn); }, registerCommand() {} };
+  const fakeApi = { on(name, fn) { handlers.set(name, fn); }, registerCommand() {}, registerTool() {} };
   mod.default(fakeApi);
   const handler = handlers.get("tool_result");
   assert.equal(typeof handler, "function");

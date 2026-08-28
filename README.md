@@ -42,6 +42,18 @@ Semantic dispatch requires exactly one text block in each bash tool result. With
 
 A command chain with two or more output-producing segments does not receive a semantic prefix filter. A small explicit allowlist treats `cd`, `export`, `set`, `unset`, `source`, `.`, `true`, `false`, and `:` as silent. Environment redaction still protects the combined text. Supported output pipes are limited to `head`, `tail`, `wc`, `sort`, and `uniq`. Other pipelines pass through.
 
+## Output recovery
+
+Lossy semantic summaries and historical masks include a stable `[cm-archive ID]` reference. The extension writes the complete ordered content-block array before replacing visible information. Reprocessing the same tool result in one session reuses the same reference.
+
+Use `condensed_milk_retrieve` with the reference. Page mode accepts `offset` and `limit` as UTF-8 byte positions over a deterministic JSON form. Responses state the next offset and use text or base64 encoding. Concatenating decoded page bytes reconstructs the stored form exactly. Tail mode returns trailing text. Literal and restricted regex searches return bounded matching lines. Page, tail, literal, and regex modes cannot be combined.
+
+Archives stay under `~/.pi/agent/condensed-milk-recovery` in opaque session directories. On supported systems, session directories use mode `0700`. Entry files use mode `0600`. The extension does not upload archives.
+
+Storage strips ANSI codes and applies mandatory environment-line redaction before writing. Retrieval applies that redaction again. Non-text blocks remain unchanged, so users must treat local archive access like local session-file access.
+
+Default retention allows 128 entries, 64 KiB per entry, 4 MiB per session, and a 24-hour lifetime. Cleanup runs at session start and after writes. Old entries leave bounded tombstones so retrieval can distinguish expiry from capacity eviction. Oversize output, unavailable storage, failed verification, or retention of a new entry causes the lossy transform to stop. Original redacted output remains visible.
+
 ## Installation
 
 Install through pi:
@@ -68,6 +80,13 @@ The cutoff configuration is global and lives at `~/.config/condensed-milk.json`.
   "thresholds": [0.30, 0.45, 0.60],
   "coverage": [0.60, 0.80, 0.95],
   "showStatus": true,
+  "archive": {
+    "enabled": true,
+    "maxEntries": 128,
+    "maxEntryBytes": 65536,
+    "maxAggregateBytes": 4194304,
+    "ttlMs": 86400000
+  },
   "filters": {
     "git-diff": false,
     "json-schema": false
@@ -77,6 +96,8 @@ The cutoff configuration is global and lives at `~/.config/condensed-milk.json`.
 ```
 
 Global `filters` values are booleans keyed by registered filter ID. The global file can enable or disable any registered filter except `environment-secrets`, including filters that are off by default. A global attempt to disable `environment-secrets` produces a warning and the filter stays enabled. Invalid IDs or non-boolean values produce warnings and are ignored.
+
+Archive limits must be positive safe integers within fixed ceilings. Invalid values keep conservative defaults and produce warnings. Disabling archives also disables lossy semantic compression and historical result masking because unrecoverable transforms fail open.
 
 Project filter configuration is optional at `./condensed-milk.config.json`:
 
@@ -170,8 +191,9 @@ The benchmark is a local synthetic performance check. It does not establish prov
 
 ## Architecture
 
-- `tool_result` strips ANSI and applies one configured bash filter to a single text block.
-- `context` receives a copy of conversation history and applies deterministic static-cutoff masking to eligible historical results.
+- `tool_result` strips ANSI and applies one configured bash filter to a single text block. Lossy output is archived first.
+- `context` receives a copy of conversation history and applies deterministic static-cutoff masking to eligible historical results. Each masked result must receive an archive reference.
+- `condensed_milk_retrieve` reads only the current session archive through bounded page or search operations.
 - Filter modules register command prefixes. Longest matching prefix wins.
 - Filters return `null` when format, safety, or output-size checks fail. The original output then remains visible.
 

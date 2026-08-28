@@ -13,7 +13,11 @@ cpSync(join(root, "filters"), join(build, "filters"), { recursive: true });
 mkdirSync(join(build, "node_modules/@earendil-works/pi-coding-agent"), { recursive: true });
 writeFileSync(join(build, "node_modules/@earendil-works/pi-coding-agent/package.json"), '{"type":"module"}');
 writeFileSync(join(build, "node_modules/@earendil-works/pi-coding-agent/index.js"), "export {};\n");
-writeFileSync(join(build, "node_modules/@earendil-works/pi-coding-agent/index.d.ts"), "export interface ExtensionAPI { on: Function; registerCommand: Function; }\n");
+writeFileSync(join(build, "node_modules/@earendil-works/pi-coding-agent/index.d.ts"), "export interface ExtensionAPI { on: Function; registerCommand: Function; registerTool: Function; }\n");
+mkdirSync(join(build, "node_modules/typebox"), { recursive: true });
+writeFileSync(join(build, "node_modules/typebox/package.json"), '{"type":"module","exports":"./index.js"}');
+writeFileSync(join(build, "node_modules/typebox/index.d.ts"), "export declare const Type: any;\n");
+writeFileSync(join(build, "node_modules/typebox/index.js"), 'export const Type = { Object: (spec) => ({ type: "object", properties: spec }), String: (d = {}) => ({ type: "string", ...d }), Integer: (d = {}) => ({ type: "integer", ...d }), Optional: (s) => s };\n');
 const tsc = spawnSync(resolve("node_modules/.bin/tsc"), [
   "--target", "es2022", "--module", "esnext", "--moduleResolution", "bundler",
   "--skipLibCheck", "--strict", "false", "--outDir", join(build, "out"), join(build, "index.ts"),
@@ -27,11 +31,17 @@ const runnerPath = join(build, "run.mjs");
 writeFileSync(runnerPath, `
 import extension from ${JSON.stringify(extensionPath)};
 const handlers = new Map();
-const api = { on(name, fn) { handlers.set(name, fn); }, registerCommand() {} };
+const api = { on(name, fn) { handlers.set(name, fn); }, registerCommand() {}, registerTool() {} };
 extension(api);
 if (process.env.CM_RUN_CONTEXT === "1") {
+  const context = {
+    getContextUsage: () => ({ tokens: 1, contextWindow: 1 }),
+    sessionManager: { getSessionFile: () => "/test/session.jsonl" },
+    ui: {},
+  };
+  await handlers.get("session_start")({ reason: "startup" }, context);
   const long = "x".repeat(200);
-  const read = (path) => ({ role: "toolResult", toolName: "read", isError: false, details: { path }, content: [{ type: "text", text: long }] });
+  const read = (path) => ({ role: "toolResult", toolName: "read", toolCallId: "read-" + path, isError: false, details: { path }, content: [{ type: "text", text: long }] });
   const messages = [
     { role: "user", content: [{ type: "text", text: "turn" }] },
     read("global.txt"),
@@ -40,7 +50,7 @@ if (process.env.CM_RUN_CONTEXT === "1") {
     read("ordinary.txt"),
     { role: "user", content: [{ type: "text", text: "end" }] },
   ];
-  const result = await handlers.get("context")({ messages }, { getContextUsage: () => ({ tokens: 1, contextWindow: 1 }) });
+  const result = await handlers.get("context")({ messages }, context);
   process.stdout.write(JSON.stringify(result));
 }
 `);
