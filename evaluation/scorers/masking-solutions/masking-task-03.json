@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: three commits, tracked mutation, dirty working tree.",
+  "files": [
+    { "path": "GITNOTES.md", "content": "subject: chore: third import\ncommits: 3\ndirty: yes\n" }
+  ],
+  "commands": []
+}

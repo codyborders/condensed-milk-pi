@@ -15,7 +15,7 @@ await import(join(tmp, "file-ops.js"));
 await import(join(tmp, "grep-grouping.js"));
 await import(join(tmp, "tree.js"));
 const { stripAnsi } = await import(join(tmp, "ansi-strip.js"));
-configureFilters({ ls: true, find: true, grep: true, rg: true, tree: true });
+configureFilters({ "log-deduplication": true, ls: true, find: true, grep: true, rg: true, tree: true });
 const input = [
   "2026-01-01T00:00:00.000Z worker ready",
   "2026-01-01T00:00:01.000Z worker ready",

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "rootcause-md-code", "kind": "fileContains", "path": "ROOTCAUSE.md", "all": ["E-7721"] },
+    { "id": "rootcause-md-phrase", "kind": "fileContains", "path": "ROOTCAUSE.md", "all": ["cache eviction raced with write"] }
+  ]
+}

@@ -85,7 +85,7 @@ export function registerFilter(
   category: FilterResult["category"] = "fast",
   options: { context?: boolean; id?: string; dynamic?: boolean } = {},
 ): void {
-  const safeDefaults = new Set(["pytest", "git-status-porcelain", "git-log-verbose", "environment-secrets", "log-deduplication"]);
+  const safeDefaults = new Set(["pytest", "git-status-porcelain", "environment-secrets"]);
   // v1.10.0 (milestone 3C1): explicit stable ID override — allowlist-registered
   // filters (json-schema) need one shared ID across many command prefixes.
   const id = options.id ?? stableId(command);

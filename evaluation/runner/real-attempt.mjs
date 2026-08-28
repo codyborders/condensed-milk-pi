@@ -26,7 +26,7 @@ import {
   writeSync,
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadProviderCredential, startCredentialProxy, loadSafeModelTemplate } from "./real-credentials.mjs";
 import { runSubprocess } from "./spawn.mjs";
@@ -139,7 +139,7 @@ export function attemptPaths(attemptDir) {
  * evaluator scaffolding, the isolated Condensed Milk config, and the
  * credential-free isolated models.json (mode 0600).
  */
-export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, proxyBaseUrl, template = null, dummyApiKey }) {
+export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, proxyBaseUrl, template = null, dummyApiKey, study = null }) {
   const paths = attemptPaths(attemptDir);
   mkdirSync(paths.sessions, { recursive: true });
   mkdirSync(paths.tmp, { recursive: true });
@@ -160,7 +160,20 @@ export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, 
     const prefix = existing.length === 0 || existing.endsWith("\n") ? "" : "\n";
     writeFileSync(excludePath, `${existing}${prefix}/implementation/\n`, "utf8");
   }
-  writeFileSync(paths.homeConfig, `${JSON.stringify({ schemaVersion: 1, profile }, null, 2)}\n`, "utf8");
+  if (study?.profileBytes !== undefined) {
+    // Study profile bytes are written exactly as provided, never
+    // reserialized, and verified against the pinned sha256 first.
+    if (
+      typeof study.profileBytes !== "string" ||
+      typeof study.profileSha256 !== "string" ||
+      sha256Text(study.profileBytes) !== study.profileSha256
+    ) {
+      throw new Error("study profile bytes do not match profileSha256; refusing to write the config");
+    }
+    writeFileSync(paths.homeConfig, study.profileBytes, "utf8");
+  } else {
+    writeFileSync(paths.homeConfig, `${JSON.stringify({ schemaVersion: 1, profile }, null, 2)}\n`, "utf8");
+  }
   writeFileSync(
     paths.agentModels,
     `${JSON.stringify(buildEvalProviderModels({ proxyBaseUrl, template, dummyApiKey }), null, 2)}\n`,
@@ -173,27 +186,94 @@ export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, 
 export const PI_ENV_KEYS = ["PATH", "HOME", "TMPDIR", "PI_CODING_AGENT_DIR"];
 
 /**
+ * Study observer configuration (optional): generate() writes the two
+ * attempt-local neutral observer extensions before the invocation is
+ * planned; extract() returns the attempt's instrumentation after
+ * scoring and final collection. The resolved setup must carry both
+ * extension paths inside the attempt directory plus the observer and
+ * wrapper-config digests. Any failure throws so the orchestrator stops
+ * later reservations instead of emitting an uninstrumented attempt.
+ */
+function validateObserverSetup(setup, attemptDir) {
+  if (setup === null || typeof setup !== "object" || Array.isArray(setup)) {
+    throw new Error("study observer setup must be an object");
+  }
+  for (const field of ["preExtensionPath", "postExtensionPath"]) {
+    const value = setup[field];
+    if (typeof value !== "string" || !value.endsWith(".mjs")) {
+      throw new Error(`study observer ${field} must be an .mjs path`);
+    }
+    if (attemptDir !== null) {
+      const contained = relative(attemptDir, value);
+      if (contained === "" || contained.startsWith("..") || isAbsolute(contained)) {
+        throw new Error("study observer extensions must live inside the attempt directory");
+      }
+    }
+  }
+  for (const field of ["observerSha256", "observerWrapperSha256"]) {
+    if (typeof setup[field] !== "string" || !/^[0-9a-f]{64}$/.test(setup[field])) {
+      throw new Error(`study observer ${field} must be a 64-hex sha256 digest`);
+    }
+  }
+  return {
+    preExtensionPath: setup.preExtensionPath,
+    postExtensionPath: setup.postExtensionPath,
+    observerSha256: setup.observerSha256,
+    observerWrapperSha256: setup.observerWrapperSha256,
+  };
+}
+
+/**
+ * Resolve the study observers for one attempt: generate() runs before
+ * the invocation is planned (so the extensions exist on disk before
+ * the child loads them) and its setup is validated and merged into the
+ * study the invocation planner sees. Returns the study unchanged when
+ * no observers are configured.
+ */
+function studyForInvocation(attemptDir, study) {
+  if (!study?.observers) return study;
+  if (typeof study.observers.generate !== "function" || typeof study.observers.extract !== "function") {
+    throw new Error("study.observers needs generate() and extract() functions");
+  }
+  const setup = validateObserverSetup(study.observers.generate({ attemptDir }), attemptDir);
+  return { ...study, observers: { ...study.observers, ...setup } };
+}
+
+/**
  * Plan the one Pi invocation for an attempt: exact argv, an allowlisted
  * environment, the combined prompt hash, the pinned metadata, and the
  * artifact paths. Pure: no spawn, no credential, no evaluator path
  * beyond the opaque attempt tree, and no key material (the dummy key
  * lives only in the prepared models.json). The prompt is the exact
  * combined attempt prompt (checked-in rules plus task text) and its
- * SHA-256 covers that whole string.
+ * SHA-256 covers that whole string. Study observers force the argv
+ * extension order [pre, arm implementation, post].
  */
-export function planRealInvocation({ paths, manifest, task, arm, piCliPath, nodePath = process.execPath }) {
+export function planRealInvocation({ paths, manifest, task, arm, piCliPath, nodePath = process.execPath, study = null }) {
   const evaluation = manifest.evaluation;
   const extensionPath = join(paths.implementation, "index.ts");
   const prompt = buildAttemptPrompt(task.prompt);
   const promptSha256 = sha256Text(prompt);
-  const scorerSha256 = scorerDefinitionSha256(SOURCE_ROOT, task.id);
+  const scorerSha256 = study?.scorerSha256 ?? scorerDefinitionSha256(SOURCE_ROOT, task.id);
+  // Ordered study extension paths replace the single standard -e flag.
+  // The order is preserved exactly as given. Resolved study observers
+  // force [pre observer, arm implementation, post observer].
+  const observers = study?.observers ? validateObserverSetup(study.observers, null) : null;
+  let extensionArgs;
+  if (observers) {
+    extensionArgs = ["-e", observers.preExtensionPath, "-e", extensionPath, "-e", observers.postExtensionPath];
+  } else if (study?.extensionPaths && study.extensionPaths.length > 0) {
+    extensionArgs = study.extensionPaths.flatMap((extension) => ["-e", extension]);
+  } else {
+    extensionArgs = ["-e", extensionPath];
+  }
   const argv = [
     nodePath,
     piCliPath,
     "--mode", "json",
     "-p",
     "--no-extensions",
-    "-e", extensionPath,
+    ...extensionArgs,
     "--no-skills",
     "--no-prompt-templates",
     "--no-themes",
@@ -230,8 +310,31 @@ export function planRealInvocation({ paths, manifest, task, arm, piCliPath, node
       thinking: evaluation.thinking,
       piVersion: evaluation.piVersion,
       armCommit: arm.commit,
+      ...(arm.implementationSha256 ? { implementationSha256: arm.implementationSha256 } : {}),
       tools: evaluation.tools,
+      ...(study?.extraPins ?? {}),
+      ...(observers
+        ? { observerSha256: observers.observerSha256, observerWrapperSha256: observers.observerWrapperSha256 }
+        : {}),
     },
+  };
+}
+
+/**
+ * Merge completion pins: the plan pins land in pinned.json, and any
+ * runtime pin recorded at reservation is preserved verbatim. Used by
+ * executeRealAttempt when it rewrites pinned.json at completion.
+ */
+export function mergeCompletionPins(reservedPinned, planPinned) {
+  const reservedRuntimePin = reservedPinned?.piRuntime ?? null;
+  return {
+    schemaVersion: 1,
+    // Reserved study pins (repetition, fixture and observer digests,
+    // study, identity) survive the completion rewrite; plan pins then
+    // layer their standard fields on top with identical values.
+    ...reservedPinned,
+    ...(reservedRuntimePin ? { piRuntime: reservedRuntimePin } : {}),
+    ...planPinned,
   };
 }
 
@@ -257,6 +360,7 @@ export async function executeRealAttempt({
   piCliPath,
   timeoutMs,
   identity = {},
+  study = null,
 }) {
   const resultPath = join(attemptDir, "result.json");
   if (existsSync(resultPath)) {
@@ -282,8 +386,9 @@ export async function executeRealAttempt({
       proxyBaseUrl: proxy.baseUrl,
       template,
       dummyApiKey,
+      study,
     });
-    const invocationPlan = planRealInvocation({ paths, manifest, task, arm: { commit: armInfo.commit }, piCliPath });
+    const invocationPlan = planRealInvocation({ paths, manifest, task, arm: armInfo, piCliPath, study: studyForInvocation(attemptDir, study) });
     plan = invocationPlan;
     // Invocation-to-first-event timing starts immediately before the Pi
     // process spawn, after every fixture-preparation step, so the
@@ -360,16 +465,28 @@ export async function executeRealAttempt({
   // completion write must never drop it, or pair validity against
   // run.json would falsely invalidate the pair.
   const reservedPinned = existsSync(paths.pinned) ? JSON.parse(readFileSync(paths.pinned, "utf8")) : null;
-  const reservedRuntimePin = reservedPinned?.piRuntime ?? null;
   writeFileSync(
     paths.pinned,
-    `${JSON.stringify({ schemaVersion: 1, taskId: task.id, arm, ...(reservedRuntimePin ? { piRuntime: reservedRuntimePin } : {}), ...plan.pinned }, null, 2)}\n`,
+    `${JSON.stringify(mergeCompletionPins(reservedPinned, plan.pinned), null, 2)}\n`,
     "utf8",
   );
-  const scorerResult = scoreWorktree({ repoRoot, worktree: paths.worktree, taskId: task.id });
+  // An injected hidden score function (study) replaces the standard
+  // scorer without exposing scorer or solution paths to the child.
+  const scoreAttempt = study?.scoreWorktree ?? scoreWorktree;
+  const scorerResult = scoreAttempt({ repoRoot, worktree: paths.worktree, taskId: task.id });
   writeFileSync(paths.scorer, `${JSON.stringify(scorerResult, null, 2)}\n`, "utf8");
   const collection = await collectFinalState({ worktree: paths.worktree, outDir: join(attemptDir, "final-state") });
   writeFileSync(paths.finalState, `${JSON.stringify(collection, null, 2)}\n`, "utf8");
+  // Study instrumentation runs after scoring and final collection. A
+  // failure throws so the orchestrator stops later reservations rather
+  // than keep an uninstrumented paid attempt.
+  if (study?.observers) {
+    const instrumentation = study.observers.extract({ attemptDir });
+    if (instrumentation === null || typeof instrumentation !== "object" || Array.isArray(instrumentation)) {
+      throw new Error("study observers extract() must return an instrumentation object");
+    }
+    writeFileSync(join(attemptDir, "instrumentation.json"), `${JSON.stringify(instrumentation, null, 2)}\n`, "utf8");
+  }
 
   const effectiveTimeoutMs = timeoutMs ?? evaluation.timeoutMsPerAttempt;
   const failures = [];
@@ -421,7 +538,17 @@ export async function executeRealAttempt({
     failures,
   };
   writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
-  return { taskId: task.id, arm, ...(identity.attempt !== undefined ? { attempt: identity.attempt } : {}), status };
+  return {
+    taskId: task.id,
+    arm,
+    ...(identity.attempt !== undefined ? { attempt: identity.attempt } : {}),
+    status,
+    durationMs: result.durationMs,
+    firstEventLatencyMs,
+    usage,
+    scorer: result.scorer,
+    exit: { code: outcome.code, signal: outcome.signal, timedOut: outcome.timedOut, spawnError: outcome.spawnError },
+  };
 }
 
 function writeInvocationMarker(path, piSpawnStartedAt) {

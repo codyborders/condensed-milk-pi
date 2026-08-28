@@ -9,10 +9,11 @@
  * Filters are registered by individual modules at import time.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
 import { readFileSync, writeFileSync, mkdirSync, appendFileSync, existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { dispatch, registeredCommands, configureGlobalFilters, configureProjectFilters, redactPrivacyLines, resetFilters } from "./filters/dispatch.js";
 import { registerJsonSchemaConfig } from "./filters/json-schema.js";
 
@@ -44,6 +45,7 @@ import {
 } from "./filters/context-compress.js";
 import { stripAnsi } from "./filters/ansi-strip.js";
 import { BoundedMap, BoundedSet, MAX_TRACKER_ENTRIES } from "./filters/bounded-tracker.js";
+import { executeRetrieveRequest, MAX_PAGE_BYTES, MAX_OFFSET_BYTES, validateArchiveConfig, ArchiveStore, DEFAULT_ARCHIVE_LIMITS, type ArchiveLimits } from "./filters/recovery.js";
 import {
   resolveProfile,
   BUILT_IN_PROFILES,
@@ -93,6 +95,11 @@ const STALE_DEFAULTS: ReadonlyArray<{ label: string; thresholds: number[]; cover
 ];
 
 const CONFIG_PATH = join(homedir(), ".config", "condensed-milk.json");
+
+// v1.10.1: recovery archive root. Session directories below it
+// are opaque (sha256 of the session file path) and never contain cwd,
+// command, or content text.
+const RECOVERY_ROOT = join(homedir(), ".pi", "agent", "condensed-milk-recovery");
 
 // v1.8.0: opt-in local telemetry. Never default on. See ADR-027.
 // Path is separate from CONFIG_PATH so deleting one doesn't disturb the other.
@@ -181,6 +188,33 @@ function reportFilterWarnings(sourcePath: string, warnings: string[]): void {
     try {
       process.stderr.write(`condensed-milk: ${sourcePath}: ${warning}.\n`);
     } catch { /* warning output must not break extension startup */ }
+  }
+}
+
+/** Stable opaque session key: sha256 of the session file path, or an
+ *  in-memory random fallback when pi exposes no session file. */
+function deriveSessionKey(sessionFile: string | undefined, fallback: string): string {
+  const source = typeof sessionFile === "string" && sessionFile.length > 0 ? sessionFile : fallback;
+  return createHash("sha256").update(source).digest("hex").slice(0, 32);
+}
+
+function reportRecoveryWarnings(warnings: string[]): void {
+  for (const warning of warnings) {
+    try {
+      process.stderr.write(`condensed-milk archive: ${warning}.\n`);
+    } catch { /* warning output must not break startup */ }
+  }
+}
+
+/** Load and strictly validate the optional global `archive` object.
+ *  Kept separate from loadConfig so archive settings can never weaken
+ *  threshold, coverage, or filter handling. */
+function loadArchiveConfig() {
+  try {
+    const parsed = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+    return validateArchiveConfig(parsed?.archive);
+  } catch {
+    return validateArchiveConfig(undefined);
   }
 }
 
@@ -309,9 +343,11 @@ function loadUserRulesConfig(): UserConfig {
 const CM_EXPLAINER = `
 
 condensed-milk: tool results older than the current cutoff appear as
-\`[cm-masked bash|read] …\` to keep the prompt cache stable. Re-run the
-command or re-read the file to get current content. \`/compress-stats\`
-for details.`;
+\`[cm-masked bash|read] …\` to keep the prompt cache stable. When output
+includes \`[cm-archive ID]\`, use \`condensed_milk_retrieve\` to inspect
+archived content by page, tail, literal search, or restricted regex search.
+Re-run the command or re-read the file if no archive reference exists.
+Use \`/compress-stats\` for details.`;
 
 // --- Per-turn telemetry ---
 interface TurnCacheData {
@@ -325,6 +361,41 @@ interface TurnCacheData {
 }
 
 export default function tokenCompressor(pi: ExtensionAPI) {
+  // v1.10.1: recovery archive store for lossy transforms.
+  // One store per session under ~/.pi/agent/condensed-milk-recovery.
+  let archiveStore: ArchiveStore | null = null;
+  let archiveLimits: ArchiveLimits = DEFAULT_ARCHIVE_LIMITS;
+  let fallbackSessionKey = randomUUID();
+
+  // condensed_milk_retrieve — recover archived pre-transform output.
+  pi.registerTool({
+    name: "condensed_milk_retrieve",
+    label: "Retrieve archived output",
+    description:
+      "Recover tool output archived by condensed-milk before semantic compression or historical masking. " +
+      "Modes: page (offset/limit over UTF-8 bytes), tail (last N bytes), literal search, or regex search (flags i, m, s, u only). " +
+      "Modes are mutually exclusive. Use the cm- reference from a [cm-archive ...] placeholder.",
+    promptSnippet: "Recover archived tool output by reference with paging, tail, literal, or regex search",
+    executionMode: "sequential",
+    parameters: Type.Object({
+      id: Type.String({ description: "Archive reference from a [cm-archive cm-...] placeholder" }),
+      offset: Type.Optional(Type.Integer({ minimum: 0, maximum: MAX_OFFSET_BYTES, description: "Page mode: UTF-8 byte offset" })),
+      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_PAGE_BYTES, description: "Page mode: bytes to return" })),
+      tail: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_PAGE_BYTES, description: "Tail mode: trailing bytes" })),
+      literal: Type.Optional(Type.String({ description: "Literal search: lines containing this substring" })),
+      regex: Type.Optional(Type.String({ description: "Regex search: restricted pattern, no backreferences or lookarounds" })),
+      flags: Type.Optional(Type.String({ description: "Regex flags, subset of i m s u" })),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
+      const outcome = executeRetrieveRequest(archiveStore, params);
+      const failure = outcome as { ok: boolean; error?: { message: string } };
+      if (failure.ok !== true) {
+        throw new Error(failure.error?.message ?? "condensed_milk_retrieve: archive storage unavailable");
+      }
+      const success = outcome as { text: string };
+      return { content: [{ type: "text", text: success.text }], details: {} };
+    },
+  });
   // v1.9.0 (ADR-029): append CM_EXPLAINER to every turn's system prompt.
   // Chained by pi across extensions (per BeforeAgentStartEventResult docs)
   // — safe to compose with other extensions contributing systemPrompt.
@@ -366,6 +437,26 @@ export default function tokenCompressor(pi: ExtensionAPI) {
 
   pi.on("session_start", async (event, ctx) => {
     totalOriginal = 0;
+    // v1.10.1: rebuild the recovery archive store for this
+    // session, then run retention cleanup and the stale-session sweep.
+    // Disabled configuration or any failure keeps the store null, which
+    // downstream code treats as archives-unavailable (fail-open).
+    archiveStore = null;
+    try {
+      const archiveConfig = loadArchiveConfig();
+      archiveLimits = archiveConfig.limits;
+      reportRecoveryWarnings(archiveConfig.warnings);
+      if (archiveConfig.enabled) {
+        const sessionFile = (ctx as any)?.sessionManager?.getSessionFile?.() as string | undefined;
+        if (!sessionFile && event.reason !== "reload") fallbackSessionKey = randomUUID();
+        const store = new ArchiveStore(RECOVERY_ROOT, deriveSessionKey(sessionFile, fallbackSessionKey), archiveLimits);
+        store.cleanup();
+        store.sweepStaleSessions();
+        archiveStore = store;
+      }
+    } catch {
+      archiveStore = null;
+    }
     totalCompressed = 0;
     compressedCount = 0;
     totalCommands = 0;
@@ -580,6 +671,54 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       return { ...block, text: finalOutput };
     });
 
+    let visibleContent = content;
+
+    // v1.10.1: when semantic filtering removed information,
+    // archive the complete pre-transform content (ANSI-stripped and
+    // mandatory-redacted at the storage boundary) and reference it from
+    // the visible summary. Archive failures fail open: the redacted,
+    // ANSI-stripped output stays visible without semantic compression.
+    // ANSI-only and redaction-only changes never archive because their
+    // visible text equals the archived base form.
+    if (changed && semanticCompression) {
+      const baseBlocks = event.content.map((block) => {
+        if (block.type !== "text") return block;
+        const stripped = stripAnsi(block.text);
+        const redacted = redactPrivacyLines(stripped);
+        return { ...block, text: redacted ?? stripped };
+      });
+      const removedInformation = baseBlocks.some((base, index) => {
+        const visible = content[index];
+        return base.type === "text" && visible.type === "text" && visible.text !== base.text;
+      });
+      if (removedInformation) {
+        const failOpen = () => {
+          const passthrough = baseBlocks.some((base, index) =>
+            base.type === "text" && event.content[index].type === "text" && base.text !== event.content[index].text,
+          );
+          if (!passthrough) return undefined;
+          const result: Record<string, unknown> = { content: baseBlocks };
+          if (event.isError) result.isError = true;
+          return result;
+        };
+        const baseText = baseBlocks.find((block) => block.type === "text")?.text ?? "";
+        const summaryText = content.find((block) => block.type === "text")?.text ?? "";
+        const referenceBytes = "\n[cm-archive cm-0000000000000000]".length;
+        if (summaryText.length + referenceBytes >= baseText.length) return failOpen() as any;
+
+        const reference = archiveStore?.store(event.toolCallId, baseBlocks) ?? null;
+        if (reference === null) return failOpen() as any;
+        let annotated = false;
+        visibleContent = content.map((block, index) => {
+          if (block.type !== "text" || annotated) return block;
+          const base = baseBlocks[index];
+          if (base.type !== "text" || base.text === block.text) return block;
+          annotated = true;
+          return { ...block, text: `${block.text}\n[cm-archive ${reference}]` };
+        });
+      }
+    }
+
     if (!changed) return;
 
     totalOriginal += originalBytes;
@@ -595,7 +734,7 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       );
     }
 
-    const ret: Record<string, unknown> = { content };
+    const ret: Record<string, unknown> = { content: visibleContent };
     if (event.isError) ret.isError = true;
     return ret;
   });
@@ -695,6 +834,9 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       rules: userRules,
       // v1.10.0: profile-driven knobs.
       placeholderFormat: activeProfile.placeholderFormat,
+      // v1.10.1: historical masking archives before masking and
+      // fails open when the archive write fails.
+      archive: { store: (toolCallId, blocks) => archiveStore?.store(toolCallId, blocks) ?? null },
       maskOldThinking: activeProfile.maskOldThinking,
     });
     const turnBytesCompressed = result?.bytesSaved ?? 0;

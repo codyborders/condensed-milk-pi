@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: three deterministic local build checks.",
+  "files": [
+    { "path": "BUILDS.md", "content": "build check: 6 modules ok\nbuild check: 6 modules ok\nbuild check: 6 modules ok\n" }
+  ],
+  "commands": []
+}

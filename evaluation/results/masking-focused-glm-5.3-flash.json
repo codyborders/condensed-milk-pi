@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "study": "masking-focused-paired",
+  "runId": "masking-final-v6-20260828T162330Z",
+  "status": "passing",
+  "evaluatorCommit": "c36f9eed5ca6d8985a9b9479263b013e14686ab1",
+  "provider": "z-ai",
+  "model": "glm-5.3-flash",
+  "thinking": "high",
+  "piVersion": "0.84.2",
+  "arms": {
+    "upstream": {
+      "commit": "71f9e396951c42687f0c3456727b2b5c8c625da1",
+      "implementationSha256": "18bf9c2c75e0dea891882a3c486baacde6945e12237f7b2e392de3ac67e29743"
+    },
+    "fork": {
+      "commit": "fca546506e3c6b26401155a780052646a65dee38",
+      "implementationSha256": "d43040975c0e7566d5a6bff3975cabf85bd7dfd18d142524e1f08094cbf0dc62"
+    }
+  },
+  "pins": {
+    "manifestSha256": "d8cc648ab3715dcfb223f882f4d34d3ead49df95fd0cf990879fe128cd4e2af9",
+    "profileSha256": "377b900f39da2bbd00fb406ea1d816b48e63be6b26a66c0239f9fec02f9ffd19",
+    "piRuntimeSha256": "a131c543306799de2040b11c707d2fce857e58ce4be3d43649a809f7e38251e3",
+    "piRuntimeEntries": 13189
+  },
+  "protocol": {
+    "tasks": 8,
+    "repetitionsPerTask": 3,
+    "attempts": 48,
+    "expectedPairs": 24,
+    "intervalMethod": "paired-bootstrap-percentile, deterministic seeded, with paired-t alternative"
+  },
+  "pairs": {
+    "valid": 24,
+    "invalid": 0,
+    "incomplete": 0
+  },
+  "gates": {
+    "pairs": true,
+    "activation": true,
+    "correctness": true,
+    "diagnostics": true,
+    "recoverability": true,
+    "privacySentinels": true,
+    "nonTextOrdering": true
+  },
+  "metrics": {
+    "upstream": {
+      "attempts": 24,
+      "correctAttempts": 21,
+      "originalBytes": 13924372,
+      "visibleBytes": 4383755,
+      "removedBytes": 9540617,
+      "removedPercent": 68.52,
+      "archivedBytes": 0,
+      "estimatedSemanticTokensSaved": 3732,
+      "estimatedHistoricalTokensSaved": 2381414,
+      "providerInputTokens": 799550,
+      "providerOutputTokens": 31339,
+      "providerCacheReadTokens": 758912,
+      "providerCacheWriteTokens": 0,
+      "totalReportedTokens": 1589801,
+      "wallTimeTotalMs": 1456406,
+      "wallTimeMedianMs": 48852,
+      "wallTimeP95Ms": 131209,
+      "firstEventMedianMs": 1187.5,
+      "historicalMaskEvents": 185,
+      "semanticTransforms": 15,
+      "archiveReferences": 0,
+      "retrievalCalls": 0,
+      "returnedBytes": 0,
+      "reruns": 8,
+      "rereads": 16,
+      "privacySentinelIncidents": 0,
+      "nonTextOrderingIncidents": 0,
+      "providerCost": null
+    },
+    "fork": {
+      "attempts": 24,
+      "correctAttempts": 21,
+      "originalBytes": 13627267,
+      "visibleBytes": 5905237,
+      "removedBytes": 7722030,
+      "removedPercent": 56.67,
+      "archivedBytes": 1013814,
+      "estimatedSemanticTokensSaved": 1455,
+      "estimatedHistoricalTokensSaved": 1929042,
+      "providerInputTokens": 1006483,
+      "providerOutputTokens": 30888,
+      "providerCacheReadTokens": 1222976,
+      "providerCacheWriteTokens": 0,
+      "totalReportedTokens": 2260347,
+      "wallTimeTotalMs": 1547735,
+      "wallTimeMedianMs": 53825,
+      "wallTimeP95Ms": 133415,
+      "firstEventMedianMs": 1323.5,
+      "historicalMaskEvents": 191,
+      "semanticTransforms": 12,
+      "archiveReferences": 286,
+      "retrievalCalls": 48,
+      "returnedBytes": 481680,
+      "reruns": 8,
+      "rereads": 6,
+      "privacySentinelIncidents": 0,
+      "nonTextOrderingIncidents": 0,
+      "providerCost": null
+    },
+    "forkMinusUpstream": {
+      "correctAttempts": 0,
+      "removedBytes": -1818587,
+      "estimatedSemanticTokensSaved": -2277,
+      "estimatedHistoricalTokensSaved": -452372,
+      "providerInputTokens": 206933,
+      "providerOutputTokens": -451,
+      "providerCacheReadTokens": 464064,
+      "totalReportedTokens": 670546,
+      "wallTimeTotalMs": 91329,
+      "wallTimeMedianMs": 4973,
+      "wallTimeP95Ms": 2206,
+      "reruns": 0,
+      "rereads": -10
+    }
+  },
+  "excludedRuns": [
+    {
+      "runId": "masking-final-20260828T104951Z",
+      "reason": "Observer ordering treated thinking-content changes as non-text order incidents. Task 8 prompt exposed the expected answer."
+    },
+    {
+      "runId": "masking-final-v2-20260828T115526Z",
+      "reason": "Task 2 upstream timed out while running Cargo. The fixed repetition slot was not retried."
+    },
+    {
+      "runId": "masking-final-v3-20260828T131901Z",
+      "reason": "One fork build attempt omitted its output file. The task was changed so the local script records each run."
+    },
+    {
+      "runId": "masking-final-v4-20260828T141518Z",
+      "reason": "Historical context archive references were omitted from extracted recovery metrics."
+    },
+    {
+      "runId": "masking-final-v5-20260828T151106Z",
+      "reason": "Task 2 used an unsupported fileEquals field name, so six correct files were scored as failures."
+    }
+  ],
+  "limitations": [
+    "This is one stochastic study with three repetitions per task.",
+    "Both arms loaded Condensed Milk. The upstream arm used upstream behavior, not an extension-disabled baseline.",
+    "Estimated token savings use byte counts divided by four. They are not provider token accounting.",
+    "Provider cost remained null because the provider did not report cost.",
+    "Privacy checks cover configured sentinel patterns. They do not establish absence of every possible secret form.",
+    "The fork matched upstream correctness but used more reported tokens in this run.",
+    "Sanitized rows omit prompts, commands, paths, transcripts, archive contents, credentials, and digests."
+  ],
+  "artifacts": {
+    "rows": "masking-focused-glm-5.3-flash-rows.json",
+    "pairedIntervals": "masking-focused-glm-5.3-flash-pairs.json",
+    "report": "masking-focused-glm-5.3-flash.md",
+    "index": "masking-focused-glm-5.3-flash-artifact-index.json"
+  }
+}

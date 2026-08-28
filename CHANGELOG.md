@@ -1,8 +1,20 @@
 # Changelog
 
+## 1.10.1-remediated.0
+
+This prerelease identifies the maintained remediation fork at `https://github.com/codyborders/condensed-milk-pi`. It preserves upstream author credit from `tomooshi`. It does not claim production approval.
+
+### Evaluation
+
+One completed sanitized Z.AI run covered 20 valid task pairs and 40 selected attempts. This was one completed 20-pair stochastic study. Both arms passed all 20 tasks with zero measured quality difference. Results remain limited to one stochastic run, one model configuration, and the documented provider and review gaps. They do not establish broad savings or production readiness.
+
+A second masking-focused study completed 48 paid attempts and 24 valid pairs. Both arms passed 21 attempts. Every masking and recovery gate passed. The fork used more reported tokens and more wall time. Rerun counts were equal, while the fork made fewer rereads. The result does not support a token-cost reduction claim.
+
+This prerelease includes bounded output recovery.
+
 ## Unreleased
 
-This work is not a release. It does not include publication or an upstream pull request.
+Follow-up work only. No additional release or publication is included here.
 
 ### Safety
 
@@ -14,13 +26,19 @@ Environment secret masking can no longer be disabled through global or project f
 
 Semantic filters now require recognized formats. Failed commands, malformed data, uncertain shell syntax, unsupported pipelines, and unknown formats remain unchanged. Semantic compression requires one text block. Historical masking preserves non-text blocks and leaves failed tool results visible.
 
-Default-on filters are limited to terminal pytest pass summaries, porcelain Git status, verbose Git log, and consecutive log deduplication. Higher-risk filters remain off. JSON structure extraction needs a global command allowlist plus a global filter setting.
+Default-on filters are limited to environment redaction, terminal pytest pass summaries, and porcelain Git status. Git log compression and generic log deduplication now require global opt-in. Higher-risk filters remain off. JSON structure extraction needs a global command allowlist plus a global filter setting.
 
 ### Context processing
 
 Historical masking still uses static cutoffs. A reverse invalidation index replaces repeated later-message scans. Working-directory parsing now handles quoted paths and prevents cross-repository invalidation when location cannot be resolved.
 
 Historical tracking collections now retain at most 10,000 entries. They remove the oldest item when full. Image and custom content blocks keep their original order during masking.
+
+### Output recovery
+
+Lossy semantic summaries and historical result masks now archive complete ordered content blocks before replacement. Stable opaque references support exact byte paging, tail reads, literal search, and restricted regex search through `condensed_milk_retrieve`.
+
+Archives are local, session-scoped, permission-restricted, and bounded by entry count, entry size, aggregate size, and lifetime. Storage and retrieval apply mandatory environment-line redaction. A failed archive operation leaves original redacted output visible and skips the lossy transform.
 
 ### Configuration
 
@@ -42,4 +60,4 @@ Risky filters that previously ran automatically are now disabled unless the glob
 
 ### Documentation
 
-README claims now distinguish local runtime measurements from provider results. The paired paid-task study remains not run because no paid-use approval was given. Its protocol and 20 task slots are recorded under `evaluation/`.
+README claims distinguish local runtime measurements from the completed sanitized provider result. Documentation records the one 20-pair stochastic run, its limits, migration paths, stable filter IDs, prerelease pinning, and rollback guidance.

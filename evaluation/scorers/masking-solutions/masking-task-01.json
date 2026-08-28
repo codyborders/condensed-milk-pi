@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: three deterministic pytest runs with normalized summaries.",
+  "files": [
+    { "path": "RUNS.md", "content": "pytest: 40 passed\npytest: 40 passed\npytest: 40 passed\n" }
+  ],
+  "commands": []
+}

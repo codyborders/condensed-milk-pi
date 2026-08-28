@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    {
+      "id": "builds-md-has-exactly-three-summaries",
+      "kind": "fileEquals",
+      "path": "BUILDS.md",
+      "equals": "build check: 6 modules ok\nbuild check: 6 modules ok\nbuild check: 6 modules ok\n"
+    }
+  ]
+}

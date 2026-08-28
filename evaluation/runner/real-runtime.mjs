@@ -11,7 +11,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, lstatSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { computeRuntimeDigest } from "./runtime-digest.mjs";
 
@@ -44,7 +44,12 @@ export function armWorktreePath({ cacheRoot, arm }) {
  * index.ts that does not hash-match the commit, and tracked evaluator
  * fixture/scorer/runner files that the pinned commits must predate.
  */
-export function verifyArmWorktree({ repoRoot, arm, cacheRoot }) {
+export function verifyArmWorktree({ repoRoot, arm, cacheRoot, implementationPolicy = "standard" }) {
+  if (implementationPolicy !== "standard" && implementationPolicy !== "masking-safe") {
+    throw new Error(`unknown implementation policy ${implementationPolicy}; refusing`);
+  }
+  const maskingSafe = implementationPolicy === "masking-safe";
+  const safe = (relativePath) => relativePath === "index.ts" || relativePath === "pi-types.d.ts" || relativePath.startsWith("filters/");
   const forbidden = ["evaluation/cache/", "evaluation/scorers/", "evaluation/runner/", "evaluation/lib/", "evaluation/tests/"];
   const path = armWorktreePath({ cacheRoot, arm });
   if (!existsSync(join(path, ".git"))) {
@@ -67,16 +72,20 @@ export function verifyArmWorktree({ repoRoot, arm, cacheRoot }) {
   if (sha256Text(expectedIndexTs) !== sha256Text(actualIndexTs)) {
     throw new Error(`arm ${arm.name} worktree index.ts hash does not match the pinned commit; refusing`);
   }
-  const tracked = git(["ls-files"], path).split("\n").filter((line) => line.length > 0);
-  for (const trackedPath of tracked) {
-    if (forbidden.some((prefix) => trackedPath.startsWith(prefix))) {
-      throw new Error(`arm ${arm.name} worktree tracks evaluator artifacts; refusing`);
-    }
+  const allTracked = git(["ls-files"], path).split("\n").filter((line) => line.length > 0);
+  if (!maskingSafe && allTracked.some((trackedPath) => forbidden.some((prefix) => trackedPath.startsWith(prefix)))) {
+    throw new Error(`arm ${arm.name} worktree tracks evaluator artifacts; refusing`);
+  }
+  const tracked = maskingSafe ? allTracked.filter(safe) : allTracked;
+  if (maskingSafe) for (const trackedPath of tracked) {
+    const source = join(path, trackedPath);
+    if (!lstatSync(source).isFile()) throw new Error(`arm ${arm.name} implementation file ${trackedPath} is not regular; refusing`);
   }
   if (!tracked.includes("index.ts")) {
     throw new Error(`arm ${arm.name} worktree has no tracked index.ts; refusing`);
   }
-  return { commit: arm.commit, path, tracked };
+  const implementationSha256 = sha256Text(tracked.map((trackedPath) => `${trackedPath}\0${readFileSync(join(path, trackedPath), "utf8")}`).join("\0"));
+  return { commit: arm.commit, path, tracked, implementationSha256, implementationPolicy };
 }
 
 function sha256Text(text) {

@@ -363,7 +363,7 @@
             }
           ],
           "post": [
-            { "argv": ["git", "merge", "feature"], "expectFailure": true }
+            { "argv": ["git", "merge", "feature"], "expectFailure": true, "conflictPaths": ["src/merge-driver.js"] }
           ]
         }
       }

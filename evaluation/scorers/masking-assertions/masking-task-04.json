@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "errors-md-codes-and-counts", "kind": "fileContains", "path": "ERRORS.md", "all": ["E101: 4", "E202: 3", "E303: 4", "E404: 4"] }
+  ]
+}

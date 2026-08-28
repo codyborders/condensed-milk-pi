@@ -33,14 +33,14 @@ Both implementation worktrees must be clean. Pin each run to its exact commit an
 ```bash
 mkdir -p evaluation/runs/local-comparison
 UPSTREAM_ROOT="$HOME/Library/Caches/condensed-milk-eval/cache/arms/upstream-71f9e396951c42687f0c3456727b2b5c8c625da1"
-FORK_ROOT="$HOME/Library/Caches/condensed-milk-eval/cache/arms/fork-85e9af185c2a6416ea37791cf5d08e57c399c0e0"
+FORK_ROOT="$HOME/Library/Caches/condensed-milk-eval/cache/arms/fork-f11ab9863b320ae05671386f144a8be469892e26"
 node --expose-gc --import tsx benchmarks/context-hook.mjs \
   --implementation-root "$UPSTREAM_ROOT" \
   --expected-commit 71f9e396951c42687f0c3456727b2b5c8c625da1 \
   --output evaluation/runs/local-comparison/upstream.json
 node --expose-gc --import tsx benchmarks/context-hook.mjs \
   --implementation-root "$FORK_ROOT" \
-  --expected-commit 85e9af185c2a6416ea37791cf5d08e57c399c0e0 \
+  --expected-commit f11ab9863b320ae05671386f144a8be469892e26 \
   --output evaluation/runs/local-comparison/fork.json
 node benchmarks/compare-context-hook.mjs \
   evaluation/runs/local-comparison/upstream.json \
@@ -51,7 +51,7 @@ node benchmarks/compare-context-hook.mjs \
 
 The comparator rejects mismatched case dimensions, input hashes, harness hashes, Node versions, machines, or nondeterministic arm output. Timing deltas are descriptive. Output hashes may differ between algorithms.
 
-The completed sanitized comparison is checked in at `benchmarks/comparison-results.json`. It records 36/36 equal output hashes and equal mask counts. The comparator verified every p95 value against its recorded budget. All cases passed. The aggregate fork delta is +0.6585 ms at median and +0.876 ms at p95. Aggregate ratios are about 2.51x and 2.54x. Absolute runtime remains far below budgets.
+The completed sanitized comparison is checked in at `benchmarks/comparison-results.json`. It compares upstream with release-candidate commit `f11ab9863b320ae05671386f144a8be469892e26`. All 36 output hashes match, and every mask count is equal. Every recorded p95 value passed its budget. The aggregate fork delta is +0.682 ms at median and +0.8025 ms at p95. Aggregate ratios are about 2.55x and 2.13x. Absolute runtime remains far below budgets.
 
 ## Current local results
 

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "summary-md-maps-functions", "kind": "fileContains", "path": "SUMMARY.md", "all": ["fold_records: src/alpha.py", "merge_streams: src/beta.py", "scan_edges: src/gamma.py"] }
+  ]
+}

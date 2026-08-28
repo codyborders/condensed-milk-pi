@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "study": "masking-focused-paired",
+  "runId": "masking-final-v6-20260828T162330Z",
+  "artifacts": [
+    {
+      "file": "masking-focused-glm-5.3-flash.json",
+      "bytes": 5746,
+      "sha256": "d96222774a0b4f62707eb92dd260d2d86af9ec681b2563b96008087ad9880572"
+    },
+    {
+      "file": "masking-focused-glm-5.3-flash.md",
+      "bytes": 5679,
+      "sha256": "f80e33eac3b207291eba456faf18d59330ae6d4d678418638e909ce61f942313"
+    },
+    {
+      "file": "masking-focused-glm-5.3-flash-rows.json",
+      "bytes": 38494,
+      "sha256": "3253b83c701135a3acd6088ca7e9475380fc7ce2ca90e8fc72bf683454cf04d3"
+    },
+    {
+      "file": "masking-focused-glm-5.3-flash-pairs.json",
+      "bytes": 47397,
+      "sha256": "6541f0ada6a42ff38afb2936f71df1b329b04c36c311e7c9d8fde07697f66c52"
+    }
+  ]
+}
