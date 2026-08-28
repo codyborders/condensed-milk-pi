@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: function-to-file mapping from the three source modules.",
+  "files": [
+    { "path": "SUMMARY.md", "content": "fold_records: src/alpha.py\nmerge_streams: src/beta.py\nscan_edges: src/gamma.py\n" }
+  ],
+  "commands": []
+}

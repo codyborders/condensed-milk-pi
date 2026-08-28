@@ -14,6 +14,7 @@ import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSyn
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { loadManifestFile } from "../lib/manifest.mjs";
+import { loadMaskingManifestFile } from "../lib/masking-manifest.mjs";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const manifest = loadManifestFile(join(repoRoot, "evaluation", "task-manifest.json"));
@@ -23,6 +24,17 @@ function pruneWorktrees() {
 }
 
 describe("real runtime preparation", () => {
+  test("standard policy refuses evaluator artifacts in masking fork commit", { timeout: 60_000 }, async () => {
+    const { verifyArmWorktree } = await import(join(repoRoot, "evaluation", "runner", "real-runtime.mjs"));
+    const masking = loadMaskingManifestFile(repoRoot).manifest;
+    const work = mkdtempSync(join(tmpdir(), "cm-runtime-standard-policy-"));
+    try {
+      assert.throws(() => verifyArmWorktree({ repoRoot, arm: masking.evaluation.arms[1], cacheRoot: work }), /tracks evaluator artifacts/);
+    } finally {
+      pruneWorktrees();
+      rmSync(work, { recursive: true, force: true });
+    }
+  });
   test("materializes detached arm worktrees at the exact manifest commits", { timeout: 60_000 }, async () => {
     const work = mkdtempSync(join(tmpdir(), "cm-runtime-arms-"));
     try {
@@ -48,6 +60,7 @@ describe("real runtime preparation", () => {
           "index.ts must match the pinned commit",
         );
         assert.ok(Array.isArray(info.tracked) && info.tracked.includes("index.ts"));
+        assert.match(info.implementationSha256, /^[0-9a-f]{64}$/);
         const serialized = JSON.stringify(info);
         assert.ok(!serialized.includes("evaluation/scorers"), "metadata must not contain scorer paths");
         assert.ok(!serialized.includes("evaluation/cache"), "metadata must not contain fixture cache paths");

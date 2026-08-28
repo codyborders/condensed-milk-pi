@@ -120,6 +120,23 @@ describe("fixture cache integrity", () => {
     }
   });
 
+  test("fixture-definition change invalidates an otherwise unchanged cache entry", () => {
+    const dir = tempDir();
+    try {
+      const cacheRoot = join(dir, "cache");
+      const task = taskById("task-01");
+      publishFixtureCache({ repoRoot, task, cacheRoot });
+      const changedTask = structuredClone(task);
+      changedTask.fixture.files[0].content += "# changed specification\n";
+
+      const check = verifyFixtureCacheEntry({ task: changedTask, entryDir: join(cacheRoot, "task-01") });
+      assert.equal(check.ok, false, "changed fixture definition must refuse stale cached bytes");
+      assert.ok(check.errors.some((error) => error.includes("fixture definition changed")), JSON.stringify(check.errors));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   test("git required-state mutation (moved HEAD) refuses before any reservation path", () => {
     const dir = tempDir();
     try {

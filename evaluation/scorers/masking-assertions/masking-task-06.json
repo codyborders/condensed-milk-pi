@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "fatal-md-timestamp", "kind": "fileContains", "path": "FATAL.md", "all": ["2026-01-01T00:09:00Z"] },
+    { "id": "fatal-md-phrase", "kind": "fileContains", "path": "FATAL.md", "all": ["write-ahead log corrupt beyond sector 118"] }
+  ]
+}

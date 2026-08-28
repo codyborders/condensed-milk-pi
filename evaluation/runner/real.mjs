@@ -145,6 +145,85 @@ function safeScorerStatus(attemptDir) {
   }
 }
 
+/**
+ * Shared pre-reservation preflight for paid runs. Accepts an explicit
+ * manifest so a second study can reuse the identical fail-closed
+ * ordering: timeout flag, credential load, exact arm worktrees, Pi
+ * runtime resolution, runtime pin persistence, node engine check.
+ * Returns { ok: true, ... } or { ok: false, error, code }. Never
+ * reserves an attempt.
+ */
+export function runPaidPreflight({ flags, manifest, repoRoot, runDir, armFilter = null, verifyObserverOrdering = null, implementationPolicy = "standard" }) {
+  let timeoutMs = manifest.evaluation.timeoutMsPerAttempt;
+  if (flags["--timeout-ms"] !== undefined) {
+    const raw = flags["--timeout-ms"];
+    const parsed = typeof raw === "string" && /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+    if (!Number.isSafeInteger(parsed) || parsed < 1) {
+      return {
+        ok: false,
+        error: `--timeout-ms must be a positive finite integer of milliseconds; refusing before reservation (got ${JSON.stringify(raw)})`,
+        code: 2,
+      };
+    }
+    timeoutMs = parsed;
+  }
+  const credentialSourcePath = flags["--credential-source"];
+  if (!credentialSourcePath) {
+    return { ok: false, error: "run needs --credential-source PATH (the z-ai provider models.json)", code: 2 };
+  }
+  // Fail-closed ordering: the credential resolves and every pinned arm
+  // verifies before the first attempt slot is claimed.
+  try {
+    loadProviderCredential({ sourcePath: credentialSourcePath });
+  } catch (error) {
+    return { ok: false, error: `credential source refused: ${error.message}`, code: 2 };
+  }
+  const cacheRoot = flags["--cache-dir"] ?? defaultCacheRoot();
+  const armInfos = {};
+  for (const armName of ["upstream", "fork"]) {
+    if (armFilter && armName !== armFilter) continue;
+    const arm = manifest.evaluation.arms.find((entry) => entry.name === armName);
+    try {
+      armInfos[armName] = verifyArmWorktree({ repoRoot, arm, cacheRoot, implementationPolicy });
+    } catch (error) {
+      return { ok: false, error: `arm ${armName} refused: ${error.message}`, code: 4 };
+    }
+  }
+  const pi = resolvePiCli({ flags, manifest, repoRoot, cacheRoot });
+  if (pi.error) {
+    return { ok: false, error: pi.error, code: 2 };
+  }
+  // Durable runtime integrity pin: the manifest digest of the exact
+  // executable bytes lands in run.json before any attempt is reserved.
+  try {
+    persistRuntimePin(runDir, pi.runtimeManifest);
+  } catch (error) {
+    return { ok: false, error: `persisting the pi runtime pin in run.json failed: ${error.message}`, code: 4 };
+  }
+  // Node engine preflight: the isolated Pi runtime's declared minimum
+  // must be satisfied by this process before any slot is reserved.
+  try {
+    verifyNodeEngine({ runtimeDir: pi.runtimeDir });
+  } catch (error) {
+    return { ok: false, error: `node engine preflight refused: ${error.message}`, code: 4 };
+  }
+  // Observer ordering verification (optional callback) runs after the
+  // runtime and node checks and strictly before any reservation. A
+  // throw must leave the run with zero attempts.
+  if (typeof verifyObserverOrdering === "function") {
+    try {
+      verifyObserverOrdering({ pi, runDir, cacheRoot });
+    } catch (error) {
+      return {
+        ok: false,
+        error: `observer ordering preflight refused: ${error.message}`,
+        code: 4,
+      };
+    }
+  }
+  return { ok: true, timeoutMs, credentialSourcePath, cacheRoot, armInfos, pi };
+}
+
 export async function runRealArms({ flags, runsDir, runId, runDir, run, repoRoot }) {
   void runsDir;
   void runDir;
@@ -176,59 +255,13 @@ export async function runRealArms({ flags, runsDir, runId, runDir, run, repoRoot
   if (armFilter !== undefined && armFilter !== "upstream" && armFilter !== "fork") {
     return fail("--arm must be upstream or fork");
   }
-  // Validate the timeout flag before anything is resolved or reserved:
-  // --timeout-ms must be a positive finite integer of milliseconds.
-  let timeoutMs = manifest.evaluation.timeoutMsPerAttempt;
-  if (flags["--timeout-ms"] !== undefined) {
-    const raw = flags["--timeout-ms"];
-    const parsed = typeof raw === "string" && /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
-    if (!Number.isSafeInteger(parsed) || parsed < 1) {
-      return fail(
-        `--timeout-ms must be a positive finite integer of milliseconds; refusing before reservation (got ${JSON.stringify(raw)})`,
-      );
-    }
-    timeoutMs = parsed;
+  // Shared fail-closed preflight (timeout, credential, arm worktrees,
+  // Pi runtime, runtime pin, node engine) with the standard manifest.
+  const preflight = runPaidPreflight({ flags, manifest, repoRoot, runDir, armFilter });
+  if (!preflight.ok) {
+    return fail(preflight.error, preflight.code);
   }
-  const credentialSourcePath = flags["--credential-source"];
-  if (!credentialSourcePath) {
-    return fail("run needs --credential-source PATH (the z-ai provider models.json)");
-  }
-  // Fail-closed ordering: the credential resolves and every pinned arm
-  // verifies before the first attempt slot is claimed.
-  try {
-    loadProviderCredential({ sourcePath: credentialSourcePath });
-  } catch (error) {
-    return fail(`credential source refused: ${error.message}`);
-  }
-  const cacheRoot = flags["--cache-dir"] ?? defaultCacheRoot();
-  const armInfos = {};
-  for (const armName of ["upstream", "fork"]) {
-    if (armFilter && armName !== armFilter) continue;
-    const arm = manifest.evaluation.arms.find((entry) => entry.name === armName);
-    try {
-      armInfos[armName] = verifyArmWorktree({ repoRoot, arm, cacheRoot });
-    } catch (error) {
-      return fail(`arm ${armName} refused: ${error.message}`, 4);
-    }
-  }
-  const pi = resolvePiCli({ flags, manifest, repoRoot, cacheRoot });
-  if (pi.error) {
-    return fail(pi.error);
-  }
-  // Durable runtime integrity pin: the manifest digest of the exact
-  // executable bytes lands in run.json before any attempt is reserved.
-  try {
-    persistRuntimePin(runDir, pi.runtimeManifest);
-  } catch (error) {
-    return fail(`persisting the pi runtime pin in run.json failed: ${error.message}`, 4);
-  }
-  // Node engine preflight: the isolated Pi runtime's declared minimum
-  // must be satisfied by this process before any slot is reserved.
-  try {
-    verifyNodeEngine({ runtimeDir: pi.runtimeDir });
-  } catch (error) {
-    return fail(`node engine preflight refused: ${error.message}`, 4);
-  }
+  const { timeoutMs, credentialSourcePath, armInfos, pi } = preflight;
 
   const outcomes = [];
   for (const task of tasks) {

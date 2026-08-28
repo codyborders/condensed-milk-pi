@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "gitnotes-subject", "kind": "fileContains", "path": "GITNOTES.md", "all": ["subject: chore: third import"] },
+    { "id": "gitnotes-count", "kind": "fileContains", "path": "GITNOTES.md", "all": ["commits: 3"] },
+    { "id": "gitnotes-dirty", "kind": "fileContains", "path": "GITNOTES.md", "all": ["dirty: yes"] }
+  ]
+}

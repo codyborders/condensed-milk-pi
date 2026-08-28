@@ -8,3 +8,4 @@ dist/
 .DS_Store
 evaluation/runs/
 evaluation/cache/
+evaluation/masking-runs/

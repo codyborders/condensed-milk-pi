@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: final FATAL entry timestamp and phrase.",
+  "files": [
+    { "path": "FATAL.md", "content": "2026-01-01T00:09:00Z\nwrite-ahead log corrupt beyond sector 118\n" }
+  ],
+  "commands": []
+}

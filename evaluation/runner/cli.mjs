@@ -32,6 +32,9 @@ import { collectFinalState } from "./collect.mjs";
 import { buildAttemptPrompt, sha256Text } from "./prompt.mjs";
 import { buildAggregateReports } from "./report.mjs";
 import { validateSelectedAttemptReceipt, runtimePinDigest } from "./receipt.mjs";
+import { loadMaskingManifestFile, loadMaskingTaskData, validateMaskingRunId } from "../lib/masking-manifest.mjs";
+import { maskingPrepare, maskingPlanRun, maskingDryRun, maskingRealRun, maskingReport } from "./masking.mjs";
+import { fixturesCacheRoot as maskingFixturesCacheRoot, publishFixtureCache as publishMaskingFixtureCache, verifyFixtureCacheEntry as verifyMaskingFixtureCache } from "../lib/cache.mjs";
 
 export const CLI_USAGE = `usage: cli.mjs <command> [flags]
   validate                          Validate the strict manifest and hidden task data
@@ -55,7 +58,26 @@ export const CLI_USAGE = `usage: cli.mjs <command> [flags]
   select --run-id X --task T --arm A --attempt N
                                     Validate a terminal attempt and make it the
                                     slot's selected attempt
-  report --run-id X|--latest        Write aggregate JSON/Markdown/CSV reports`;
+  report --run-id X|--latest        Write aggregate JSON/Markdown/CSV reports
+  masking-validate                  Validate the masking study manifest and profile
+  masking-fixtures                  Regenerate the masking study fixture cache
+  masking-prepare [--run-id X] [--mode real]
+                                    Create a masking run and persist randomized
+                                    arm order plus repetition order
+  masking-plan --run-id X           Read-only masking plan (no attempts)
+  masking-dry-run --run-id X        Execute free deterministic fake masking
+                                    attempts (8 tasks x 2 arms x 3 reps)
+  masking-run --run-id X --confirm-paid [--credential-source PATH]
+                                    [--cache-dir DIR] [--pi-runtime DIR]
+                                    [--recover-lock]
+                                    Paid masking execution through the shared
+                                    real-run controls (lock, preflight,
+                                    immutable reservations, observers)
+  masking-abandon --run-id X --task T --arm A --attempt N --reason R
+                                    Mark one stranded slot and invalidate run
+  masking-report --run-id X|--latest
+                                    Write masking gate report, sanitized rows,
+                                    paired intervals, artifact index`;
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -85,6 +107,30 @@ export async function cliMain(argv) {
   }
   if (command === "report") {
     return cmdReport(flags);
+  }
+  if (command === "masking-validate") {
+    return cmdMaskingValidate();
+  }
+  if (command === "masking-fixtures") {
+    return cmdMaskingFixtures();
+  }
+  if (command === "masking-prepare") {
+    return cmdMaskingPrepare(flags);
+  }
+  if (command === "masking-plan") {
+    return cmdMaskingPlan(flags);
+  }
+  if (command === "masking-dry-run") {
+    return await cmdMaskingDryRun(flags);
+  }
+  if (command === "masking-run") {
+    return await cmdMaskingRun(flags);
+  }
+  if (command === "masking-abandon") {
+    return await cmdMaskingAbandon(flags);
+  }
+  if (command === "masking-report") {
+    return cmdMaskingReport(flags);
   }
   if (command === "fixtures") {
     return cmdFixtures();
@@ -784,6 +830,98 @@ function otherArmFixtureBefore({ runDir, taskId, arm }) {
   return best;
 }
 
+/**
+ * Lower-level immutable reservation primitive. Accepts an explicit
+ * fixture directory, a pre-validated fixture identity, explicit pins,
+ * a repetition attempt number, and a paid identity. It atomically
+ * claims attempt-NNN, journals and snapshots the reservation, writes
+ * fixture-before and pinned data, and creates provider-invocation.json
+ * with wx. It hardcodes no task path and no fixture cache.
+ */
+export function reserveAttemptPrimitive({
+  runDir,
+  runId,
+  taskId,
+  arm,
+  attempt,
+  fixtureDir,
+  fixtureIdentity,
+  pins,
+  paidIdentity = null,
+  behavior = null,
+}) {
+  if (!existsSync(fixtureDir)) {
+    return { claimed: false, refused: "fixture", exit: 4, attemptDir: null };
+  }
+  if (
+    !fixtureIdentity ||
+    typeof fixtureIdentity.contentSha256 !== "string" ||
+    typeof fixtureIdentity.gitStateSha256 !== "string"
+  ) {
+    return { claimed: false, refused: "fixture-identity", exit: 4, attemptDir: null };
+  }
+  const attemptDir = join(runDir, "attempts", taskId, arm, `attempt-${String(attempt).padStart(3, "0")}`);
+  mkdirSync(join(runDir, "attempts", taskId, arm), { recursive: true });
+  if (!claimAttemptSlot(attemptDir)) {
+    return { claimed: false, attemptDir };
+  }
+  appendJournal(runDir, { type: "attempt-reserved", taskId, arm, attempt });
+  writeFileSync(
+    join(attemptDir, "fixture-before.json"),
+    `${JSON.stringify({ taskId, arm, attempt, ...fixtureIdentity }, null, 2)}\n`,
+    "utf8",
+  );
+  writeFileSync(
+    join(attemptDir, "pinned.json"),
+    `${JSON.stringify({
+      schemaVersion: 1,
+      taskId,
+      arm,
+      attempt,
+      ...pins,
+      ...(paidIdentity?.piRuntime && pins.piRuntime === undefined
+        ? { piRuntime: paidIdentity.piRuntime }
+        : {}),
+    }, null, 2)}\n`,
+    "utf8",
+  );
+  const receiptFd = openSync(join(attemptDir, "provider-invocation.json"), "wx");
+  try {
+    writeSync(receiptFd, `${JSON.stringify({
+      schemaVersion: 1,
+      runId,
+      taskId,
+      arm,
+      attempt,
+      fake: true,
+      ...(behavior ? { behavior } : {}),
+      // A paid identity overrides the fake marker and pins the paid call,
+      // including the executable runtime digest, in the receipt itself.
+      ...(paidIdentity ? {
+        fake: false,
+        armCommit: paidIdentity.armCommit,
+        model: paidIdentity.model,
+        provider: paidIdentity.provider,
+        ...(paidIdentity.piRuntime ? { piRuntime: paidIdentity.piRuntime } : {}),
+        ...(paidIdentity.study ? { study: paidIdentity.study } : {}),
+        ...(paidIdentity.profileSha256 ? { profileSha256: paidIdentity.profileSha256 } : {}),
+        ...(paidIdentity.fixtureContentSha256 ? { fixtureContentSha256: paidIdentity.fixtureContentSha256 } : {}),
+        ...(paidIdentity.fixtureGitStateSha256 ? { fixtureGitStateSha256: paidIdentity.fixtureGitStateSha256 } : {}),
+        ...(paidIdentity.implementationSha256 ? { implementationSha256: paidIdentity.implementationSha256 } : {}),
+        ...(paidIdentity.observerSha256 ? { observerSha256: paidIdentity.observerSha256 } : {}),
+        ...(paidIdentity.observerWrapperSha256 ? { observerWrapperSha256: paidIdentity.observerWrapperSha256 } : {}),
+      } : {}),
+      reservedAt: new Date().toISOString(),
+    }, null, 2)}\n`);
+    fsyncSync(receiptFd);
+  } finally {
+    closeSync(receiptFd);
+  }
+  appendJournal(runDir, { type: "invocation-receipt-written", taskId, arm, attempt });
+  writeSnapshot(runDir, snapshotAfter(runDir, taskId, arm, attempt, "reserved"));
+  return { claimed: true, attemptDir };
+}
+
 export function reserveAttempt({ runDir, runId, taskId, arm, attempt, behavior, real = null }) {
   const guard = guardTaskFixture({ runDir, taskId });
   if (!guard.ok) {
@@ -803,59 +941,30 @@ export function reserveAttempt({ runDir, runId, taskId, arm, attempt, behavior, 
     );
     return { claimed: false, refused: "pair", exit: 4, attemptDir: null };
   }
-  const attemptDir = join(runDir, "attempts", taskId, arm, `attempt-${String(attempt).padStart(3, "0")}`);
-  mkdirSync(join(runDir, "attempts", taskId, arm), { recursive: true });
-  if (!claimAttemptSlot(attemptDir)) {
-    return { claimed: false, attemptDir };
-  }
-  appendJournal(runDir, { type: "attempt-reserved", taskId, arm, attempt });
-  writeFileSync(
-    join(attemptDir, "fixture-before.json"),
-    `${JSON.stringify({ taskId, arm, attempt, ...fixtureBefore }, null, 2)}\n`,
-    "utf8",
-  );
   const manifest = loadManifest();
   const task = manifest.tasks.find((entry) => entry.id === taskId);
-  writeFileSync(
-    join(attemptDir, "pinned.json"),
-    `${JSON.stringify({
-      schemaVersion: 1,
-      taskId,
-      arm,
-      attempt,
-      promptSha256: sha256Text(buildAttemptPrompt(task.prompt)),
-      scorerSha256: scorerDefinitionSha256(repoRoot, taskId),
-      provider: manifest.evaluation.provider,
-      model: manifest.evaluation.model,
-      thinking: manifest.evaluation.thinking,
-      piVersion: manifest.evaluation.piVersion,
-      armCommit: manifest.evaluation.arms.find((entry) => entry.name === arm)?.commit ?? null,
-      ...(real?.piRuntime ? { piRuntime: real.piRuntime } : {}),
-    }, null, 2)}\n`,
-    "utf8",
-  );
-  const receiptFd = openSync(join(attemptDir, "provider-invocation.json"), "wx");
-  try {
-    writeSync(receiptFd, `${JSON.stringify({
-      schemaVersion: 1,
-      runId,
-      taskId,
-      arm,
-      attempt,
-      fake: true,
-      ...(behavior ? { behavior } : {}),
-      // Real reservations override the fake marker and pin the paid call,
-      // including the executable runtime digest, in the receipt itself.
-      ...(real ? { fake: false, armCommit: real.armCommit, model: real.model, provider: real.provider, ...(real.piRuntime ? { piRuntime: real.piRuntime } : {}) } : {}),
-      reservedAt: new Date().toISOString(),
-    }, null, 2)}\n`);
-    fsyncSync(receiptFd);
-  } finally {
-    closeSync(receiptFd);
-  }
-  appendJournal(runDir, { type: "invocation-receipt-written", taskId, arm, attempt });
-  writeSnapshot(runDir, snapshotAfter(runDir, taskId, arm, attempt, "reserved"));
-  return { claimed: true, attemptDir };
+  const pins = {
+    promptSha256: sha256Text(buildAttemptPrompt(task.prompt)),
+    scorerSha256: scorerDefinitionSha256(repoRoot, taskId),
+    provider: manifest.evaluation.provider,
+    model: manifest.evaluation.model,
+    thinking: manifest.evaluation.thinking,
+    piVersion: manifest.evaluation.piVersion,
+    armCommit: manifest.evaluation.arms.find((entry) => entry.name === arm)?.commit ?? null,
+    ...(real?.piRuntime ? { piRuntime: real.piRuntime } : {}),
+  };
+  return reserveAttemptPrimitive({
+    runDir,
+    runId,
+    taskId,
+    arm,
+    attempt,
+    fixtureDir: guard.fixtureDir,
+    fixtureIdentity: fixtureBefore,
+    pins,
+    paidIdentity: real,
+    behavior,
+  });
 }
 
 function latestRunId(runsDir) {
@@ -1020,6 +1129,267 @@ export function snapshotAfter(runDir, taskId, arm, attempt, status) {
 
 function loadManifest() {
   return loadManifestFile(join(repoRoot, "evaluation", "task-manifest.json"));
+}
+
+/** --- Masking study commands (separate study; free path plus explicit
+ * paid refusal). All reuse the same flag parser and exit conventions. */
+
+function cmdMaskingValidate() {
+  const { manifest } = loadMaskingManifestFile(repoRoot);
+  for (const task of manifest.tasks) {
+    loadMaskingTaskData(repoRoot, task.id);
+  }
+  process.stdout.write(
+    `masking-validate: ok (schemaVersion ${manifest.schemaVersion}, ${manifest.tasks.length} tasks, ${manifest.evaluation.repetitionsPerTask} repetitions)\n`,
+  );
+  return 0;
+}
+
+function cmdMaskingFixtures() {
+  const { manifest } = loadMaskingManifestFile(repoRoot);
+  const cacheRoot = maskingFixturesCacheRoot(repoRoot);
+  const rows = [];
+  for (const task of manifest.tasks) {
+    const fixtureDir = join(cacheRoot, task.id);
+    if (existsSync(join(fixtureDir, ".git"))) {
+      const check = verifyMaskingFixtureCache({ task, entryDir: fixtureDir });
+      if (check.ok) {
+        rows.push({ taskId: task.id, treeSha256: check.record.contentSha256 });
+        continue;
+      }
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
+    const published = publishMaskingFixtureCache({ repoRoot, task, cacheRoot });
+    const check = verifyMaskingFixtureCache({ task, entryDir: published });
+    if (!check.ok) {
+      throw new Error(`masking fixture cache publication failed for ${task.id}: ${check.errors.join("; ")}`);
+    }
+    rows.push({ taskId: task.id, treeSha256: check.record.contentSha256 });
+  }
+  process.stdout.write(`masking-fixtures: ${manifest.tasks.length} tasks cached\n${rows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+  return 0;
+}
+
+function cmdMaskingPrepare(flags) {
+  const runsDir = flags["--runs-dir"] ?? join(repoRoot, "evaluation", "masking-runs");
+  const runId = flags["--run-id"] ?? `masking-${timestampRunId()}`;
+  const mode = flags["--mode"] === "real" ? "real" : "dry-run";
+  if (flags["--mode"] !== undefined && mode !== flags["--mode"]) {
+    process.stderr.write("cli: --mode must be real or dry-run\n");
+    return 2;
+  }
+  try {
+    const run = maskingPrepare({ repoRoot, runsDir, runId, mode });
+    process.stdout.write(`${JSON.stringify({ runId, runDir: run.runDir, mode: run.mode })}\n`);
+    return 0;
+  } catch (error) {
+    process.stderr.write(`cli: ${error.message}\n`);
+    return 2;
+  }
+}
+
+function requireMaskingRunDir(flags) {
+  const runsDir = flags["--runs-dir"] ?? join(repoRoot, "evaluation", "masking-runs");
+  const runId = flags["--run-id"] ?? latestRunId(join(runsDir));
+  if (!runId) {
+    process.stderr.write(`cli: no masking runs found under ${runsDir}\n`);
+    return null;
+  }
+  const check = validateMaskingRunId(runId);
+  if (!check.ok) {
+    process.stderr.write(`cli: masking run id refused: ${check.problems.join("; ")}\n`);
+    return null;
+  }
+  return { runsDir, runId, runDir: join(runsDir, runId) };
+}
+
+function cmdMaskingPlan(flags) {
+  const target = requireMaskingRunDir(flags);
+  if (!target) return 2;
+  if (!existsSync(target.runDir)) {
+    process.stderr.write(`cli: unknown masking run ${target.runId} under ${target.runsDir}\n`);
+    return 2;
+  }
+  try {
+    process.stdout.write(`${JSON.stringify(maskingPlanRun({ repoRoot, ...target }))}\n`);
+    return 0;
+  } catch (error) {
+    process.stderr.write(`cli: ${error.message}\n`);
+    return 2;
+  }
+}
+
+async function cmdMaskingDryRun(flags) {
+  const target = requireMaskingRunDir(flags);
+  if (!target) return 2;
+  if (!existsSync(target.runDir)) {
+    process.stderr.write(`cli: unknown masking run ${target.runId} under ${target.runsDir}\n`);
+    return 2;
+  }
+  try {
+    const outcome = await maskingDryRun({ repoRoot, ...target });
+    process.stdout.write(`${JSON.stringify(outcome)}\n`);
+    return 0;
+  } catch (error) {
+    process.stderr.write(`cli: ${error.message}\n`);
+    return 3;
+  }
+}
+
+async function cmdMaskingRun(flags) {
+  const target = requireMaskingRunDir(flags);
+  if (!target) return 2;
+  if (!existsSync(target.runDir)) {
+    process.stderr.write(`cli: unknown masking run ${target.runId} under ${target.runsDir}\n`);
+    return 2;
+  }
+  if (!flags["--confirm-paid"]) {
+    process.stderr.write("cli: masking-run makes paid provider calls and needs --confirm-paid; nothing was reserved\n");
+    return 2;
+  }
+  // The shared run lock covers the whole paid run; --recover-lock maps
+  // straight through. Released in finally so a crash cannot pin it.
+  const { acquireRunLock, releaseRunLock } = await import("./state.mjs");
+  try {
+    acquireRunLock(target.runDir, { recover: Boolean(flags["--recover-lock"]) });
+  } catch (error) {
+    process.stderr.write(`cli: run lock refused: ${error.message}\n`);
+    return 3;
+  }
+  try {
+    const outcome = await maskingRealRun({ repoRoot, ...target, flags });
+    // Structured outcome on stdout; the exit code stays numeric. A
+    // stopped paid run returns 3, never an object and never 0.
+    process.stdout.write(`${JSON.stringify(outcome)}\n`);
+    return outcome.stoppedReason === null || outcome.stoppedReason === undefined ? 0 : 3;
+  } catch (error) {
+    process.stderr.write(`cli: ${error.message}\n`);
+    return 2;
+  } finally {
+    releaseRunLock(target.runDir);
+  }
+}
+
+/**
+ * masking-abandon: locked, explicit acknowledgement that a reserved
+ * paid slot will never complete. Requires run id, task, arm, attempt,
+ * and reason. Marks the slot abandoned, marks the whole run invalid,
+ * and never creates another attempt or provider call. The invalid run
+ * cannot resume paid execution; documentation requires a new run id.
+ */
+async function cmdMaskingAbandon(flags) {
+  const target = requireMaskingRunDir(flags);
+  if (!target) return 2;
+  if (!existsSync(target.runDir)) {
+    process.stderr.write(`cli: unknown masking run ${target.runId} under ${target.runsDir}\n`);
+    return 2;
+  }
+  const taskId = flags["--task"];
+  const arm = flags["--arm"];
+  const attemptRaw = flags["--attempt"];
+  const reason = flags["--reason"];
+  for (const [name, value] of [["--task", taskId], ["--arm", arm], ["--attempt", attemptRaw], ["--reason", reason]]) {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      process.stderr.write(`cli: masking-abandon requires ${name}\n`);
+      return 2;
+    }
+  }
+  if (!/^[123]$/.test(attemptRaw)) {
+    process.stderr.write("cli: --attempt must be 1, 2, or 3\n");
+    return 2;
+  }
+  if (arm !== "upstream" && arm !== "fork") {
+    process.stderr.write("cli: --arm must be upstream or fork\n");
+    return 2;
+  }
+  // Validate the task against the masking manifest before any path
+  // join. Unknown ids and traversal refuse with no directory created.
+  const maskingManifest = loadMaskingManifestFile(repoRoot).manifest;
+  if (typeof taskId !== "string" || !/^masking-task-\d{2}$/.test(taskId) || !maskingManifest.tasks.some((task) => task.id === taskId)) {
+    process.stderr.write(`cli: task ${JSON.stringify(taskId)} is not in the masking manifest\n`);
+    return 2;
+  }
+  // The reason stays one bounded line.
+  if (/[\r\n]/.test(reason) || reason.length > 512) {
+    process.stderr.write("cli: --reason must be a single line of at most 512 characters\n");
+    return 2;
+  }
+  const attempt = Number(attemptRaw);
+  const { acquireRunLock, releaseRunLock, appendJournal } = await import("./state.mjs");
+  try {
+    acquireRunLock(target.runDir, { recover: Boolean(flags["--recover-lock"]) });
+  } catch (error) {
+    process.stderr.write(`cli: run lock refused: ${error.message}\n`);
+    return 3;
+  }
+  try {
+    const attemptDir = join(target.runDir, "attempts", taskId, arm, `attempt-${String(attempt).padStart(3, "0")}`);
+    const receiptPath = join(attemptDir, "provider-invocation.json");
+    if (!existsSync(receiptPath)) {
+      process.stderr.write("cli: masking-abandon needs a reserved slot with a receipt\n");
+      return 2;
+    }
+    if (existsSync(join(attemptDir, "result.json"))) {
+      process.stderr.write("cli: the slot already has a terminal result; nothing to abandon\n");
+      return 2;
+    }
+    // The receipt must identify this exact slot.
+    let receipt;
+    try {
+      receipt = JSON.parse(readFileSync(receiptPath, "utf8"));
+    } catch {
+      process.stderr.write("cli: the receipt is not valid JSON; refusing to abandon\n");
+      return 2;
+    }
+    if (
+      receipt.taskId !== taskId ||
+      receipt.arm !== arm ||
+      receipt.attempt !== attempt ||
+      receipt.runId !== target.runId ||
+      receipt.fake !== false
+    ) {
+      process.stderr.write("cli: the receipt does not identify this slot; refusing to abandon\n");
+      return 2;
+    }
+    const runPath = join(target.runDir, "run.json");
+    const run = JSON.parse(readFileSync(runPath, "utf8"));
+    // Invalidate the run first. A crash after this point cannot resume paid execution.
+    const runTempPath = `${runPath}.tmp`;
+    writeFileSync(runTempPath, `${JSON.stringify({ ...run, invalid: true, invalidReason: reason }, null, 2)}\n`, "utf8");
+    renameSync(runTempPath, runPath);
+    writeFileSync(
+      join(attemptDir, "result.json"),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        study: "masking",
+        runId: target.runId,
+        taskId,
+        arm,
+        rep: attempt,
+        status: "abandoned",
+        reason,
+        abandonedAt: new Date().toISOString(),
+      }, null, 2)}\n`,
+      "utf8",
+    );
+    appendJournal(target.runDir, { type: "slot-abandoned", taskId, arm, attempt, reason });
+    process.stdout.write(`${JSON.stringify({ runId: target.runId, taskId, arm, attempt, status: "abandoned", runInvalid: true })}\n`);
+    return 0;
+  } finally {
+    releaseRunLock(target.runDir);
+  }
+}
+
+function cmdMaskingReport(flags) {
+  const target = requireMaskingRunDir(flags);
+  if (!target) return 2;
+  if (!existsSync(target.runDir)) {
+    process.stderr.write(`cli: unknown masking run ${target.runId} under ${target.runsDir}\n`);
+    return 2;
+  }
+  const report = maskingReport({ repoRoot, ...target });
+  process.stdout.write(`${JSON.stringify(report)}\n`);
+  return report.passing ? 0 : 6;
 }
 
 function cmdValidate() {
