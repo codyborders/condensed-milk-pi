@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: distinct ERROR codes with total counts across both log files.",
+  "files": [
+    { "path": "ERRORS.md", "content": "E101: 3\nE202: 2\nE303: 2\nE404: 3\n" }
+  ],
+  "commands": []
+}

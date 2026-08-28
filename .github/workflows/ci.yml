@@ -32,6 +32,16 @@ jobs:
         run: npm run evaluation:test
       - name: Run free evaluation dry-run
         run: npm run evaluation:dry-run
+      - name: Validate masking study manifest
+        run: npm run masking:validate
+      - name: Generate deterministic masking fixtures
+        run: npm run masking:fixtures
+      - name: Run free masking dry-run (explicit CI run id)
+        run: |
+          node evaluation/runner/cli.mjs masking-prepare --runs-dir evaluation/masking-runs --run-id ci-masking-dry
+          node evaluation/runner/cli.mjs masking-dry-run --runs-dir evaluation/masking-runs --run-id ci-masking-dry
+      - name: Report passing masking gates
+        run: node evaluation/runner/cli.mjs masking-report --runs-dir evaluation/masking-runs --run-id ci-masking-dry
       - name: Typecheck
         run: npm run typecheck
       - name: Run benchmark tests

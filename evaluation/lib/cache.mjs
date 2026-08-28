@@ -72,6 +72,7 @@ export function publishFixtureCache({ repoRoot, task, cacheRoot }) {
     return fixtureDir;
   }
 
+  mkdirSync(cacheRoot, { recursive: true });
   const nonce = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const stagingRoot = join(cacheRoot, `fixtures-tmp-${nonce}`);
   const staging = join(stagingRoot, task.id);
@@ -82,7 +83,6 @@ export function publishFixtureCache({ repoRoot, task, cacheRoot }) {
       `${JSON.stringify(buildIntegrityRecord({ task, fixtureDir: staging }), null, 2)}\n`,
       "utf8",
     );
-    mkdirSync(cacheRoot, { recursive: true });
     renameSync(staging, fixtureDir);
   } catch (error) {
     if (!existsSync(join(fixtureDir, ".git"))) {
@@ -132,8 +132,9 @@ export function buildIntegrityRecord({ task, fixtureDir }) {
     Object.assign(git, mergeState);
   }
   return sealIntegrityRecord({
-    schemaVersion: 1,
+    schemaVersion: 2,
     taskId: task.id,
+    fixtureDefinitionSha256: sha256(canonicalJson(task.fixture)),
     contentSha256: hashTree(fixtureDir),
     git,
     postconditions: { ok: postconditions.ok, errors: postconditions.errors },
@@ -229,8 +230,8 @@ export function verifyFixtureCacheEntry({ task, entryDir }) {
   } catch {
     return { ok: false, errors: ["integrity record is not readable JSON; regenerate with: npm run evaluation:fixtures"], record: null };
   }
-  if (stored?.schemaVersion !== 1) {
-    return { ok: false, errors: ["integrity record schemaVersion must be 1"], record: null };
+  if (stored?.schemaVersion !== 2) {
+    return { ok: false, errors: ["integrity record schemaVersion must be 2"], record: null };
   }
   if (stored.taskId !== task.id) {
     return { ok: false, errors: [`integrity record taskId ${JSON.stringify(stored.taskId)} does not match ${task.id}`], record: null };
@@ -242,6 +243,9 @@ export function verifyFixtureCacheEntry({ task, entryDir }) {
   const recomputed = buildIntegrityRecord({ task, fixtureDir: entryDir });
   if (recomputed.taskId !== stored.taskId) {
     errors.push(`integrity mismatch: taskId changed (${stored.taskId} -> ${recomputed.taskId})`);
+  }
+  if (recomputed.fixtureDefinitionSha256 !== stored.fixtureDefinitionSha256) {
+    errors.push("integrity mismatch: fixture definition changed since publication");
   }
   if (recomputed.contentSha256 !== stored.contentSha256) {
     errors.push("integrity mismatch: non-.git tree content changed since publication");

@@ -44,7 +44,7 @@ export function runtimePinDigest(pin) {
  * Validate the receipt of one selected attempt.
  * Returns { ok: true, receipt } or { ok: false, reason }.
  */
-export function validateSelectedAttemptReceipt({ runDir, attemptDir, runId, taskId, arm, attempt, manifest }) {
+export function validateSelectedAttemptReceipt({ runDir, attemptDir, runId, taskId, arm, attempt, manifest, expected = null }) {
   const receiptPath = join(attemptDir, "provider-invocation.json");
   if (!existsSync(receiptPath)) {
     return { ok: false, reason: "provider-invocation.json receipt is missing" };
@@ -116,6 +116,21 @@ export function validateSelectedAttemptReceipt({ runDir, attemptDir, runId, task
     if (!runDigest) return { ok: false, reason: "run.json carries a malformed piRuntime pin" };
     if (runDigest !== receiptDigest) {
       return { ok: false, reason: "receipt piRuntime digest does not match run.json" };
+    }
+  }
+  // Study extension: optional expected study/profile/fixture identity.
+  // Applied only when `expected` is provided; the standard behavior
+  // above is unchanged when it is absent.
+  if (expected) {
+    const pinnedForStudy = readJsonOrNull(join(attemptDir, "pinned.json")) ?? receipt;
+    for (const field of ["study", "profileSha256", "fixtureContentSha256", "fixtureGitStateSha256", "implementationSha256", "observerSha256", "observerWrapperSha256"]) {
+      if (expected[field] === undefined) continue;
+      if (receipt[field] !== expected[field] || pinnedForStudy[field] !== expected[field]) {
+        return {
+          ok: false,
+          reason: `receipt ${field} does not match the expected ${field} ${JSON.stringify(expected[field])}`,
+        };
+      }
     }
   }
   return { ok: true, receipt };

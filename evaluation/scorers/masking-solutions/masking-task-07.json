@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: decisive failure step and reason from the regression stream.",
+  "files": [
+    { "path": "FAILURE.md", "content": "step 37\nwidget queue overflow\n" }
+  ],
+  "commands": []
+}

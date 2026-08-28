@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "runs-md-lists-three-summaries", "kind": "fileContains", "path": "RUNS.md", "all": ["pytest: 40 passed"] }
+  ]
+}

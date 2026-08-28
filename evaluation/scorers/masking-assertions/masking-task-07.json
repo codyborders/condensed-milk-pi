@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "assertions": [
+    { "id": "failure-md-step", "kind": "fileContains", "path": "FAILURE.md", "all": ["step 37"] },
+    { "id": "failure-md-reason", "kind": "fileContains", "path": "FAILURE.md", "all": ["widget queue overflow"] }
+  ]
+}

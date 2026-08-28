@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 2,
+  "evaluation": {
+    "provider": "z-ai",
+    "model": "glm-5.3-flash",
+    "thinking": "high",
+    "profile": "eval-masking",
+    "profileFile": "masking-eval-profile.json",
+    "piVersion": "0.84.2",
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "condensed_milk_retrieve"],
+    "timeoutMsPerAttempt": 3600000,
+    "repetitionsPerTask": 3,
+    "arms": [
+      {
+        "name": "upstream",
+        "role": "baseline",
+        "commit": "71f9e396951c42687f0c3456727b2b5c8c625da1"
+      },
+      {
+        "name": "fork",
+        "role": "treatment",
+        "commit": "fca546506e3c6b26401155a780052646a65dee38"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "number": 1,
+      "id": "masking-task-01",
+      "category": "mixed-tool",
+      "scale": "standard",
+      "title": "Summarize three repeated test runs",
+      "prompt": "First read context/masking-task-01.log end to end. Then run pytest -vv tests/test_suite.py exactly three times. Normalize each successful result to the deterministic line pytest: 40 passed. Finish by writing RUNS.md containing exactly three identical lines, one per run, in run order. Nothing else is required.",
+      "masking": {
+        "kind": "repeated-tests",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": ["pytest"]
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "tests/test_suite.py",
+            "content": "import pytest\n\n\n@pytest.mark.parametrize(\"value\", range(40))\ndef test_positive(value):\n    assert value >= 0\n\n\n# Deterministic verbose output keeps each tool result above historical mask minimum.\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-01.log", "template": "log-lines", "count": 400, "seed": 6101 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import test suite", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 2,
+      "id": "masking-task-02",
+      "category": "build",
+      "scale": "standard",
+      "title": "Record three repeated build checks",
+      "prompt": "First read context/masking-task-02.log end to end. Then run cargo check exactly three times. Normalize each successful result to the deterministic line cargo check: passed. Finish by writing BUILDS.md containing exactly three identical lines, one per run, in run order. Nothing else is required.",
+      "masking": {
+        "kind": "repeated-builds",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": ["cargo-check"]
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "Cargo.toml",
+            "content": "[package]\nname = \"masking-study-cargo-fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n# Deterministic minimal crate for cargo-check semantic coverage.\ndescription = \"A stable fixture with no network dependencies and enough declared bytes for historical masking.\"\n"
+          },
+          {
+            "path": "src/main.rs",
+            "content": "fn main() {\n    let values = [1, 2, 3, 4, 5, 6, 7, 8];\n    assert_eq!(values.iter().sum::<i32>(), 36);\n}\n\n// Keep fixture source deterministic and dependency-free for repeated cargo check runs.\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-02.log", "template": "log-lines", "count": 400, "seed": 6102 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import build check", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 3,
+      "id": "masking-task-03",
+      "category": "git",
+      "scale": "standard",
+      "title": "Summarize repository git state",
+      "prompt": "First read context/masking-task-03.log end to end. Then run exactly these three inspections: git status --porcelain, git log, and git diff HEAD. Do not run other Git inspection commands. Write GITNOTES.md with exactly three deterministic lines: subject: chore: third import; commits: 3; dirty: yes.",
+      "masking": {
+        "kind": "git-inspection",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": ["git-log-verbose"]
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "README.md",
+            "content": "git inspection fixture\n"
+          },
+          {
+            "path": "notes/second.md",
+            "content": "second import note\n"
+          },
+          {
+            "path": "notes/third.md",
+            "content": "third import note\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-03.log", "template": "log-lines", "count": 400, "seed": 6103 }],
+        "mutations": [
+          {
+            "path": "README.md",
+            "from": "git inspection fixture\n",
+            "to": "git inspection fixture updated\nline 01\nline 02\nline 03\nline 04\nline 05\nline 06\nline 07\nline 08\nline 09\nline 10\nline 11\n"
+          }
+        ],
+        "untracked": [
+          { "path": "scratch-note.txt", "content": "uncommitted scratch content\n" },
+          { "path": "scratch-alpha.txt", "content": "alpha scratch content\n" },
+          { "path": "scratch-bravo.txt", "content": "bravo scratch content\n" },
+          { "path": "scratch-charlie.txt", "content": "charlie scratch content\n" },
+          { "path": "scratch-delta.txt", "content": "delta scratch content\n" },
+          { "path": "scratch-echo.txt", "content": "echo scratch content\n" },
+          { "path": "scratch-foxtrot.txt", "content": "foxtrot scratch content\n" },
+          { "path": "scratch-golf.txt", "content": "golf scratch content\n" }
+        ],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [
+            { "message": "chore: first import", "paths": ["README.md"] },
+            { "message": "chore: second import", "paths": ["notes/second.md"] },
+            { "message": "chore: third import", "paths": ["notes/third.md"] }
+          ],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 4,
+      "id": "masking-task-04",
+      "category": "search",
+      "scale": "standard",
+      "title": "Count error codes in high-volume search output",
+      "prompt": "First read context/masking-task-04.log end to end. Then run exactly rg -n ERROR logs. Normalize its matches into ERRORS.md with one line per distinct error code in sorted order, each formatted as code: count. Expected deterministic lines are E101: 4, E202: 3, E303: 4, E404: 4. Nothing else is required.",
+      "masking": {
+        "kind": "search-volume",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": ["rg"]
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "logs/service-a.log",
+            "content": "INFO startup complete\nERROR E101 connection refused\nINFO retry scheduled\nERROR E101 connection refused\nERROR E202 timeout while draining\nINFO drain finished\nERROR E202 timeout while draining\nERROR E303 bad gateway upstream\nINFO rotating log\nERROR E303 bad gateway upstream\nERROR E303 bad gateway upstream\nERROR E303 bad gateway upstream\nERROR E101 connection refused\nERROR E202 timeout while draining\n"
+          },
+          {
+            "path": "logs/service-b.log",
+            "content": "INFO worker online\nERROR E101 connection refused\nERROR E404 handler missing\nINFO rescheduling\nERROR E404 handler missing\nERROR E404 handler missing\nERROR E404 handler missing\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-04.log", "template": "log-lines", "count": 400, "seed": 6104 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import service logs", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 5,
+      "id": "masking-task-05",
+      "category": "long-context",
+      "scale": "standard",
+      "title": "Map functions to files with overlapping reads",
+      "prompt": "First read context/masking-task-05.log end to end. Then read src/alpha.py, src/beta.py, then src/alpha.py again, then src/gamma.py, then src/beta.py again. Write SUMMARY.md with exactly three lines mapping each function name to the file that defines it, formatted as function: file, sorted by function name.",
+      "masking": {
+        "kind": "overlapping-reads",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": []
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "src/alpha.py",
+            "content": "\"\"\"Alpha module.\"\"\"\n\n\ndef fold_records(records):\n    \"\"\"Fold records into one summary.\"\"\"\n    return len(records)\n\n\n# Deterministic read fixture filler keeps historical masking eligible.\n# alpha contract line 01\n# alpha contract line 02\n# alpha contract line 03\n# alpha contract line 04\n"
+          },
+          {
+            "path": "src/beta.py",
+            "content": "\"\"\"Beta module.\"\"\"\n\n\ndef merge_streams(left, right):\n    \"\"\"Merge two streams into one.\"\"\"\n    return left + right\n\n\n# Deterministic read fixture filler keeps historical masking eligible.\n# beta contract line 01\n# beta contract line 02\n# beta contract line 03\n# beta contract line 04\n"
+          },
+          {
+            "path": "src/gamma.py",
+            "content": "\"\"\"Gamma module.\"\"\"\n\n\ndef scan_edges(edges):\n    \"\"\"Scan edges and count them.\"\"\"\n    return sum(1 for _ in edges)\n\n\n# Deterministic read fixture filler keeps historical masking eligible.\n# gamma contract line 01\n# gamma contract line 02\n# gamma contract line 03\n# gamma contract line 04\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-05.log", "template": "log-lines", "count": 400, "seed": 6105 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import source modules", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 6,
+      "id": "masking-task-06",
+      "category": "debugging",
+      "scale": "standard",
+      "title": "Find the fatal entry in a noisy log",
+      "prompt": "First read context/masking-task-06.log end to end. Then read logs/noisy.log end to end. Write FATAL.md with exactly two lines: the timestamp of the final FATAL entry and the failure phrase printed on that entry, in the order they appear on the entry.",
+      "masking": {
+        "kind": "noisy-logs",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": []
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "logs/noisy.log",
+            "content": "2026-01-01T00:00:00Z INFO heartbeat ok\n2026-01-01T00:01:00Z WARN queue depth 12\n2026-01-01T00:02:00Z INFO heartbeat ok\n2026-01-01T00:03:00Z WARN queue depth 14\n2026-01-01T00:04:00Z INFO heartbeat ok\n2026-01-01T00:05:00Z ERROR E501 partial write\n2026-01-01T00:06:00Z INFO heartbeat ok\n2026-01-01T00:07:00Z WARN queue depth 15\n2026-01-01T00:08:00Z INFO heartbeat ok\n2026-01-01T00:09:00Z FATAL write-ahead log corrupt beyond sector 118\n2026-01-01T00:10:00Z INFO shutdown begins\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-06.log", "template": "log-lines", "count": 400, "seed": 6106 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import noisy log", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 7,
+      "id": "masking-task-07",
+      "category": "mixed-tool",
+      "scale": "standard",
+      "title": "Report the decisive failure after a long success stream",
+      "prompt": "First read context/masking-task-07.log end to end. Then run node tools/regress.js once. It prints a long stream of successful step lines and then fails decisively. Write FAILURE.md with exactly two lines: the name of the step that failed and the failure reason exactly as printed on the failing line.",
+      "masking": {
+        "kind": "stream-then-failure",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": false,
+        "diagnostic": null,
+        "filterIds": []
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "tools/regress.js",
+            "content": "for (let step = 1; step <= 60; step += 1) {\n  console.log(`ok step ${step}`);\n}\nconsole.log(\"FAIL step 37: widget queue overflow\");\nprocess.exitCode = 1;\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-07.log", "template": "log-lines", "count": 400, "seed": 6107 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import regression script", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    },
+    {
+      "number": 8,
+      "id": "masking-task-08",
+      "category": "debugging",
+      "scale": "standard",
+      "title": "Recover the diagnostic root cause",
+      "prompt": "Run node tools/diagnose.js once and read the diagnostic dump. Then read context/masking-task-08.log end to end, followed by src/registry.py and src/policy.py. If condensed_milk_retrieve exists, use it to recover the earlier diagnostic and do not rerun diagnose. If the tool is unavailable, you may rerun diagnose at most once. Finish by writing ROOTCAUSE.md with exactly two lines: E-7721 and cache eviction raced with write. Score only final ROOTCAUSE.md correctness.",
+      "masking": {
+        "kind": "diagnostic-recovery",
+        "threshold": 0.05,
+        "requiresArchiveRecovery": true,
+        "diagnostic": "tools/diagnose.js final diagnostic line (code E-7721, phrase cache eviction raced with write)",
+        "filterIds": []
+      },
+      "fixture": {
+        "files": [
+          {
+            "path": "tools/diagnose.js",
+            "content": "for (let index = 1; index <= 48; index += 1) {\n  console.log(`probe ${index}: nominal`);\n}\nconsole.log(\"diagnostic: E-7721 cache eviction raced with write\");\n"
+          },
+          {
+            "path": "src/registry.py",
+            "content": "\"\"\"Registry module.\"\"\"\n\nREGISTRY = {\"widgets\": 3, \"gears\": 5}\n\n# Deterministic context filler keeps repeated reads above historical mask minimum.\n# registry contract line 01\n# registry contract line 02\n# registry contract line 03\n# registry contract line 04\n"
+          },
+          {
+            "path": "src/policy.py",
+            "content": "\"\"\"Policy module.\"\"\"\n\nPOLICY = {\"max_retries\": 2}\n\n# Deterministic context filler keeps repeated reads above historical mask minimum.\n# policy contract line 01\n# policy contract line 02\n# policy contract line 03\n# policy contract line 04\n"
+          }
+        ],
+        "generate": [{ "path": "context/masking-task-08.log", "template": "log-lines", "count": 400, "seed": 6108 }],
+        "mutations": [],
+        "untracked": [],
+        "git": {
+          "author": { "name": "Eval Fixture", "email": "fixture@example.invalid" },
+          "startDate": "2026-01-01T00:00:00Z",
+          "commits": [{ "message": "chore: import diagnostics", "paths": ["all"] }],
+          "post": []
+        }
+      }
+    }
+  ]
+}

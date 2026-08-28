@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "profile": "eval-masking",
+  "filters": {
+    "pytest": true,
+    "cargo-check": true,
+    "git-status-porcelain": true,
+    "git-log-verbose": true,
+    "git-diff": true,
+    "rg": true
+  },
+  "profiles": {
+    "eval-masking": {
+      "label": "masking evaluation profile (deliberately low deterministic thresholds; not a general-purpose preset)",
+      "thresholds": [0.05, 0.08, 0.12],
+      "coverage": [0.5, 0.75, 0.9],
+      "effectiveContextCap": 131072,
+      "maskOldThinking": "with-coverage"
+    }
+  }
+}

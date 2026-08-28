@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "note": "Reference: three deterministic cargo checks with normalized summaries.",
+  "files": [
+    { "path": "BUILDS.md", "content": "cargo check: passed\ncargo check: passed\ncargo check: passed\n" }
+  ],
+  "commands": []
+}

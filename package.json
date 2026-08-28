@@ -56,7 +56,14 @@
     "evaluation:fixtures": "node evaluation/runner/cli.mjs fixtures",
     "evaluation:test": "node --test --test-concurrency=1 \"evaluation/tests/*.test.mjs\"",
     "evaluation:dry-run": "node evaluation/runner/dry-run.mjs",
-    "evaluation:report": "node evaluation/runner/cli.mjs report --latest"
+    "evaluation:report": "node evaluation/runner/cli.mjs report --latest",
+    "masking:validate": "node evaluation/runner/cli.mjs masking-validate",
+    "masking:fixtures": "node evaluation/runner/cli.mjs masking-fixtures",
+    "masking:prepare": "node evaluation/runner/cli.mjs masking-prepare",
+    "masking:plan": "node evaluation/runner/cli.mjs masking-plan",
+    "masking:dry-run": "node evaluation/runner/cli.mjs masking-dry-run",
+    "masking:run": "node evaluation/runner/cli.mjs masking-run",
+    "masking:report": "node evaluation/runner/cli.mjs masking-report --latest"
   },
   "keywords": [
     "pi",
