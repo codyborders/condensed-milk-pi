@@ -18,7 +18,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const ANSWERS = {
   "RUNS.md": "pytest: 40 passed\npytest: 40 passed\npytest: 40 passed\n",
-  "BUILDS.md": "cargo check: passed\ncargo check: passed\ncargo check: passed\n",
+  "BUILDS.md": "build check: 6 modules ok\nbuild check: 6 modules ok\nbuild check: 6 modules ok\n",
   "GITNOTES.md": "subject: chore: third import\ncommits: 3\ndirty: yes\n",
   "ERRORS.md": "E101: 4\nE202: 3\nE303: 4\nE404: 4\n",
   "SUMMARY.md": "fold_records: src/alpha.py\nmerge_streams: src/beta.py\nscan_edges: src/gamma.py\n",

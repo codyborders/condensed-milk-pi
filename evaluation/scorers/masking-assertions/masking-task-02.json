@@ -5,7 +5,7 @@
       "id": "builds-md-has-exactly-three-summaries",
       "kind": "fileEquals",
       "path": "BUILDS.md",
-      "content": "build check: 6 modules ok\nbuild check: 6 modules ok\nbuild check: 6 modules ok\n"
+      "equals": "build check: 6 modules ok\nbuild check: 6 modules ok\nbuild check: 6 modules ok\n"
     }
   ]
 }
