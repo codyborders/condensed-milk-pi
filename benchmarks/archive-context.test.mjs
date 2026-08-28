@@ -34,6 +34,7 @@ test("checked-in archive benchmark covers exact passes and passes release gates"
   assert.deepEqual(upstream.measurements.map((item) => item.candidates), [100, 300, 1000, 10000]);
   assert.deepEqual([...new Set(report.measurements.map((item) => item.candidates))], [100, 300, 1000, 10000]);
   assert.equal(report.measurements.length, 16, "four counts, two archive modes, and two capacity modes");
+  assert.ok(report.measuredIterations >= 20, "p95 uses enough samples to exclude one timing outlier");
   assert.match(report.baselineSource, /archive-upstream-baseline\.json.*upstream/i);
   assert.deepEqual(report.failures, [], "checked-in run passes every release gate");
 
@@ -50,6 +51,9 @@ test("checked-in archive benchmark covers exact passes and passes release gates"
     assert.equal(measurement.operationCounts.repeatedPassDelta.indexRenameSync, 0);
     if (measurement.archive === "enabled" && measurement.capacityMode === "above") {
       assert.equal(measurement.survivors, measurement.candidates, "above-capacity mode retains every candidate");
+    }
+    if (measurement.archive === "disabled") {
+      assert.equal(measurement.survivors, 0, "disabled batches fail open with zero survivors");
     }
   }
 });

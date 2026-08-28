@@ -69,13 +69,15 @@ Update `benchmarks/archive-results.json` only after an intentional full run:
 npm run benchmark:archive:update
 ```
 
-Repeated-pass p95 must remain below 25 ms. Repeated processing of live tool-call IDs must perform zero archive-content writes and zero archive-content renames. `benchmarks/archive-context.test.mjs` checks the complete dimension set, exact pass sample counts, raw result gates, and supported-capacity survivor counts.
+Repeated-pass p95 must remain below 25 ms. Repeated processing of live tool-call IDs must perform zero archive-content writes and zero archive-content renames. `benchmarks/archive-context.test.mjs` checks the complete dimension set, exact pass sample counts, raw result gates, supported-capacity survivor counts, and zero disabled survivors.
 
-The corrected local run passed all 16 cases. Its highest repeated-pass p95 was 9.750 ms for 10,000 candidates. The fifth-pass p95 was 0.772 ms for 100 candidates, 1.123 ms for 300, and 3.056 ms for 1,000. Every repeated pass recorded zero content writes and renames.
+Disabled cases run the same archive batch wrapper as production. The wrapper returns a null preparation result, so disabled runs fail open and mask nothing.
 
-`benchmarks/archive-before-results.json` records the synchronous per-entry behavior from merge commit `8d004bf97f5142d869aebcedf05ae7d7be4e1d30`. At 300 candidates with capacity 128, its fifth-pass p95 was 368.189 ms. The corrected batch path measured 0.665 ms for the matching case. At 300 candidates with capacity above candidate count, p95 changed from 43.448 ms to 1.123 ms.
+The regenerated local run passed all 16 cases with 20 measured iterations per case. Its highest repeated-pass p95 was 8.795 ms for 10,000 candidates. The fifth-pass p95 was 0.511 ms for 100 candidates. It was 1.269 ms for 300, 3.580 ms for 1,000, and 8.795 ms for 10,000. Every repeated pass recorded zero content writes and renames.
 
-First-pass work remains larger because new survivors must be written and verified. At 10,000 candidates with the supported 1,024-entry maximum, first-pass p95 was 222.032 ms. The release gate applies to repeated passes, while first-pass timings remain visible in the raw report.
+`benchmarks/archive-before-results.json` records the synchronous per-entry behavior from merge commit `8d004bf97f5142d869aebcedf05ae7d7be4e1d30`. At 300 candidates with capacity 128, its fifth-pass p95 was 368.189 ms. The corrected batch path measured 0.933 ms for the matching case. At 300 candidates with capacity above candidate count, p95 changed from 43.448 ms to 1.269 ms.
+
+First-pass work remains larger because new survivors must be written and verified. At 10,000 candidates with the supported 1,024-entry maximum, first-pass p95 was 244.282 ms. The release gate applies to repeated passes, while first-pass timings remain visible in the raw report.
 
 Upstream ratios use exact candidate counts and pass numbers from `benchmarks/archive-upstream-baseline.json`. That file pins upstream commit `71f9e396951c42687f0c3456727b2b5c8c625da1`. Upstream does not archive results, so archive-enabled ratios describe added local recovery work. They are not token or provider-cost measurements.
 

@@ -85,11 +85,23 @@ process.on("exit", () => {
   let unlinks = 0;
   const fs = { ...real, unlinkSync: (p: string) => { unlinks++; return real.unlinkSync(p); } };
   let clock = baseClock;
+  const seeder = makeStore("batch-inject-evict", { maxEntries: 2 }, fs, () => clock);
+  seeder.prepareBatch([{ toolCallId: "old-a", blocks: [{ type: "text", text: long("a") }] }]);
+  clock += 1_000;
+  seeder.prepareBatch([{ toolCallId: "old-b", blocks: [{ type: "text", text: long("b") }] }]);
+  clock += 1_000;
+  // Tightened limits evict the oldest existing row deterministically and
+  // close admission; the unlink must run through the injected filesystem.
   const store = makeStore("batch-inject-evict", { maxEntries: 1 }, fs, () => clock);
-  store.prepareBatch([{ toolCallId: "old-a", blocks: [{ type: "text", text: long("a") }] }]);
-  clock += 1_000; // the stored entry is now strictly older than the candidate
-  const refs = store.prepareBatch([{ toolCallId: "new-b", blocks: [{ type: "text", text: long("b") }] }]);
-  assert.ok(refs && refs.has("new-b"), "new candidate wins the single slot");
+  const refs = store.prepareBatch([
+    { toolCallId: "old-a", blocks: [{ type: "text", text: long("a") }] },
+    { toolCallId: "old-b", blocks: [{ type: "text", text: long("b") }] },
+    { toolCallId: "new-c", blocks: [{ type: "text", text: long("c") }] },
+  ]);
+  assert.ok(refs, "batch succeeds after changed-limit eviction");
+  assert.ok(refs.has("old-b"), "newest existing row survives the tightened limit");
+  assert.ok(!refs.has("old-a"), "oldest existing row loses the tightened limit");
+  assert.ok(!refs.has("new-c"), "changed-limit eviction closes admission to new ids");
   assert.ok(unlinks >= 1, "eviction unlinks through the injected filesystem");
   ok("injected filesystem: eviction unlinks run through injected operations");
 }
@@ -247,16 +259,23 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
 {
   const real = defaultArchiveFilesystem();
   let clock = baseClock;
-  const store = makeStore("batch-orphan-unlink", { maxEntries: 1 }, undefined, () => clock);
-  store.prepareBatch([{ toolCallId: "gone-soon", blocks: [{ type: "text", text: long("g") }] }]);
-  clock += 1_000; // stored entry becomes strictly older than the candidate
+  const seeder = makeStore("batch-orphan-unlink", { maxEntries: 2 }, undefined, () => clock);
+  const seeded = seeder.prepareBatch([
+    { toolCallId: "gone-soon", blocks: [{ type: "text", text: long("g") }] },
+    { toolCallId: "also-gone", blocks: [{ type: "text", text: long("g2") }] },
+  ]);
+  assert.ok(seeded && seeded.size === 2);
+  clock += 1_000;
   const broken = { ...real, unlinkSync: (p: string) => {
     if (/^cm-[0-9a-f]{16}\.json$/.test(p.substring(p.lastIndexOf("/") + 1))) throw new Error("unlink refused");
     return real.unlinkSync(p);
   } };
+  // Tightened limits force an existing eviction; the refused unlink
+  // leaves uncertain final state, so the batch must fail open.
   const store2 = makeStore("batch-orphan-unlink", { maxEntries: 1 }, broken, () => clock);
   const refs = store2.prepareBatch([
     { toolCallId: "gone-soon", blocks: [{ type: "text", text: long("g") }] },
+    { toolCallId: "also-gone", blocks: [{ type: "text", text: long("g2") }] },
     { toolCallId: "fresh-1", blocks: [{ type: "text", text: long("f") }] },
   ]);
   assert.equal(refs, null, "eviction unlink failure returns no references");

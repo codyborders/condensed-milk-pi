@@ -12,7 +12,7 @@ const docs = `${readme}\n${changelog}`;
 const forkUrl = "https://github.com/codyborders/condensed-milk-pi";
 
 assert.equal(packageJson.name, "@codyborders/condensed-milk-pi");
-assert.equal(packageJson.version, "1.10.1-remediated.0");
+assert.equal(packageJson.version, "1.10.1-remediated.1");
 assert.equal(packageJson.repository.url, `${forkUrl}.git`);
 assert.equal(packageJson.homepage, `${forkUrl}#readme`);
 assert.equal(packageJson.bugs.url, `${forkUrl}/issues`);
@@ -32,7 +32,8 @@ assert.equal(lockfile.packages[""].version, packageJson.version);
 // pinned GitHub-tag install is the documented installation path.
 assert.doesNotMatch(readme, /npm install @codyborders\/condensed-milk-pi/, "npm registry install line must stay removed");
 assert.doesNotMatch(readme, /pi install npm:@codyborders\/condensed-milk-pi/, "pi npm-registry install line must stay removed");
-assert.match(readme, /pi install https:\/\/github\.com\/codyborders\/condensed-milk-pi@v1\.10\.1-remediated\.0/);
+assert.match(readme, /pi install https:\/\/github\.com\/codyborders\/condensed-milk-pi@v1\.10\.1-remediated\.1/);
+assert.match(readme, /v1\.10\.1-remediated\.0 stays unchanged/);
 assert.match(readme, /git clone https:\/\/github\.com\/codyborders\/condensed-milk-pi\.git/);
 assert.doesNotMatch(readme, /pi install npm:@tomooshi\/condensed-milk-pi/);
 assert.doesNotMatch(readme, /git clone https:\/\/github\.com\/tomooshi\/condensed-milk-pi/);
@@ -46,7 +47,7 @@ assert.match(readme, /Git log compression and generic log deduplication now requ
 assert.match(readme, /upstream v1\.10\.0/);
 assert.match(readme, /stable IDs/);
 assert.match(readme, /~\/\.config\/condensed-milk\.json/);
-assert.match(readme, /1\.10\.1-remediated\.0/);
+assert.match(readme, /1\.10\.1-remediated\.1/);
 assert.match(readme, /roll back/i);
 
 console.log("package identity and fork documentation checks passed");

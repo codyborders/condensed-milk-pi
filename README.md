@@ -6,7 +6,7 @@ Archive-backed lossy masking is disabled by default in this prerelease. Enabling
 
 Condensed Milk is a pi terminal extension that reduces repetitive bash output and masks stale tool results before an LLM call. It uses deterministic, domain-aware transforms. It is not a general-purpose output truncator.
 
-This repository is the maintained remediation fork of upstream Condensed Milk. The fork keeps upstream author credit and uses prerelease `1.10.1-remediated.0` under the `@codyborders` scope. It does not claim production approval.
+This repository is the maintained remediation fork of upstream Condensed Milk. The fork keeps upstream author credit and uses prerelease `1.10.1-remediated.1` under the `@codyborders` scope. The earlier corrective prerelease v1.10.1-remediated.0 stays unchanged. It does not claim production approval.
 
 Upstream v1.10.0 remains the reference baseline. Selecting upstream retains upstream behavior. This fork changes defaults and safety handling as documented below. Experimental filters stay disabled unless explicitly enabled. This prerelease includes bounded output recovery.
 
@@ -66,14 +66,14 @@ Archives stay under `~/.pi/agent/condensed-milk-recovery` in opaque session dire
 
 Storage strips ANSI codes and applies mandatory environment-line redaction before writing. Retrieval applies that redaction again. Non-text blocks remain unchanged, so users must treat local archive access like local session-file access.
 
-Default retention allows 128 entries, 64 KiB per entry, 4 MiB per session, and a 24-hour lifetime. Context processing reads the index and runs retention at most once per batch. Old entries leave bounded tombstones so retrieval can distinguish expiry from capacity eviction. Oversize output, unavailable storage, failed verification, or rejected retention leaves original redacted output visible.
+Default retention allows 128 entries, 64 KiB per entry, 4 MiB per session, and a 24-hour lifetime. Context processing reads the index and runs retention at most once per batch. Removal records remain bounded. A persisted closure flag prevents admission after a capacity rejection or removal, even after an older removal record is dropped. Oversize output, unavailable storage, failed verification, or rejected retention leaves original redacted output visible.
 
 ## Installation
 
 Install the pinned prerelease from the tagged fork Git URL:
 
 ```bash
-pi install https://github.com/codyborders/condensed-milk-pi@v1.10.1-remediated.0
+pi install https://github.com/codyborders/condensed-milk-pi@v1.10.1-remediated.1
 ```
 
 The npm registry is not an installation source for this fork. The tagged Git URL above is the supported pinned form.
@@ -174,7 +174,7 @@ The fork retains upstream configuration paths: global cutoff settings at `~/.con
 
 Configurations carrying the recognized v1.6.x defaults, thresholds `[0.20, 0.35, 0.50]` and coverage `[0.50, 0.75, 0.90]`, migrate automatically to current defaults on session start. A matching tuple is treated as stale generated configuration. Other threshold or coverage values remain explicit customization. The old v1.1.x `windowSize` setting is ignored because static-cutoff masking replaced the rolling window.
 
-Pin prerelease installs to `1.10.1-remediated.0`. To roll back, remove the scoped fork and reinstall upstream v1.10.0 from its original package or repository. Do not reuse fork-only opt-ins when rolling back.
+Pin prerelease installs to `1.10.1-remediated.1`. The earlier corrective tag `v1.10.1-remediated.0` stays unchanged. To roll back, remove the scoped fork and reinstall upstream v1.10.0 from its original package or repository. Do not reuse fork-only opt-ins when rolling back.
 
 ## Bounded telemetry
 

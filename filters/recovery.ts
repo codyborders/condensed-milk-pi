@@ -686,6 +686,7 @@ interface StoreIndex {
   /** Bounded removal records carrying the removal reason so later
    *  retrievals can distinguish expired from evicted persistently. */
   evicted: Array<string | { id: string; reason: "expired" | "evicted" }>;
+  admissionClosed?: boolean;
 }
 
 /** Short synchronous sleep used only for bounded lock retries. */
@@ -724,10 +725,14 @@ export class ArchiveStore {
   /** Session memory of every tombstoned id, including records the
    *  bounded index list dropped, so repeated batches never rewrite the
    *  index just to re-record forgotten tombstones. */
-  private readonly knownTombstones = new Set<string>();
   /** toolCallId -> archive id cache so repeated batches skip rehashing
    *  every candidate. The whole cache resets at a fixed bound. */
   private readonly idCache = new Map<string, string>();
+  /** Live ids whose entry file this instance already verified against
+   *  the index row (id, blocks array, createdAt, exact byte count).
+   *  Repeated passes validate from this cache instead of rereading live
+   *  content; any removal clears the cached validity for that id. */
+  private readonly verifiedLive = new Set<string>();
   private static readonly MAX_ID_CACHE_ENTRIES = 20_000;
 
   /** Cached deriveArchiveId for the batch candidate loop. */
@@ -791,6 +796,9 @@ export class ArchiveStore {
       if (!isPlainObject(parsed) || parsed.v !== 1 || !isPlainObject(parsed.entries) || !Array.isArray(parsed.evicted)) {
         return null;
       }
+      if (parsed.admissionClosed !== undefined && typeof parsed.admissionClosed !== "boolean") {
+        return null; // malformed closure flag: integrity uncertain, fail open
+      }
       for (const [id, entry] of Object.entries(parsed.entries)) {
         if (!ARCHIVE_ID_PATTERN.test(id) || !isPlainObject(entry)) return null;
         if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 0) return null;
@@ -804,6 +812,12 @@ export class ArchiveStore {
         if (!isPlainObject(tombstone) || typeof tombstone.id !== "string") return null;
         if (!ARCHIVE_ID_PATTERN.test(tombstone.id)) return null;
         if (tombstone.reason !== "expired" && tombstone.reason !== "evicted") return null;
+      }
+      // Legacy indexes predate the explicit closure flag. Any persisted
+      // removal means admission must stay closed so a tombstone that later
+      // rolls off the bounded list can never be recreated.
+      if (parsed.admissionClosed === undefined && parsed.evicted.length > 0) {
+        parsed.admissionClosed = true;
       }
       return parsed;
     } catch {
@@ -830,6 +844,10 @@ export class ArchiveStore {
   }
 
   private tombstone(index: StoreIndex, id: string, reason: "expired" | "evicted"): void {
+    // Every persisted removal closes admission. This keeps the exact
+    // tombstone list bounded without permitting an older removed id to be
+    // recreated after its record rolls off that list.
+    index.admissionClosed = true;
     // Drop any earlier record for the same id, then append with its reason.
     index.evicted = index.evicted.filter((entry) =>
       typeof entry === "string" ? entry !== id : entry.id !== id,
@@ -859,16 +877,20 @@ export class ArchiveStore {
     reason: "expired" | "evicted",
   ): boolean {
     const prior = seen.get(id);
-    if (prior === reason) return false;
-    if (!seen.has(id) && this.knownTombstones.has(id)) return false; // dropped by the bounded list on purpose
+    let changed = false;
+    if (index.admissionClosed !== true) {
+      index.admissionClosed = true;
+      changed = true;
+    }
+    if (prior === reason) return changed;
     seen.delete(id);
     this.tombstone(index, id, reason);
     seen.set(id, reason);
-    this.knownTombstones.add(id);
     return true;
   }
 
   private removeEntry(index: StoreIndex, id: string, reason: "expired" | "evicted" = "evicted"): boolean {
+    this.verifiedLive.delete(id); // removal clears cached validity
     try {
       this.fs.unlinkSync(this.entryPath(id));
     } catch (error: any) {
@@ -1017,13 +1039,13 @@ export class ArchiveStore {
       if (typeof entry === "string") tombstoned.set(entry, "evicted");
       else tombstoned.set(entry.id, entry.reason);
     }
-    for (const id of tombstoned.keys()) this.knownTombstones.add(id);
 
     // Retention over existing entries: drop rows whose file vanished,
     // then expire rows past the TTL.
     for (const id of Object.keys(index.entries)) {
       if (!present.has(`${id}.json`)) {
         delete index.entries[id];
+        this.verifiedLive.delete(id);
         if (this.tombstoneChanged(tombstoned, index, id, "evicted")) dirty = true;
         continue;
       }
@@ -1034,17 +1056,20 @@ export class ArchiveStore {
           if (e?.code !== "ENOENT") return null; // uncertain final state
         }
         delete index.entries[id];
+        this.verifiedLive.delete(id);
         if (this.tombstoneChanged(tombstoned, index, id, "expired")) dirty = true;
       }
     }
 
-    // Classify candidates. Live ids are reused with no read or rewrite.
-    // Tombstoned ids are never recreated. Oversize and unserializable
-    // candidates are rejected (stay visible) without failing the batch.
+    // Classify candidates. Live ids are reused with no rewrite. A closed
+    // archive never admits any previously non-live id. Tombstoned ids are
+    // never recreated. Oversize and unserializable candidates are rejected
+    // (stay visible) without failing the batch.
     const pending: Array<{ id: string; canonical: string; bytes: number }> = [];
     for (const candidate of candidates) {
-      if (tombstoned.has(candidate.id) || this.knownTombstones.has(candidate.id)) continue;
       if (index.entries[candidate.id] !== undefined) continue;
+      if (index.admissionClosed === true) continue; // closed forever
+      if (tombstoned.has(candidate.id)) continue;
       let canonical: string;
       try {
         canonical = canonicalArchiveText(candidate.id, now, this.normalizeBlocks(candidate.blocks));
@@ -1056,31 +1081,52 @@ export class ArchiveStore {
       pending.push({ id: candidate.id, canonical, bytes });
     }
 
-    // Deterministic survivor selection BEFORE any write. Ties on
-    // createdAt keep EXISTING rows first (order = MAX_SAFE_INTEGER for
-    // new rows below): re-storing a live entry costs a rewrite, so a
-    // repeated identical batch never churns its live set. Among new
-    // rows, earlier submissions are evicted first, so the survivor
-    // window is the submission tail.
-    const rows = Object.entries(index.entries).map(([id, entry]) => ({
+    // Deterministic survivor selection BEFORE any write. Existing valid
+    // live rows win over new candidates: new rows fill only remaining
+    // capacity, so the survivor window among new rows is the submission
+    // tail. Existing rows are evicted only when they exceed changed
+    // limits (oldest first, ties by id). Any capacity rejection — a new
+    // candidate that does not fit, or existing rows over new limits —
+    // closes admission persistently, so a closed archive never admits a
+    // previously non-live id again (store recreation and bounded
+    // tombstone-list overflow included).
+    const existingRows = Object.entries(index.entries).map(([id, entry]) => ({
       id,
       bytes: entry.bytes,
       createdAt: entry.createdAt,
-      order: Number.MAX_SAFE_INTEGER,
     }));
-    pending.forEach((p, order) => rows.push({ id: p.id, bytes: p.bytes, createdAt: now, order }));
-    const survivorIds = new Set(rows.map((row) => row.id));
-    let totalBytes = rows.reduce((sum, row) => sum + row.bytes, 0);
-    let count = rows.length;
+    const survivorIds = new Set(existingRows.map((row) => row.id));
+    let totalBytes = existingRows.reduce((sum, row) => sum + row.bytes, 0);
+    let count = existingRows.length;
     if (count > this.limits.maxEntries || totalBytes > this.limits.maxAggregateBytes) {
-      rows.sort((a, b) =>
-        a.createdAt - b.createdAt || a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-      );
-      for (const row of rows) {
+      existingRows.sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+      for (const row of existingRows) {
         if (count <= this.limits.maxEntries && totalBytes <= this.limits.maxAggregateBytes) break;
         survivorIds.delete(row.id);
         totalBytes -= row.bytes;
         count -= 1;
+      }
+      index.admissionClosed = true; // changed limits forced existing eviction
+      dirty = true;
+    }
+    if (pending.length > 0 && index.admissionClosed !== true) {
+      // Among new rows the submission tail wins: admit from the newest
+      // backwards while capacity remains, so earlier submissions are the
+      // ones that stay visible.
+      let rejectedAny = false;
+      for (let i = pending.length - 1; i >= 0; i--) {
+        const entry = pending[i];
+        if (count + 1 > this.limits.maxEntries || totalBytes + entry.bytes > this.limits.maxAggregateBytes) {
+          rejectedAny = true;
+          continue;
+        }
+        survivorIds.add(entry.id);
+        totalBytes += entry.bytes;
+        count += 1;
+      }
+      if (rejectedAny) {
+        index.admissionClosed = true; // a candidate lost to capacity
+        dirty = true;
       }
     }
 
@@ -1094,6 +1140,7 @@ export class ArchiveStore {
         if (e?.code !== "ENOENT") return null;
       }
       delete index.entries[id];
+      this.verifiedLive.delete(id);
       if (this.tombstoneChanged(tombstoned, index, id, "evicted")) dirty = true;
     }
 
@@ -1120,6 +1167,7 @@ export class ArchiveStore {
         return null;
       }
       index.entries[entry.id] = { bytes: entry.bytes, createdAt: now };
+      this.verifiedLive.add(entry.id); // verified write enters the cache
       dirty = true;
     }
 
@@ -1141,13 +1189,45 @@ export class ArchiveStore {
       }
     }
 
-    // Emit references only for candidates whose id is live after the pass.
+    // Emit references only for candidates whose id is live after the
+    // pass. A reused live reference is emitted only after this instance
+    // has verified the entry file once: readable canonical archive JSON
+    // with matching id, blocks array, createdAt equal to the index row,
+    // and the exact indexed byte count. Any invalid or unreadable live
+    // candidate fails the whole batch open so caller content stays
+    // visible and no invalid placeholder is emitted. Successful
+    // validation is cached per instance; newly verified writes below
+    // entered the cache already.
     for (const candidate of candidates) {
-      if (index.entries[candidate.id] !== undefined) {
-        references.set(candidate.toolCallId, candidate.id);
+      if (index.entries[candidate.id] === undefined) continue;
+      if (!this.verifiedLive.has(candidate.id)) {
+        if (!this.verifyLiveEntry(candidate.id, index.entries[candidate.id])) return null;
+        this.verifiedLive.add(candidate.id);
       }
+      references.set(candidate.toolCallId, candidate.id);
     }
     return references;
+  }
+
+  /** Validate one live entry file against its index row before its
+   *  reference may be reused. Reads the file once; callers cache the
+   *  success in this instance. */
+  private verifyLiveEntry(id: string, row: IndexEntry): boolean {
+    let raw: string;
+    try {
+      raw = this.fs.readFileSync(this.entryPath(id), "utf8");
+    } catch {
+      return false; // unreadable (or a directory collision): fail open
+    }
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return false;
+    }
+    if (!isPlainObject(parsed) || parsed.v !== 1 || parsed.id !== id || !Array.isArray(parsed.blocks)) return false;
+    if (typeof parsed.createdAt !== "number" || parsed.createdAt !== row.createdAt) return false;
+    return Buffer.byteLength(raw, "utf8") === row.bytes;
   }
 
   /** Load one entry for retrieval. Distinguishes evicted (tombstoned),
@@ -1252,6 +1332,7 @@ export class ArchiveStore {
       } catch (error: any) {
         if (error?.code !== "ENOENT") return false;
         delete index.entries[id];
+        this.verifiedLive.delete(id);
         this.tombstone(index, id, "evicted");
       }
     }
@@ -1264,6 +1345,7 @@ export class ArchiveStore {
         if (error?.code !== "ENOENT") return false;
       }
       delete index.entries[id];
+      this.verifiedLive.delete(id);
       this.tombstone(index, id, "expired");
     }
 
@@ -1290,6 +1372,7 @@ export class ArchiveStore {
         if (error?.code !== "ENOENT") return false;
       }
       delete index.entries[candidate.id];
+      this.verifiedLive.delete(candidate.id);
       this.tombstone(index, candidate.id, "evicted");
       totalBytes -= candidate.bytes;
       count -= 1;
@@ -1327,6 +1410,7 @@ export class ArchiveStore {
       if (!index) return;
       for (const id of Object.keys(index.entries)) {
         delete index.entries[id];
+        this.verifiedLive.delete(id);
         this.tombstone(index, id, "evicted");
       }
       if (!this.writeIndex(index)) return;

@@ -27,7 +27,7 @@ const { compressStaleToolResults, resolveRules, emptyUserConfig } = await import
 const rules = resolveRules(emptyUserConfig());
 const CANDIDATES = quick ? [100] : [100, 300, 1000, 10000];
 const PASSES = [1, 2, 5];
-const ITERATIONS = quick ? 3 : 8;
+const ITERATIONS = quick ? 3 : 20;
 const WARMUP = 2;
 const P95_BUDGET_MS = 25;
 const long = (i) => `bench-${i} ${"payload ".repeat(30)}\n`.repeat(3);
@@ -56,9 +56,11 @@ function maskOnce(messages, store) {
     zoneEntered: -1,
     rules,
   };
-  if (store !== null) {
-    options.archiveBatch = { prepareBatch: (candidates) => store.prepareBatch(candidates) };
-  }
+  // Production always installs the batch wrapper; a disabled archive is
+  // a null store whose prepareBatch returns null, so nothing is masked.
+  options.archiveBatch = {
+    prepareBatch: (candidates) => (store ? store.prepareBatch(candidates) : null),
+  };
   return compressStaleToolResults(messages, options);
 }
 
