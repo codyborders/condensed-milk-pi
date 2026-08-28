@@ -17,6 +17,9 @@ assert.equal(packageJson.repository.url, `${forkUrl}.git`);
 assert.equal(packageJson.homepage, `${forkUrl}#readme`);
 assert.equal(packageJson.bugs.url, `${forkUrl}/issues`);
 assert.equal(packageJson.author, "tomooshi", "upstream author credit must remain");
+assert.equal(packageJson.dependencies["proper-lockfile"], "4.1.2", "runtime lock dependency stays pinned to the reviewed version");
+assert.equal(packageJson.devDependencies["@types/proper-lockfile"], "4.1.4", "lock type declarations stay pinned");
+assert.equal(lockfile.packages["node_modules/proper-lockfile"].version, "4.1.2", "lockfile pins the reviewed lock implementation");
 assert.equal(packageJson.maintainer.name, "codyborders");
 assert.equal(packageJson.maintainer.url, forkUrl);
 assert.ok(packageJson.contributors.some((credit) => credit.name === "tomooshi"), "upstream credit must remain in contributors");
@@ -25,8 +28,10 @@ assert.equal(lockfile.version, packageJson.version);
 assert.equal(lockfile.packages[""].name, packageJson.name);
 assert.equal(lockfile.packages[""].version, packageJson.version);
 
-assert.match(readme, /pi install npm:@codyborders\/condensed-milk-pi@1\.10\.1-remediated\.0/);
-assert.match(readme, /npm install @codyborders\/condensed-milk-pi@1\.10\.1-remediated\.0/);
+// Approved contract change: npm registry install lines are removed; the
+// pinned GitHub-tag install is the documented installation path.
+assert.doesNotMatch(readme, /npm install @codyborders\/condensed-milk-pi/, "npm registry install line must stay removed");
+assert.doesNotMatch(readme, /pi install npm:@codyborders\/condensed-milk-pi/, "pi npm-registry install line must stay removed");
 assert.match(readme, /pi install https:\/\/github\.com\/codyborders\/condensed-milk-pi@v1\.10\.1-remediated\.0/);
 assert.match(readme, /git clone https:\/\/github\.com\/codyborders\/condensed-milk-pi\.git/);
 assert.doesNotMatch(readme, /pi install npm:@tomooshi\/condensed-milk-pi/);

@@ -63,7 +63,7 @@ const SYNTHETIC_CREDENTIAL = ["AK", "IA", "IOSFODNN7EXAMPLEDUMMY"].join("");
 // --- archive config validation ---
 {
   const dflt = validateArchiveConfig(undefined);
-  assert.equal(dflt.enabled, true);
+  assert.equal(dflt.enabled, false, "archive defaults to disabled (explicit opt-in)");
   assert.deepEqual(dflt.limits, DEFAULT_ARCHIVE_LIMITS);
   assert.deepEqual(dflt.warnings, []);
 
@@ -84,7 +84,7 @@ const SYNTHETIC_CREDENTIAL = ["AK", "IA", "IOSFODNN7EXAMPLEDUMMY"].join("");
     maxAggregateBytes: -1,
     ttlMs: Number.NaN,
   });
-  assert.equal(bad.enabled, true, "invalid enabled keeps default");
+  assert.equal(bad.enabled, false, "invalid enabled keeps disabled default");
   assert.deepEqual(bad.limits, DEFAULT_ARCHIVE_LIMITS, "invalid numbers keep defaults");
   assert.equal(bad.warnings.length, 5, "one warning per invalid field");
 
@@ -172,11 +172,48 @@ const SYNTHETIC_CREDENTIAL = ["AK", "IA", "IOSFODNN7EXAMPLEDUMMY"].join("");
     Buffer.from(mid.bytes!, "base64").equals(canonicalBytes.subarray(mid.start, mid.end)),
     "base64 payload is the exact raw byte slice",
   );
-  // Offset at/after end returns an empty terminal page.
-  const beyond = pageCanonicalText(canonical, canonical.length + 50, 10);
+  // A request larger than the archive ends without another empty request.
+  const short = pageCanonicalText("short", 0, 100);
+  assert.equal(short.end, 5);
+  assert.equal(short.next, null);
+
+  // A limit ending exactly at the final byte is terminal.
+  const exact = pageCanonicalText("exact", 0, Buffer.byteLength("exact", "utf8"));
+  assert.equal(exact.end, exact.totalBytes);
+  assert.equal(exact.next, null);
+
+  // Offset at or after the end returns an empty terminal page.
+  const atEnd = pageCanonicalText(canonical, canonicalBytes.length, 10);
+  assert.equal(atEnd.text, "");
+  assert.equal(atEnd.next, null);
+  const beyond = pageCanonicalText(canonical, canonicalBytes.length + 50, 10);
   assert.equal(beyond.mode, "text");
   assert.equal(beyond.text, "");
   assert.equal(beyond.next, null);
+
+  // A multibyte character ending at the final byte returns next=null.
+  const finalMultibyte = "prefix-\u{1F642}";
+  const finalPage = pageCanonicalText(finalMultibyte, 0, Buffer.byteLength(finalMultibyte, "utf8"));
+  assert.equal(finalPage.end, finalPage.totalBytes);
+  assert.equal(finalPage.next, null);
+  assert.equal(finalPage.text, finalMultibyte);
+
+  // Reconstruction terminates on the last non-empty page.
+  const compact = "a\u00e9\u{1F642}";
+  const compactBytes = Buffer.from(compact, "utf8");
+  let compactOffset = 0;
+  let compactResult = Buffer.alloc(0);
+  let finalPayloadBytes = 0;
+  for (;;) {
+    const page = pageCanonicalText(compact, compactOffset, 3);
+    const payload = page.mode === "text" ? Buffer.from(page.text ?? "", "utf8") : Buffer.from(page.bytes ?? "", "base64");
+    compactResult = Buffer.concat([compactResult, payload]);
+    finalPayloadBytes = payload.length;
+    if (page.next === null) break;
+    compactOffset = page.next;
+  }
+  assert.ok(finalPayloadBytes > 0, "final response contains data instead of requiring an empty request");
+  assert.ok(compactResult.equals(compactBytes), "boundary pages reconstruct exact bytes");
   ok("utf-8 byte pagination exact reconstruction (text pages, base64 mid-codepoint pages)");
 }
 
@@ -320,14 +357,15 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   assert.equal(store.retrieve(id).kind, "missing");
   const afterCorrupt = JSON.parse(readFileSync(join(store.directory(), "index.json"), "utf8"));
   assert.equal(afterCorrupt.entries[id], undefined, "index drops corrupt entries");
-  // Corrupt index is treated as empty; the next store() rebuilds it with
-  // exactly the live entry.
+  // Corrupt index is UNAVAILABLE (fail open), never treated as empty:
+  // rebuilding would lose tombstones and allow recreating evicted ids.
   writeFileSync(join(store.directory(), "index.json"), "{broken", { mode: 0o600 });
+  assert.equal(store.store("toolcall-afterbad", [{ type: "text", text: longText("r") }]), null,
+    "corrupt index fails open instead of rebuilding from empty");
+  // A valid empty index restores normal operation.
+  writeFileSync(join(store.directory(), "index.json"), JSON.stringify({ v: 1, entries: {}, evicted: [] }), { mode: 0o600 });
   const rebuilt = store.store("toolcall-afterbad", [{ type: "text", text: longText("r") }]);
-  assert.ok(rebuilt, "store succeeds after corrupt index");
-  const rebuiltIndex = JSON.parse(readFileSync(join(store.directory(), "index.json"), "utf8"));
-  assert.equal(rebuiltIndex.v, 1);
-  assert.deepEqual(Object.keys(rebuiltIndex.entries), [rebuilt], "rebuilt index lists exactly the live entry");
+  assert.ok(rebuilt, "store succeeds after the index is repaired");
   ok("archive store: stable id reuse, verbatim round-trip, 0700/0600 permissions");
 }
 
@@ -386,12 +424,13 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   try {
     utimesSync(join(lru.directory(), `${first}.json`), baseClock / 1000 - 100, baseClock / 1000 - 100);
   } catch { /* already evicted */ }
+  clock += 1;
   lru.store("tc-lru-2", [{ type: "text", text: longText("l2") }]);
   assert.equal(lru.retrieve(first).kind, "evicted", "retention eviction reports evicted");
   ok("archive store: ttl expiry with distinct expired/evicted states");
 }
 
-// --- lru entry-count eviction (runs after writes) ---
+// --- deterministic entry-count eviction by creation order ---
 {
   let clock = baseClock;
   const store = makeStore("sess-count", { maxEntries: 2 }, () => clock);
@@ -403,15 +442,15 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   assert.equal(store.retrieve(idA).kind, "evicted", "oldest entry evicted by count cap after write");
   assert.equal(store.retrieve(idB).kind, "ok");
   assert.equal(store.retrieve(idC).kind, "ok");
-  // LRU: retrieving B then storing D evicts C (least recently used).
+  // Retrieval does not change deterministic retention order.
   clock += 10;
   assert.equal(store.retrieve(idB).kind, "ok");
   clock += 10;
   const idD = store.store("tc-d", [{ type: "text", text: longText("d") }])!;
-  assert.equal(store.retrieve(idC).kind, "evicted", "least recently used entry evicted");
-  assert.equal(store.retrieve(idB).kind, "ok");
+  assert.equal(store.retrieve(idB).kind, "evicted", "oldest created entry is evicted");
+  assert.equal(store.retrieve(idC).kind, "ok");
   assert.equal(store.retrieve(idD).kind, "ok");
-  ok("archive store: LRU entry-count eviction with access refresh");
+  ok("archive store: deterministic entry-count eviction");
 }
 
 // --- aggregate-byte eviction (verified by probe run before this write) ---
@@ -450,9 +489,28 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   const sweeper = new ArchiveStore(root, "sess-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: 1_000 });
   sweeper.sweepStaleSessions();
   const revived = makeStore("sess-sweep-target", { ttlMs: 1000 }, () => clock);
-  assert.equal(revived.retrieve(staleId!).kind, "evicted", "swept session archives are reclaimed with a persistent reason");
+  assert.equal(revived.retrieve(staleId!).kind, "evicted", "inactive session retirement preserves the eviction reason");
   assert.ok(revived.store("tc-after-sweep", [{ type: "text", text: "recreate" }]));
   ok("archive store: stale session directories swept after ttl");
+}
+
+// --- stale sweep fails open when index integrity is uncertain ---
+{
+  const target = makeStore("sess-sweep-malformed", { ttlMs: 1000 });
+  const id = target.store("tc-sweep-malformed", [{ type: "text", text: longText("m") }]);
+  assert.ok(id);
+  const indexPath = join(target.directory(), "index.json");
+  writeFileSync(indexPath, "{broken", { mode: 0o600 });
+  const staleAt = (Date.now() - 60_000) / 1000;
+  utimesSync(target.directory(), staleAt, staleAt);
+  for (const name of readdirSync(target.directory())) {
+    utimesSync(join(target.directory(), name), staleAt, staleAt);
+  }
+  const sweeper = new ArchiveStore(root, "sess-sweep-malformed-runner", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: 1_000 });
+  sweeper.sweepStaleSessions();
+  assert.equal(readFileSync(indexPath, "utf8"), "{broken", "malformed index is not replaced with an empty index");
+  assert.ok(readdirSync(target.directory()).includes(`${id}.json`), "recoverable entry bytes are not deleted");
+  ok("archive store: malformed stale index fails open");
 }
 
 // --- oversize refusal (probe run green before this write) ---
@@ -600,6 +658,7 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   try {
     utimesSync(join(tiny.directory(), `${evictedFirst}.json`), baseClock / 1000 - 100, baseClock / 1000 - 100);
   } catch { /* already evicted */ }
+  clock += 1;
   tiny.store("tc-ev-2", [{ type: "text", text: longText("e2") }]);
   const evicted2 = executeRetrieveRequest(tiny, { id: evictedFirst });
   assert.ok(!evicted2.ok && evicted2.error.kind === "evicted", "retention eviction distinct from expiry");

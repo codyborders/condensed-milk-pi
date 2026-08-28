@@ -45,7 +45,7 @@ import {
 } from "./filters/context-compress.js";
 import { stripAnsi } from "./filters/ansi-strip.js";
 import { BoundedMap, BoundedSet, MAX_TRACKER_ENTRIES } from "./filters/bounded-tracker.js";
-import { executeRetrieveRequest, MAX_PAGE_BYTES, MAX_OFFSET_BYTES, validateArchiveConfig, ArchiveStore, DEFAULT_ARCHIVE_LIMITS, type ArchiveLimits } from "./filters/recovery.js";
+import { executeRetrieveRequest, MAX_PAGE_BYTES, MAX_OFFSET_BYTES, validateArchiveConfig, ArchiveStore, DEFAULT_ARCHIVE_LIMITS, packageVersion, recoveryRoot, type ArchiveLimits } from "./filters/recovery.js";
 import {
   resolveProfile,
   BUILT_IN_PROFILES,
@@ -96,16 +96,15 @@ const STALE_DEFAULTS: ReadonlyArray<{ label: string; thresholds: number[]; cover
 
 const CONFIG_PATH = join(homedir(), ".config", "condensed-milk.json");
 
-// v1.10.1: recovery archive root. Session directories below it
-// are opaque (sha256 of the session file path) and never contain cwd,
-// command, or content text.
-const RECOVERY_ROOT = join(homedir(), ".pi", "agent", "condensed-milk-recovery");
+// v1.10.1: recovery archive root, derived per session start from
+// PI_CODING_AGENT_DIR when set (see recoveryRoot). Session directories
+// below it are opaque (sha256 of the session file path) and never
+// contain cwd, command, or content text.
 
 // v1.8.0: opt-in local telemetry. Never default on. See ADR-027.
 // Path is separate from CONFIG_PATH so deleting one doesn't disturb the other.
 const TELEMETRY_LOG_PATH = join(homedir(), ".config", "condensed-milk-sessions.jsonl");
 const TELEMETRY_SCHEMA_VERSION = 1;
-const PACKAGE_VERSION = "1.10.0";
 
 /** v1.8.0: allowlist of pi built-in tool names. Any tool name from a custom
  *  extension (e.g. user-installed third-party tools with identifying names)
@@ -362,7 +361,7 @@ interface TurnCacheData {
 
 export default function tokenCompressor(pi: ExtensionAPI) {
   // v1.10.1: recovery archive store for lossy transforms.
-  // One store per session under ~/.pi/agent/condensed-milk-recovery.
+  // One store per session below the configured Pi agent directory.
   let archiveStore: ArchiveStore | null = null;
   let archiveLimits: ArchiveLimits = DEFAULT_ARCHIVE_LIMITS;
   let fallbackSessionKey = randomUUID();
@@ -449,7 +448,7 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       if (archiveConfig.enabled) {
         const sessionFile = (ctx as any)?.sessionManager?.getSessionFile?.() as string | undefined;
         if (!sessionFile && event.reason !== "reload") fallbackSessionKey = randomUUID();
-        const store = new ArchiveStore(RECOVERY_ROOT, deriveSessionKey(sessionFile, fallbackSessionKey), archiveLimits);
+        const store = new ArchiveStore(recoveryRoot(), deriveSessionKey(sessionFile, fallbackSessionKey), archiveLimits);
         store.cleanup();
         store.sweepStaleSessions();
         archiveStore = store;
@@ -573,7 +572,7 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       const reReads = reReadByRead + reReadByBash;
       const entry = {
         schema: TELEMETRY_SCHEMA_VERSION,
-        version: PACKAGE_VERSION,
+        version: packageVersion(),
         session_id_hash: sessionIdHash,
         cwd_hash: cwdHash,
         started_at: sessionStartIso,
@@ -721,6 +720,19 @@ export default function tokenCompressor(pi: ExtensionAPI) {
 
     if (!changed) return;
 
+    // Savings use the final model-visible text. This includes any archive
+    // reference appended after semantic filtering.
+    originalBytes = 0;
+    compressedBytes = 0;
+    for (let index = 0; index < event.content.length; index++) {
+      const original = event.content[index];
+      const visible = visibleContent[index];
+      if (original?.type !== "text" || visible?.type !== "text") continue;
+      if (original.text === visible.text) continue;
+      originalBytes += original.text.length;
+      compressedBytes += visible.text.length;
+    }
+
     totalOriginal += originalBytes;
     totalCompressed += compressedBytes;
     compressedCount++;
@@ -834,9 +846,12 @@ export default function tokenCompressor(pi: ExtensionAPI) {
       rules: userRules,
       // v1.10.0: profile-driven knobs.
       placeholderFormat: activeProfile.placeholderFormat,
-      // v1.10.1: historical masking archives before masking and
-      // fails open when the archive write fails.
-      archive: { store: (toolCallId, blocks) => archiveStore?.store(toolCallId, blocks) ?? null },
+      // v1.10.1: historical masking archives every eligible candidate in
+      // one two-phase batch call and fails open (no masking) when the
+      // batch returns no references.
+      archiveBatch: {
+        prepareBatch: (candidates) => (archiveStore ? archiveStore.prepareBatch(candidates) : null),
+      },
       maskOldThinking: activeProfile.maskOldThinking,
     });
     const turnBytesCompressed = result?.bytesSaved ?? 0;

@@ -16,6 +16,9 @@ mkdirSync(join(tmp, "node_modules/typebox"), { recursive: true });
 writeFileSync(join(tmp, "node_modules/typebox/package.json"), '{"type":"module","exports":"./index.js"}');
 writeFileSync(join(tmp, "node_modules/typebox/index.d.ts"), "export declare const Type: any;\n");
 writeFileSync(join(tmp, "node_modules/typebox/index.js"), 'export const Type = { Object: (spec) => ({ type: "object", properties: spec }), String: (d = {}) => ({ type: "string", ...d }), Integer: (d = {}) => ({ type: "integer", ...d }), Optional: (s) => s };\n');
+for (const dependency of ["proper-lockfile", "graceful-fs", "retry", "signal-exit"]) {
+  cpSync(join(process.cwd(), "node_modules", dependency), join(tmp, "node_modules", dependency), { recursive: true });
+}
 const tsc = spawnSync("npx", ["-y", "-p", "typescript@5.9", "tsc", "--target", "es2022", "--module", "esnext", "--moduleResolution", "bundler", "--skipLibCheck", "--strict", "false", "--outDir", join(tmp, "out"), join(tmp, "index.ts")], { encoding: "utf8" });
 if (tsc.status !== 0) { console.error(tsc.stdout, tsc.stderr); process.exit(1); }
 const mod = await import(join(tmp, "out/index.js"));

@@ -14,7 +14,17 @@ This prerelease includes bounded output recovery.
 
 ## Unreleased
 
-Follow-up work only. No additional release or publication is included here.
+Corrective work only. No additional release or publication is included here.
+
+### Recovery release blocker
+
+Archive-backed lossy masking is now disabled by default. The published prerelease used synchronous per-entry historical archiving. That path could exceed context latency budgets and emit a reference removed by retention later in the same context event.
+
+Historical archiving now prepares one bounded batch per context event. Retention runs once, live entries are reused without content rewrites, and placeholders use only final live references. Rejected candidates remain visible. Storage, verification, index, lock, and cleanup failures preserve original redacted content.
+
+The archive-enabled benchmark covers 100, 300, 1,000, and 10,000 candidates. It measures first, second, and fifth passes with supported capacities above and below candidate count. Checked-in raw results include timings, upstream ratios, and filesystem operation counts.
+
+The existing paid study showed 42.18% higher reported token use for the fork. It does not support a token-reduction claim. No new paid evaluation was run for this correction.
 
 ### Safety
 
