@@ -142,7 +142,11 @@ describe("fixture cache integrity", () => {
     try {
       const cacheRoot = join(dir, "cache");
       publishFixtureCache({ repoRoot, task: taskById("task-09"), cacheRoot });
-      git(join(cacheRoot, "task-09"), ["commit", "--allow-empty", "-q", "-m", "state tamper"]);
+      git(join(cacheRoot, "task-09"), [
+        "-c", "user.name=Cache Integrity Test",
+        "-c", "user.email=cache-integrity@example.invalid",
+        "commit", "--allow-empty", "-q", "-m", "state tamper",
+      ]);
 
       const dry = runDryArm({ dir, runId: "cache-gitmut", taskId: "task-09", arm: "upstream" });
       assert.equal(dry.status, 4, "moved HEAD must refuse");
