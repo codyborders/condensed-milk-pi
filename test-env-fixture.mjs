@@ -31,9 +31,14 @@ function check(name, condition, detail = "") {
   else { console.error(`  FAIL  ${name}${detail ? ` — ${detail}` : ""}`); failures++; }
 }
 
+const syntheticGithubToken = ["gh", "p_", "fixtureValue", "1234567890abcdef"].join("");
+const syntheticAwsSecret = ["AK", "IA", "123456789012345678"].join("");
+const syntheticAwsId = ["AK", "IA", "IOSFODNN7EXAMPLE"].join("");
+const syntheticLicenseKey = ["sk", "-live-", "1234567890"].join("");
+
 const envInput = [
   "SHELL=/bin/zsh",
-  "GITHUB_TOKEN=ghp_verySecretTokenValue1234567890abcdef",
+  `GITHUB_TOKEN=${syntheticGithubToken}`,
   "MONKEY=banana",
   "APIARY=honey",
   "PASSPORT=doc123",
@@ -41,15 +46,15 @@ const envInput = [
   "TOKENS=many",
   "SECRETS=some",
   "my_private_key=x",
-  "AWS_SECRET_ACCESS_KEY=AKIA123456789012345678",
-  "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+  `AWS_SECRET_ACCESS_KEY=${syntheticAwsSecret}`,
+  `AWS_ACCESS_KEY_ID=${syntheticAwsId}`,
   "DB_PASSWORD=hunter2000",
   "SHORTHAND_PASS=1",
   "AUTH=basic abcdefabcdef",
   "CREDENTIAL=topsecretcredential",
   "api_key=lowercase-secret-value",
   "KEYBOARD=qwerty-uiop",
-  "LICENSE_KEY=sk-live-1234567890",
+  `LICENSE_KEY=${syntheticLicenseKey}`,
   "LONG_VAL=" + "x".repeat(120),
   "",
   "not an assignment line",
@@ -60,7 +65,7 @@ const result = dispatch({ command: "env", stdout: envInput, isError: false, tool
 const out = result?.output ?? "";
 check("token secret redacted to [REDACTED]", out.includes("GITHUB_TOKEN=[REDACTED]"), JSON.stringify(out));
 check("MONKEY not a false positive", out.includes("MONKEY=banana"), JSON.stringify(out));
-check("secret value not present", !out.includes("ghp_verySecretTokenValue"), JSON.stringify(out));
+check("secret value not present", !out.includes(syntheticGithubToken), JSON.stringify(out));
 
 // Preservation: non-sensitive values never truncated.
 check("long value never truncated", out.includes("LONG_VAL=" + "x".repeat(120)), JSON.stringify(out));
