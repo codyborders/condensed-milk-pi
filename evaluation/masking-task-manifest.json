@@ -62,7 +62,7 @@
       "category": "build",
       "scale": "standard",
       "title": "Record three repeated build checks",
-      "prompt": "First read context/masking-task-02.log end to end. Then run node tools/build-check.js exactly three times. After each run keep only its final summary line. Finish by writing BUILDS.md containing three lines, one per run, in run order, each matching build check: 6 modules ok. Nothing else is required.",
+      "prompt": "First read context/masking-task-02.log end to end. Then run node tools/build-check.js exactly three times. The script appends one deterministic summary line to BUILDS.md per run. Do not create, replace, or append to BUILDS.md yourself. Verify that the file contains exactly three identical lines after the third run. Nothing else is required.",
       "masking": {
         "kind": "repeated-builds",
         "threshold": 0.05,
@@ -74,7 +74,7 @@
         "files": [
           {
             "path": "tools/build-check.js",
-            "content": "const modules = [\"core\", \"api\", \"ui\", \"store\", \"queue\", \"log\"];\nfor (const module of modules) {\n  console.log(`checking module ${module}`);\n}\nconsole.log(\"build check: 6 modules ok\");\n"
+            "content": "const { appendFileSync } = require(\"node:fs\");\nconst modules = [\"core\", \"api\", \"ui\", \"store\", \"queue\", \"log\"];\nfor (const module of modules) {\n  console.log(`checking module ${module}`);\n}\nconst summary = \"build check: 6 modules ok\";\nconsole.log(summary);\nappendFileSync(\"BUILDS.md\", `${summary}\\n`, \"utf8\");\n"
           }
         ],
         "generate": [{ "path": "context/masking-task-02.log", "template": "log-lines", "count": 400, "seed": 6102 }],

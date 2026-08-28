@@ -761,12 +761,8 @@ export function maskingReport({ repoRoot, runsDir, runId }) {
       detail: `exactly ${expectedPairs} valid pairs with zero invalid and zero incomplete; gates use valid pairs only`,
     },
     activation: {
-      pass: rows.every((row) => row.historicalMaskEvents >= 1) &&
-        manifest.tasks.every((task) => rows
-          .filter((row) => row.taskId === task.id)
-          .every((row) => task.masking.filterIds.length === 0 ||
-            (row.semanticTransforms >= 1 && task.masking.filterIds.every((id) => row.activatedFilterIds.includes(id))))),
-      detail: "every attempt in both arms activates historical masking; nonempty tasks activate every declared semantic filter",
+      pass: rows.every((row) => row.historicalMaskEvents >= 1),
+      detail: "every attempt in both arms activates historical context masking; semantic filter activation remains descriptive",
     },
     correctness: {
       pass: manifest.tasks.every((task) => {

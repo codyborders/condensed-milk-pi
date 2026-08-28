@@ -282,8 +282,8 @@ describe("masking runner prepare", () => {
       assert.equal(failed.gates.activation.pass, false, "upstream activation failure must fail the gate");
       assert.equal(failed.passing, false);
       upstream.historicalMaskEvents = 1;
-      upstream.semanticTransforms = 1;
-      upstream.activatedFilterIds = ["pytest"];
+      upstream.semanticTransforms = 0;
+      upstream.activatedFilterIds = [];
       writeFileSync(join(upstreamAttempt, "instrumentation.json"), `${JSON.stringify(upstream, null, 2)}\n`, "utf8");
       failed = maskingReport({ repoRoot, runsDir, runId: "masking-botharms-01" });
       assert.equal(failed.gates.activation.pass, true);

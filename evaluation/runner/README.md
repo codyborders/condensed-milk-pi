@@ -122,7 +122,7 @@ Release gates follow. A failing gate makes the whole report non-passing. The rep
 
 | Gate | Requirement |
 | --- | --- |
-| Activation | Every arm activates historical masking. Applicable tasks activate declared semantic filters. |
+| Activation | Every arm activates historical context masking. Semantic filter activation remains a reported metric. |
 | Correctness | Fork correctness meets or exceeds upstream correctness for each task. |
 | Diagnostics | Every required diagnostic is observed. |
 | Recoverability | Every required fork attempt uses `condensed_milk_retrieve` and returns archived bytes. |
