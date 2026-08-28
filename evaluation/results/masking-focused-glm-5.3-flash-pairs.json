@@ -1,0 +1,1741 @@
+{
+  "schemaVersion": 1,
+  "runId": "masking-final-v5-20260828T151106Z",
+  "metrics": [
+    "estimatedTokensSavedSemantic",
+    "estimatedTokensSavedHistorical",
+    "usageInput",
+    "usageOutput",
+    "wallTimeMs",
+    "firstEventLatencyMs",
+    "retrievalCalls",
+    "reruns",
+    "rereads"
+  ],
+  "tasks": [
+    {
+      "taskId": "masking-task-01",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -1008.3333333333334,
+            "low": -3181,
+            "high": 228,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -1008.3333333333334,
+            "low": -5697.277559519464,
+            "high": 3680.610892852798,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -6881.333333333333,
+            "low": -40948,
+            "high": 20362,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -6881.333333333333,
+            "low": -84434.4828462415,
+            "high": 70671.81617957485,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 5305,
+            "low": 866,
+            "high": 9635,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 5305,
+            "low": -5589.225798728199,
+            "high": 16199.2257987282,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 23.333333333333332,
+            "low": -358,
+            "high": 459,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 23.333333333333332,
+            "low": -998.1467921768564,
+            "high": 1044.813458843523,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 15284.333333333334,
+            "low": -22359,
+            "high": 66867,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 15284.333333333334,
+            "low": -99526.0654895122,
+            "high": 130094.73215617886,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 130.66666666666666,
+            "low": 46,
+            "high": 210,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 130.66666666666666,
+            "low": -73.35550966861703,
+            "high": 334.6888430019503,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-01"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-02",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 75134.33333333333,
+            "low": 30577,
+            "high": 132755,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 75134.33333333333,
+            "low": -54852.167515650464,
+            "high": 205120.83418231714,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 14174.333333333334,
+            "low": 8418,
+            "high": 20523,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 14174.333333333334,
+            "low": -914.8148709000379,
+            "high": 29263.481537566706,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 1235.6666666666667,
+            "low": 576,
+            "high": 2154,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 1235.6666666666667,
+            "low": -801.7841553667404,
+            "high": 3273.117488700074,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 59882,
+            "low": 20358,
+            "high": 119110,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 59882,
+            "low": -69893.09848002241,
+            "high": 189657.0984800224,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -448.3333333333333,
+            "low": -937,
+            "high": -91,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -448.3333333333333,
+            "low": -1536.4461459488746,
+            "high": 639.7794792822081,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 5.666666666666667,
+            "low": 3,
+            "high": 8,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 5.666666666666667,
+            "low": -0.58494281297473,
+            "high": 11.918276146308063,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-02"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-03",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -46.333333333333336,
+            "low": -49,
+            "high": -41,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -46.333333333333336,
+            "low": -57.80707394648607,
+            "high": -34.8595927201806,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 3512.6666666666665,
+            "low": 70,
+            "high": 10375,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 3512.6666666666665,
+            "low": -11250.479598548967,
+            "high": 18275.8129318823,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 4600.666666666667,
+            "low": 2702,
+            "high": 7921,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 4600.666666666667,
+            "low": -2566.982142110247,
+            "high": 11768.315475443582,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 99.66666666666667,
+            "low": -193,
+            "high": 284,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 99.66666666666667,
+            "low": -536.991869129827,
+            "high": 736.3252024631603,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 11936.333333333334,
+            "low": 8608,
+            "high": 15672,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 11936.333333333334,
+            "low": 3118.7066348672706,
+            "high": 20753.960031799397,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 163.33333333333334,
+            "low": 95,
+            "high": 239,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 163.33333333333334,
+            "low": -16.219022362123894,
+            "high": 342.8856890287906,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 2,
+            "low": 2,
+            "high": 2,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 2,
+            "low": 2,
+            "high": 2,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-03"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-04",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -6,
+            "low": -29,
+            "high": 20,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -6,
+            "low": -67.20261991188764,
+            "high": 55.20261991188764,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -17267,
+            "low": -20507,
+            "high": -10799,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -17267,
+            "low": -31181.786911256815,
+            "high": -3352.213088743185,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 8751.333333333334,
+            "low": 3505,
+            "high": 16313,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 8751.333333333334,
+            "low": -7918.654558168457,
+            "high": 25421.321224835126,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -45.666666666666664,
+            "low": -475,
+            "high": 299,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -45.666666666666664,
+            "low": -1024.1310604398514,
+            "high": 932.797727106518,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 7358.333333333333,
+            "low": -13812,
+            "high": 26317,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 7358.333333333333,
+            "low": -42711.23318018073,
+            "high": 57427.8998468474,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 36,
+            "low": -45,
+            "high": 102,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 36,
+            "low": -149.41388215349207,
+            "high": 221.41388215349207,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 1.3333333333333333,
+            "low": 0,
+            "high": 2,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 1.3333333333333333,
+            "low": -1.535101819954851,
+            "high": 4.201768486621518,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-04"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-05",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -12.666666666666666,
+            "low": -38,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -12.666666666666666,
+            "low": -67.16693457914216,
+            "high": 41.83360124580883,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 6482,
+            "low": -30952,
+            "high": 50464,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 6482,
+            "low": -95618.7342083165,
+            "high": 108582.7342083165,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 12728,
+            "low": 3708,
+            "high": 29396,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 12728,
+            "low": -23170.77799753564,
+            "high": 48626.77799753564,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 142.33333333333334,
+            "low": -137,
+            "high": 360,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 142.33333333333334,
+            "low": -489.06945080477396,
+            "high": 773.7361174714407,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 35233,
+            "low": 25876,
+            "high": 42025,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 35233,
+            "low": 14429.630445862698,
+            "high": 56036.3695541373,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 93.66666666666667,
+            "low": 53,
+            "high": 133,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 93.66666666666667,
+            "low": -5.740235480879946,
+            "high": 193.07356881421327,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 1.3333333333333333,
+            "low": 0,
+            "high": 4,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 1.3333333333333333,
+            "low": -4.403536973243035,
+            "high": 7.0702036399097015,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-05"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -0.3333333333333333,
+            "low": -1.7675509099774254,
+            "high": 1.1008842433107588,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-06",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -10235,
+            "low": -20518,
+            "high": 10153,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -10235,
+            "low": -54096.79913734949,
+            "high": 33626.79913734949,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 9432,
+            "low": -930,
+            "high": 16053,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 9432,
+            "low": -13145.229193222869,
+            "high": 32009.22919322287,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 719,
+            "low": -222,
+            "high": 1696,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 719,
+            "low": -1664.546639291826,
+            "high": 3102.546639291826,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 28477.333333333332,
+            "low": 8228,
+            "high": 45589,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 28477.333333333332,
+            "low": -18415.975424354492,
+            "high": 75370.64209102116,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 187,
+            "low": 105,
+            "high": 348,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 187,
+            "low": -159.38358759298245,
+            "high": 533.3835875929824,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 2.6666666666666665,
+            "low": 2,
+            "high": 3,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 2.6666666666666665,
+            "low": 1.2324490900225744,
+            "high": 4.100884243310759,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -1,
+            "low": -1,
+            "high": -1,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-06"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -1,
+            "low": -1,
+            "high": -1,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-07",
+      "requiresArchiveRecovery": false,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -65139.333333333336,
+            "low": -133910,
+            "high": -10315,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -65139.333333333336,
+            "low": -221557.30430820803,
+            "high": 91278.63764154134,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -1039.3333333333333,
+            "low": -6745,
+            "high": 2482,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -1039.3333333333333,
+            "low": -13425.909156946585,
+            "high": 11347.242490279918,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 59.666666666666664,
+            "low": -746,
+            "high": 1060,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 59.666666666666664,
+            "low": -2222.2681487623354,
+            "high": 2341.6014820956684,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 15169.333333333334,
+            "low": -29892,
+            "high": 38738,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 15169.333333333334,
+            "low": -81806.58806194378,
+            "high": 112145.25472861044,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 30,
+            "low": -141,
+            "high": 225,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 30,
+            "low": -427.51990290723876,
+            "high": 487.51990290723876,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 1.3333333333333333,
+            "low": 0,
+            "high": 2,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 1.3333333333333333,
+            "low": -1.535101819954851,
+            "high": 4.201768486621518,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -1,
+            "low": -1,
+            "high": -1,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-07"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -1,
+            "low": -1,
+            "high": -1,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    },
+    {
+      "taskId": "masking-task-08",
+      "requiresArchiveRecovery": true,
+      "intervals": {
+        "estimatedTokensSavedSemantic": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 0,
+            "low": 0,
+            "high": 0,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "estimatedTokensSavedHistorical": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 10407.333333333334,
+            "low": -32299,
+            "high": 42749,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 10407.333333333334,
+            "low": -85437.26424752087,
+            "high": 106251.93091418753,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageInput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 8834,
+            "low": 6007,
+            "high": 12560,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 8834,
+            "low": 468.0957714361266,
+            "high": 17199.90422856387,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "usageOutput": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -426.3333333333333,
+            "low": -885,
+            "high": 31,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -426.3333333333333,
+            "low": -1564.0720212785573,
+            "high": 711.4053546118907,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "wallTimeMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 2404.6666666666665,
+            "low": -7058,
+            "high": 9011,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 2404.6666666666665,
+            "low": -18478.669630835037,
+            "high": 23288.002964168372,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "firstEventLatencyMs": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 89.66666666666667,
+            "low": -21,
+            "high": 210,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 89.66666666666667,
+            "low": -198.0039169518132,
+            "high": 377.3372502851466,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "retrievalCalls": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": 5.333333333333333,
+            "low": 4,
+            "high": 8,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": 5.333333333333333,
+            "low": -0.4035369732430345,
+            "high": 11.0702036399097,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "reruns": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -0.6666666666666666,
+            "low": -1,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -0.6666666666666666,
+            "low": -2.100884243310759,
+            "high": 0.7675509099774255,
+            "level": 0.95
+          },
+          "n": 3
+        },
+        "rereads": {
+          "pairedBootstrap": {
+            "method": "paired-bootstrap-percentile",
+            "n": 3,
+            "mean": -1.6666666666666667,
+            "low": -3,
+            "high": 0,
+            "level": 0.95,
+            "iterations": 2000,
+            "seed": "masking:masking-task-08"
+          },
+          "pairedT": {
+            "method": "paired-t",
+            "n": 3,
+            "mean": -1.6666666666666667,
+            "low": -5.461249700424653,
+            "high": 2.12791636709132,
+            "level": 0.95
+          },
+          "n": 3
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "estimatedTokensSavedSemantic": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": -134.16666666666666,
+      "low": -408.91770833333334,
+      "high": 15.087499999999977,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": -134.16666666666666,
+        "low": -409.1407611249142,
+        "high": 140.80742779158092,
+        "level": 0.95
+      }
+    },
+    "estimatedTokensSavedHistorical": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": -498.2916666666667,
+      "low": -19331.633333333328,
+      "high": 18802.398958333328,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": -498.2916666666667,
+        "low": -20952.24549681257,
+        "high": 19955.662163479235,
+        "level": 0.95
+      }
+    },
+    "usageInput": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": 7848.25,
+      "low": 4992.833333333333,
+      "high": 11018.20625,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": 7848.25,
+        "low": 4593.272766765263,
+        "high": 11103.227233234737,
+        "level": 0.95
+      }
+    },
+    "usageOutput": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": 225.95833333333334,
+      "low": -40.80416666666664,
+      "high": 520.59375,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": 225.95833333333334,
+        "low": -76.0280067103487,
+        "high": 527.9446733770154,
+        "level": 0.95
+      }
+    },
+    "wallTimeMs": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": 21968.166666666668,
+      "low": 10429.195833333333,
+      "high": 34622.938541666656,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": 21968.166666666668,
+        "low": 8926.109222458761,
+        "high": 35010.22411087457,
+        "level": 0.95
+      }
+    },
+    "firstEventLatencyMs": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": 35.25,
+      "low": -74.753125,
+      "high": 118.58749999999998,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": 35.25,
+        "low": -69.74286541165621,
+        "high": 140.24286541165623,
+        "level": 0.95
+      }
+    },
+    "retrievalCalls": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": 2.4583333333333335,
+      "low": 1.5833333333333333,
+      "high": 3.417708333333328,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": 2.4583333333333335,
+        "low": 1.470161367006094,
+        "high": 3.446505299660573,
+        "level": 0.95
+      }
+    },
+    "reruns": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": -0.16666666666666666,
+      "low": -0.3333333333333333,
+      "high": -0.041666666666666664,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": -0.16666666666666666,
+        "low": -0.3274194306932232,
+        "high": -0.005913902640110075,
+        "level": 0.95
+      }
+    },
+    "rereads": {
+      "method": "paired-bootstrap-percentile",
+      "n": 24,
+      "mean": -0.5833333333333334,
+      "low": -0.9166666666666666,
+      "high": -0.2916666666666667,
+      "level": 0.95,
+      "iterations": 2000,
+      "seed": "masking:masking-final-v5-20260828T151106Z",
+      "pairedT": {
+        "method": "paired-t",
+        "n": 24,
+        "mean": -0.5833333333333334,
+        "low": -0.9108116108419917,
+        "high": -0.25585505582467505,
+        "level": 0.95
+      }
+    }
+  }
+}
