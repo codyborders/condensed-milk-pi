@@ -22,6 +22,12 @@ Historical masking still uses static cutoffs. A reverse invalidation index repla
 
 Historical tracking collections now retain at most 10,000 entries. They remove the oldest item when full. Image and custom content blocks keep their original order during masking.
 
+### Output recovery
+
+Lossy semantic summaries and historical result masks now archive complete ordered content blocks before replacement. Stable opaque references support exact byte paging, tail reads, literal search, and restricted regex search through `condensed_milk_retrieve`.
+
+Archives are local, session-scoped, permission-restricted, and bounded by entry count, entry size, aggregate size, and lifetime. Storage and retrieval apply mandatory environment-line redaction. A failed archive operation leaves original redacted output visible and skips the lossy transform.
+
 ### Configuration
 
 Global settings can control registered filters. Project settings can narrow enabled behavior but cannot enable default-off filters. Project settings also cannot disable environment redaction.

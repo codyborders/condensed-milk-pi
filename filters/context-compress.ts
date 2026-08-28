@@ -435,6 +435,20 @@ export interface CompressOptions {
    *  blocks on assistant messages. Defaults to "off" (Anthropic
    *  behavior). See profiles.ts for semantics. */
   maskOldThinking?: ThinkingMaskPolicy;
+  /** Optional recovery archive. When present, every eligible bash or read
+   *  result is archived (complete ordered content, keyed by toolCallId)
+   *  BEFORE masking, and the returned stable reference is appended to the
+   *  placeholder. When the callback returns null the message is left
+   *  unmasked (fail-open: the original output stays visible). Calls
+   *  without this option keep the exact pre-archive placeholder bytes. */
+  archive?: ArchiveSink;
+}
+
+/** Storage boundary contract used by compressStaleToolResults. */
+export interface ArchiveSink {
+  /** Archive the blocks for one tool result. Returns the stable opaque
+   *  reference id, or null when archiving failed (caller must not mask). */
+  store(toolCallId: string | undefined, blocks: unknown[]): string | null;
 }
 
 /** v1.10.0 fallback templates — exact byte match for the v1.9.0
@@ -543,6 +557,15 @@ export function compressStaleToolResults(
       const invalidated = !pastCutoff && isCommandInvalidated(command, idx, invalidationIndex, rules);
 
       if (pastCutoff || invalidated) {
+        // Recovery archive (optional): archive the complete ordered content
+        // before masking. A null return fails open — the message stays
+        // fully visible rather than receiving an unrecoverable transform.
+        let archiveSuffix = "";
+        if (opts.archive) {
+          const reference = opts.archive.store(msg.toolCallId, msg.content ?? []);
+          if (reference === null || reference === undefined) return m;
+          archiveSuffix = ` [cm-archive ${reference}]`;
+        }
         // v1.9.0 (ADR-029): `cm-` prefix brands placeholder as a
         // condensed-milk artifact (not a tool failure) — self-documenting
         // for self-sufficient looping agents who only see placeholder text
@@ -550,9 +573,9 @@ export function compressStaleToolResults(
         // v1.10.0: template comes from active profile (back-compat default
         // matches v1.9.0 byte-for-byte).
         const tpl = (opts.placeholderFormat ?? FALLBACK_PLACEHOLDERS).bash;
-        const placeholder = command
+        const placeholder = (command
           ? renderPlaceholder(tpl, { cmd: command.slice(0, 80) })
-          : renderPlaceholder(tpl, { cmd: "" }).trimEnd();
+          : renderPlaceholder(tpl, { cmd: "" }).trimEnd()) + archiveSuffix;
         bytesSaved += content.length - placeholder.length;
         masksApplied++;
         if (command) maskedCommands.push(command);
@@ -572,10 +595,17 @@ export function compressStaleToolResults(
         // → byte-identical per message → cache prefix stays stable.
         const lineCount = countLines(content);
         const sizeStr = formatSize(content.length);
+        // Recovery archive (optional): see the bash branch above.
+        let archiveSuffix = "";
+        if (opts.archive) {
+          const reference = opts.archive.store(msg.toolCallId, msg.content ?? []);
+          if (reference === null || reference === undefined) return m;
+          archiveSuffix = ` [cm-archive ${reference}]`;
+        }
         // v1.9.0 (ADR-029): `cm-` prefix (see bash branch above).
         // v1.10.0: profile-supplied template (back-compat default identical to v1.9.0).
         const tpl = (opts.placeholderFormat ?? FALLBACK_PLACEHOLDERS).read;
-        const placeholder = renderPlaceholder(tpl, { path, n: lineCount, size: sizeStr });
+        const placeholder = renderPlaceholder(tpl, { path, n: lineCount, size: sizeStr }) + archiveSuffix;
         bytesSaved += content.length - placeholder.length;
         masksApplied++;
         maskedPaths.push(path);
