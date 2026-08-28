@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
   "assertions": [
-    { "id": "builds-md-lists-three-summaries", "kind": "fileContains", "path": "BUILDS.md", "all": ["cargo check: passed"] }
+    { "id": "builds-md-lists-three-summaries", "kind": "fileContains", "path": "BUILDS.md", "all": ["build check: 6 modules ok"] }
   ]
 }

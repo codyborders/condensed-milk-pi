@@ -62,7 +62,7 @@
       "category": "build",
       "scale": "standard",
       "title": "Record three repeated build checks",
-      "prompt": "First read context/masking-task-02.log end to end. Then run cargo check exactly three times. Normalize each successful result to the deterministic line cargo check: passed. Finish by writing BUILDS.md containing exactly three identical lines, one per run, in run order. Nothing else is required.",
+      "prompt": "First read context/masking-task-02.log end to end. Then run node tools/build-check.js exactly three times. After each run keep only its final summary line. Finish by writing BUILDS.md containing three lines, one per run, in run order, each matching build check: 6 modules ok. Nothing else is required.",
       "masking": {
         "kind": "repeated-builds",
         "threshold": 0.05,
@@ -73,12 +73,8 @@
       "fixture": {
         "files": [
           {
-            "path": "Cargo.toml",
-            "content": "[package]\nname = \"masking-study-cargo-fixture\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n# Deterministic minimal crate for cargo-check semantic coverage.\ndescription = \"A stable fixture with no network dependencies and enough declared bytes for historical masking.\"\n"
-          },
-          {
-            "path": "src/main.rs",
-            "content": "fn main() {\n    let values = [1, 2, 3, 4, 5, 6, 7, 8];\n    assert_eq!(values.iter().sum::<i32>(), 36);\n}\n\n// Keep fixture source deterministic and dependency-free for repeated cargo check runs.\n"
+            "path": "tools/build-check.js",
+            "content": "const modules = [\"core\", \"api\", \"ui\", \"store\", \"queue\", \"log\"];\nfor (const module of modules) {\n  console.log(`checking module ${module}`);\n}\nconsole.log(\"build check: 6 modules ok\");\n"
           }
         ],
         "generate": [{ "path": "context/masking-task-02.log", "template": "log-lines", "count": 400, "seed": 6102 }],

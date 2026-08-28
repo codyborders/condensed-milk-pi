@@ -100,7 +100,6 @@ export const MASKING_STUDY_PINS = Object.freeze({
 
 export const MASKING_APPROVED_FILTER_IDS = Object.freeze(new Set([
   "pytest",
-  "cargo-check",
   "git-status-porcelain",
   "git-log-verbose",
   "git-diff",

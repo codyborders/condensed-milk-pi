@@ -3,7 +3,6 @@
   "profile": "eval-masking",
   "filters": {
     "pytest": true,
-    "cargo-check": true,
     "git-status-porcelain": true,
     "git-log-verbose": true,
     "git-diff": true,
