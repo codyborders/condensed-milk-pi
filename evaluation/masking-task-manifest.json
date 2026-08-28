@@ -68,7 +68,7 @@
         "threshold": 0.05,
         "requiresArchiveRecovery": false,
         "diagnostic": null,
-        "filterIds": ["cargo-check"]
+        "filterIds": []
       },
       "fixture": {
         "files": [
@@ -297,7 +297,7 @@
       "category": "debugging",
       "scale": "standard",
       "title": "Recover the diagnostic root cause",
-      "prompt": "Run node tools/diagnose.js once and read the diagnostic dump. Then read context/masking-task-08.log end to end, followed by src/registry.py and src/policy.py. If condensed_milk_retrieve exists, use it to recover the earlier diagnostic and do not rerun diagnose. If the tool is unavailable, you may rerun diagnose at most once. Finish by writing ROOTCAUSE.md with exactly two lines: E-7721 and cache eviction raced with write. Score only final ROOTCAUSE.md correctness.",
+      "prompt": "Run node tools/diagnose.js once and read the diagnostic dump. Then read context/masking-task-08.log end to end, followed by src/registry.py and src/policy.py. Before writing the answer, inspect the context for a cm-archive reference. If condensed_milk_retrieve exists, you must call it at least once with that reference, even if you remember the diagnostic. Do not rerun diagnose when retrieval exists. If the tool is unavailable, you may rerun diagnose at most once. Finish by writing ROOTCAUSE.md with exactly two lines: the diagnostic code, then the short root-cause phrase, exactly as recovered. Score only final ROOTCAUSE.md correctness.",
       "masking": {
         "kind": "diagnostic-recovery",
         "threshold": 0.05,

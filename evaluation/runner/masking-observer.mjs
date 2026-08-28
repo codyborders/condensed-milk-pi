@@ -628,7 +628,8 @@ function blocksOrderIncident(pre, post) {
   const shared = Math.min(a.length, b.length);
   for (let index = 0; index < shared; index += 1) {
     if (a[index].m !== b[index].m || a[index].t !== b[index].t) return true;
-    if (a[index].t !== "text" && a[index].h !== b[index].h) return true;
+    const mutableContent = a[index].t === "text" || a[index].t === "thinking";
+    if (!mutableContent && a[index].h !== b[index].h) return true;
   }
   return false;
 }
@@ -753,8 +754,10 @@ export function extractMaskingInstrumentation({ attemptDir }) {
       if (!recordsIdentical(pre, post)) semanticTransforms += 1;
     } else {
       contextPairs += 1;
-      historicalMaskedBytes += Math.max(0, pre.bytes - post.bytes);
-      if (post.masked > pre.masked || post.archive > pre.archive) historicalMaskEvents += 1;
+      const bytesRemoved = Math.max(0, pre.bytes - post.bytes);
+      historicalMaskedBytes += bytesRemoved;
+      const hasMaskMarker = pre.masked > 0 || post.masked > 0 || pre.archive > 0 || post.archive > 0;
+      if (bytesRemoved > 0 && hasMaskMarker) historicalMaskEvents += 1;
     }
     if (pre.diag || post.diag) diagnosticPresent = true;
     if (post.sentinel) secretIncidents += 1;
