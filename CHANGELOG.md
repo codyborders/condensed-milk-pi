@@ -1,8 +1,18 @@
 # Changelog
 
+## 1.10.1-remediated.0
+
+This prerelease identifies the maintained remediation fork at `https://github.com/codyborders/condensed-milk-pi`. It preserves upstream author credit from `tomooshi`. It does not claim production approval.
+
+### Evaluation
+
+One completed sanitized Z.AI run covered 20 valid task pairs and 40 selected attempts. This was one completed 20-pair stochastic study. Both arms passed all 20 tasks with zero measured quality difference. Results remain limited to one stochastic run, one model configuration, and the documented provider and review gaps. They do not establish broad savings or production readiness.
+
+This prerelease includes bounded output recovery.
+
 ## Unreleased
 
-This work is not a release. It does not include publication or an upstream pull request.
+Follow-up work only. No additional release or publication is included here.
 
 ### Safety
 
@@ -14,7 +24,7 @@ Environment secret masking can no longer be disabled through global or project f
 
 Semantic filters now require recognized formats. Failed commands, malformed data, uncertain shell syntax, unsupported pipelines, and unknown formats remain unchanged. Semantic compression requires one text block. Historical masking preserves non-text blocks and leaves failed tool results visible.
 
-Default-on filters are limited to terminal pytest pass summaries, porcelain Git status, verbose Git log, and consecutive log deduplication. Higher-risk filters remain off. JSON structure extraction needs a global command allowlist plus a global filter setting.
+Default-on filters are limited to environment redaction, terminal pytest pass summaries, and porcelain Git status. Git log compression and generic log deduplication now require global opt-in. Higher-risk filters remain off. JSON structure extraction needs a global command allowlist plus a global filter setting.
 
 ### Context processing
 
@@ -48,4 +58,4 @@ Risky filters that previously ran automatically are now disabled unless the glob
 
 ### Documentation
 
-README claims now distinguish local runtime measurements from provider results. The paired paid-task study remains not run because no paid-use approval was given. Its protocol and 20 task slots are recorded under `evaluation/`.
+README claims distinguish local runtime measurements from the completed sanitized provider result. Documentation records the one 20-pair stochastic run, its limits, migration paths, stable filter IDs, prerelease pinning, and rollback guidance.
