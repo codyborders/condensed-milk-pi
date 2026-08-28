@@ -130,7 +130,7 @@ describe("masking runner prepare", () => {
       assert.deepEqual(
         Object.keys(row).sort(),
         [
-          "archivedBytes", "arm", "correctness", "cost", "diagnosticPresent",
+          "archiveReferences", "archivedBytes", "arm", "correctness", "cost", "diagnosticPresent",
           "estimatedTokensSavedHistorical", "estimatedTokensSavedSemantic", "firstEventLatencyMs",
           "historicalMaskEvents", "nonTextOrderingIncidents", "originalBytes", "recoveryResult",
           "removedBytes", "rep", "rereads", "reruns", "retrievalCalls", "returnedBytes",

@@ -405,7 +405,7 @@ export async function maskingDryRun({ repoRoot, runsDir, runId }) {
 /** Approved public row fields: metrics, ids, and outcomes only. */
 const MASKING_ROW_FIELDS = Object.freeze([
   "taskId", "arm", "rep", "status", "correctness",
-  "historicalMaskEvents", "semanticTransforms", "recoveryResult",
+  "historicalMaskEvents", "semanticTransforms", "archiveReferences", "recoveryResult",
   "originalBytes", "visibleBytes", "removedBytes", "archivedBytes",
   "estimatedTokensSavedSemantic", "estimatedTokensSavedHistorical",
   "usageInput", "usageOutput", "usageCacheRead", "usageCacheWrite",

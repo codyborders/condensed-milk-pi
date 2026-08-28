@@ -280,7 +280,7 @@ describe("masking observer extraction", () => {
       assert.equal(instrumentation.removedBytes, expectedSemantic + expectedHistorical);
       assert.equal(instrumentation.visibleBytes, expectedOriginal - expectedSemantic - expectedHistorical);
       assert.equal(instrumentation.semanticTransforms, 2, "both bash results were transformed");
-      assert.equal(instrumentation.archiveReferences, 2);
+      assert.equal(instrumentation.archiveReferences, 2, "the scripted context placeholder has no archive reference");
       assert.equal(instrumentation.historicalMaskEvents, 1, "only the one context mask counts historically");
       assert.equal(instrumentation.retrievalCalls, 1);
       assert.equal(instrumentation.returnedBytes, bytes(DIAG_TEXT));

@@ -756,6 +756,7 @@ export function extractMaskingInstrumentation({ attemptDir }) {
       contextPairs += 1;
       const bytesRemoved = Math.max(0, pre.bytes - post.bytes);
       historicalMaskedBytes += bytesRemoved;
+      if (post.archive > pre.archive) archiveReferences += post.archive - pre.archive;
       const hasMaskMarker = pre.masked > 0 || post.masked > 0 || pre.archive > 0 || post.archive > 0;
       if (bytesRemoved > 0 && hasMaskMarker) historicalMaskEvents += 1;
     }
