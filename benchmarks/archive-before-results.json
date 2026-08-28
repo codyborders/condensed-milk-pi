@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-28T13:55:44Z",
+  "nodeVersion": "v25.8.2",
+  "sourceCommit": "8d004bf97f5142d869aebcedf05ae7d7be4e1d30",
+  "implementation": "per-entry synchronous archive store",
+  "measuredIterations": 3,
+  "measurements": [
+    {
+      "candidates": 100,
+      "maxEntries": 150,
+      "capacityMode": "above",
+      "passTimingsMs": {
+        "1": { "samples": 3, "medianMs": 120.3, "p95Ms": 124.89 },
+        "2": { "samples": 3, "medianMs": 10.126, "p95Ms": 10.836 },
+        "5": { "samples": 3, "medianMs": 8.476, "p95Ms": 8.481 }
+      }
+    },
+    {
+      "candidates": 100,
+      "maxEntries": 99,
+      "capacityMode": "below",
+      "passTimingsMs": {
+        "1": { "samples": 3, "medianMs": 103.952, "p95Ms": 175.388 },
+        "2": { "samples": 3, "medianMs": 11.61, "p95Ms": 13.063 },
+        "5": { "samples": 3, "medianMs": 9.926, "p95Ms": 12.259 }
+      }
+    },
+    {
+      "candidates": 300,
+      "maxEntries": 350,
+      "capacityMode": "above",
+      "passTimingsMs": {
+        "1": { "samples": 3, "medianMs": 591.366, "p95Ms": 597.4 },
+        "2": { "samples": 3, "medianMs": 44.824, "p95Ms": 44.988 },
+        "5": { "samples": 3, "medianMs": 42.96, "p95Ms": 43.448 }
+      }
+    },
+    {
+      "candidates": 300,
+      "maxEntries": 128,
+      "capacityMode": "below",
+      "passTimingsMs": {
+        "1": { "samples": 3, "medianMs": 477.359, "p95Ms": 565.948 },
+        "2": { "samples": 3, "medianMs": 362.485, "p95Ms": 435.623 },
+        "5": { "samples": 3, "medianMs": 357.901, "p95Ms": 368.189 }
+      }
+    }
+  ]
+}

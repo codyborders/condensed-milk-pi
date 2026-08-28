@@ -1,6 +1,6 @@
 {
   "name": "@codyborders/condensed-milk-pi",
-  "version": "1.10.1-remediated.0",
+  "version": "1.10.1-remediated.1",
   "description": "Maintained remediation fork of Condensed Milk, a semantic token compression extension for pi terminal",
   "author": "tomooshi",
   "contributors": [
@@ -46,12 +46,15 @@
   },
   "homepage": "https://github.com/codyborders/condensed-milk-pi#readme",
   "scripts": {
-    "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-handler-smoke.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && npx tsx test-recovery.ts && node test-output-recovery.mjs && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs && node test-package-metadata.mjs",
+    "test": "node test-back-compat.mjs && node test-compact-reset.mjs && node test-compound-cmd.mjs && node test-handler.mjs && node test-handler-smoke.mjs && node test-rules-config.mjs && node test-config-reload.mjs && node test-profiles.mjs && node test-profile-validation.mjs && node test-rereads.mjs && node test-context-index.mjs && node test-history-preservation.mjs && node test-history-shapes.mjs && node test-tracker-bounds.mjs && npx tsx test-git-filters.ts && npx tsx test-recovery.ts && npx tsx test-recovery-batch.ts && npx tsx test-recovery-corrections.ts && npx tsx test-recovery-corrections2.ts && npx tsx test-recovery-admission.ts && node test-output-recovery.mjs && node test-filter-fixtures.mjs && node test-milestone-3c2.mjs && node test-env-fixture.mjs && node test-json-fixture.mjs && node test-package-metadata.mjs",
     "typecheck": "tsc --noEmit",
     "benchmark": "node --expose-gc --import tsx benchmarks/context-hook.mjs",
     "benchmark:test": "node --test \"benchmarks/*.test.mjs\"",
     "benchmark:update": "node --expose-gc --import tsx benchmarks/context-hook.mjs --write",
     "benchmark:compare": "node benchmarks/compare-context-hook.mjs",
+    "benchmark:archive": "node --import tsx benchmarks/archive-context.mjs",
+    "benchmark:archive:test": "node --test \"benchmarks/archive-*.test.mjs\"",
+    "benchmark:archive:update": "node --import tsx benchmarks/archive-context.mjs --write",
     "evaluation:validate": "node evaluation/runner/cli.mjs validate",
     "evaluation:fixtures": "node evaluation/runner/cli.mjs fixtures",
     "evaluation:test": "node --test --test-concurrency=1 \"evaluation/tests/*.test.mjs\"",
@@ -90,11 +93,13 @@
     ]
   },
   "dependencies": {
+    "proper-lockfile": "4.1.2",
     "typebox": "1.3.7"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "0.84.2",
     "@types/node": "22.19.19",
+    "@types/proper-lockfile": "4.1.4",
     "tsx": "4.19.2",
     "typescript": "5.9.3"
   }

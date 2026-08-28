@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Extension-boundary test for condensed_milk_retrieve registration.
- * Grows slice by slice with the index.ts integration.
+ * Covers recovery registration and index.ts integration.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -50,12 +50,15 @@ try {
   };
   mod.default(api);
   const sessionStart = handlers.get("session_start");
+  let savingsStatus = "";
   const ctx = {
-    ui: {},
+    ui: { setStatus(key, value) { if (key === "token-savings") savingsStatus = value; } },
     sessionManager: { getSessionFile: () => "/fake/sessions/11111111-2222-3333-4444-555555555555.jsonl" },
   };
   const restoreHome = process.env.HOME;
   process.env.HOME = homeRoot;
+  mkdirSync(join(homeRoot, ".config"), { recursive: true });
+  writeFileSync(join(homeRoot, ".config", "condensed-milk.json"), JSON.stringify({ archive: { enabled: true } }));
   try {
     await sessionStart({ reason: "startup" }, ctx);
   } finally {
@@ -93,6 +96,13 @@ try {
   assert.ok(semantic.content[0].text.startsWith("pytest: ===="), "summary visible");
   const ref = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(semantic.content[0].text);
   assert.ok(ref, "summary carries archive reference");
+  const expectedSaved = longPytest.length - semantic.content[0].text.length;
+  const expectedPercent = Math.round((expectedSaved / longPytest.length) * 100);
+  assert.equal(
+    savingsStatus,
+    `↓${expectedSaved}B 1/1 ${expectedPercent}%`,
+    "status counts the visible archive reference bytes",
+  );
   const archiveId = ref[1];
   const page = await tool.execute("t1", { id: archiveId, offset: 0, limit: 4096 }, undefined, undefined, ctx);
   assert.ok(page.content[0].text.includes("test_a passed"), "retrieval returns full archived output");
@@ -178,6 +188,12 @@ try {
   assert.ok(historicalRef, "historical placeholder includes recovery reference");
   const maskedAgain = await contextHandler({ messages: historicalMessages }, context);
   assert.equal(maskedAgain.messages[1].content[0].text, maskedText, "historical reference stays stable");
+  const sessionDir = join(recoveryRoot, dirs[0]);
+  const entryFile = join(sessionDir, `${historicalRef[1]}.json`);
+  const mtimeBefore = statSync(entryFile).mtimeMs;
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const maskedThird = await contextHandler({ messages: historicalMessages }, context);
+  assert.equal(statSync(entryFile).mtimeMs, mtimeBefore, "repeated pass performs no live-entry rewrite or refresh");
   const historicalPage = await tool.execute("t3", { id: historicalRef[1], offset: 0, limit: 4096 }, undefined, undefined, context);
   assert.ok(historicalPage.content[0].text.includes("detail line"), "historical output is recoverable");
   console.log("PASS historical masking archive and stable reference");
@@ -187,7 +203,7 @@ try {
   mkdirSync(configDir, { recursive: true });
   writeFileSync(
     join(configDir, "condensed-milk.json"),
-    JSON.stringify({ archive: { maxEntryBytes: 64, maxAggregateBytes: 4096 } }),
+    JSON.stringify({ archive: { enabled: true, maxEntryBytes: 64, maxAggregateBytes: 4096 } }),
   );
   await sessionStart({ reason: "new" }, ctx);
   const refused = await handler(
@@ -198,7 +214,7 @@ try {
   console.log("PASS archive write refusal preserves original output");
 
   // --- session isolation and safe errors ---
-  rmSync(join(configDir, "condensed-milk.json"), { force: true });
+  writeFileSync(join(configDir, "condensed-milk.json"), JSON.stringify({ archive: { enabled: true } }));
   const secondContext = {
     ...ctx,
     sessionManager: { getSessionFile: () => "/fake/sessions/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jsonl" },

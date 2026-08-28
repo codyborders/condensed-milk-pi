@@ -1,0 +1,2814 @@
+{
+  "generatedAt": "2026-08-28T23:02:42.665Z",
+  "nodeVersion": "v25.8.2",
+  "quick": false,
+  "measuredIterations": 20,
+  "gate": {
+    "repeatedP95BudgetMs": 25,
+    "zeroRepeatedRewrites": true
+  },
+  "baselineSource": "benchmarks/archive-upstream-baseline.json exact upstream passes",
+  "measurements": [
+    {
+      "candidates": 100,
+      "archive": "enabled",
+      "capacityMode": "above",
+      "maxEntries": 150,
+      "baseline": {
+        "count": 100,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.037,
+            "p95Ms": 0.057
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.39
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.169
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 15.913,
+          "p95Ms": 17.365
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.522,
+          "p95Ms": 0.675
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.404,
+          "p95Ms": 0.511
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.675,
+      "gateRepeatedP95Passed": true,
+      "survivors": 100,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 100,
+            "entryRenameSync": 100,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 101,
+            "writeFileSync": 101,
+            "renameSync": 101,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 100,
+            "entryRenameSync": 100,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 102,
+            "writeFileSync": 101,
+            "renameSync": 101,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 100,
+            "entryRenameSync": 100,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 103,
+            "writeFileSync": 101,
+            "renameSync": 101,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 100,
+            "entryRenameSync": 100,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 104,
+            "writeFileSync": 101,
+            "renameSync": 101,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 100,
+            "entryRenameSync": 100,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 105,
+            "writeFileSync": 101,
+            "renameSync": 101,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 430.081,
+        "2": 14.5,
+        "5": 11.222
+      }
+    },
+    {
+      "candidates": 100,
+      "archive": "enabled",
+      "capacityMode": "below",
+      "maxEntries": 99,
+      "baseline": {
+        "count": 100,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.037,
+            "p95Ms": 0.057
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.39
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.169
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 15.609,
+          "p95Ms": 18.216
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.512,
+          "p95Ms": 0.557
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.384,
+          "p95Ms": 0.637
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.637,
+      "gateRepeatedP95Passed": true,
+      "survivors": 99,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 99,
+            "entryRenameSync": 99,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 100,
+            "writeFileSync": 100,
+            "renameSync": 100,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 99,
+            "entryRenameSync": 99,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 101,
+            "writeFileSync": 100,
+            "renameSync": 100,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 99,
+            "entryRenameSync": 99,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 102,
+            "writeFileSync": 100,
+            "renameSync": 100,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 99,
+            "entryRenameSync": 99,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 103,
+            "writeFileSync": 100,
+            "renameSync": 100,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 99,
+            "entryRenameSync": 99,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 104,
+            "writeFileSync": 100,
+            "renameSync": 100,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 421.865,
+        "2": 14.222,
+        "5": 10.667
+      }
+    },
+    {
+      "candidates": 100,
+      "archive": "disabled",
+      "capacityMode": "above",
+      "maxEntries": 150,
+      "baseline": {
+        "count": 100,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.037,
+            "p95Ms": 0.057
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.39
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.169
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 0.03,
+          "p95Ms": 0.034
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.028,
+          "p95Ms": 0.03
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.028,
+          "p95Ms": 0.032
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.032,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.811,
+        "2": 0.778,
+        "5": 0.778
+      }
+    },
+    {
+      "candidates": 100,
+      "archive": "disabled",
+      "capacityMode": "below",
+      "maxEntries": 99,
+      "baseline": {
+        "count": 100,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.037,
+            "p95Ms": 0.057
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.39
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.036,
+            "p95Ms": 0.169
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 0.03,
+          "p95Ms": 0.033
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.029,
+          "p95Ms": 0.031
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.028,
+          "p95Ms": 0.045
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.045,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.811,
+        "2": 0.806,
+        "5": 0.778
+      }
+    },
+    {
+      "candidates": 300,
+      "archive": "enabled",
+      "capacityMode": "above",
+      "maxEntries": 350,
+      "baseline": {
+        "count": 300,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.107,
+            "p95Ms": 0.173
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.109,
+            "p95Ms": 0.223
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.113,
+            "p95Ms": 0.274
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 45.718,
+          "p95Ms": 54.434
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 1.114,
+          "p95Ms": 1.459
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.951,
+          "p95Ms": 1.269
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 1.459,
+      "gateRepeatedP95Passed": true,
+      "survivors": 300,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 300,
+            "entryRenameSync": 300,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 301,
+            "writeFileSync": 301,
+            "renameSync": 301,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 300,
+            "entryRenameSync": 300,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 302,
+            "writeFileSync": 301,
+            "renameSync": 301,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 300,
+            "entryRenameSync": 300,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 303,
+            "writeFileSync": 301,
+            "renameSync": 301,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 300,
+            "entryRenameSync": 300,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 304,
+            "writeFileSync": 301,
+            "renameSync": 301,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 300,
+            "entryRenameSync": 300,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 305,
+            "writeFileSync": 301,
+            "renameSync": 301,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 427.271,
+        "2": 10.22,
+        "5": 8.416
+      }
+    },
+    {
+      "candidates": 300,
+      "archive": "enabled",
+      "capacityMode": "below",
+      "maxEntries": 128,
+      "baseline": {
+        "count": 300,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.107,
+            "p95Ms": 0.173
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.109,
+            "p95Ms": 0.223
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.113,
+            "p95Ms": 0.274
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 20.474,
+          "p95Ms": 25.439
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.748,
+          "p95Ms": 0.839
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.603,
+          "p95Ms": 0.933
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.933,
+      "gateRepeatedP95Passed": true,
+      "survivors": 128,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 129,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 130,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 131,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 132,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 133,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 191.346,
+        "2": 6.862,
+        "5": 5.336
+      }
+    },
+    {
+      "candidates": 300,
+      "archive": "disabled",
+      "capacityMode": "above",
+      "maxEntries": 350,
+      "baseline": {
+        "count": 300,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.107,
+            "p95Ms": 0.173
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.109,
+            "p95Ms": 0.223
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.113,
+            "p95Ms": 0.274
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 0.075,
+          "p95Ms": 0.11
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.072,
+          "p95Ms": 0.087
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.071,
+          "p95Ms": 0.085
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.087,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.701,
+        "2": 0.661,
+        "5": 0.628
+      }
+    },
+    {
+      "candidates": 300,
+      "archive": "disabled",
+      "capacityMode": "below",
+      "maxEntries": 128,
+      "baseline": {
+        "count": 300,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.107,
+            "p95Ms": 0.173
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.109,
+            "p95Ms": 0.223
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.113,
+            "p95Ms": 0.274
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 0.062,
+          "p95Ms": 0.08
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.06,
+          "p95Ms": 0.066
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.059,
+          "p95Ms": 0.062
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.066,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.579,
+        "2": 0.55,
+        "5": 0.522
+      }
+    },
+    {
+      "candidates": 1000,
+      "archive": "enabled",
+      "capacityMode": "above",
+      "maxEntries": 1024,
+      "baseline": {
+        "count": 1000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.332,
+            "p95Ms": 0.465
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.3,
+            "p95Ms": 0.407
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.278,
+            "p95Ms": 0.359
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 151.64,
+          "p95Ms": 176.934
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 3.051,
+          "p95Ms": 3.812
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 2.825,
+          "p95Ms": 3.58
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 3.812,
+      "gateRepeatedP95Passed": true,
+      "survivors": 1000,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 1000,
+            "entryRenameSync": 1000,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 1001,
+            "writeFileSync": 1001,
+            "renameSync": 1001,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 1000,
+            "entryRenameSync": 1000,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 1002,
+            "writeFileSync": 1001,
+            "renameSync": 1001,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 1000,
+            "entryRenameSync": 1000,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 1003,
+            "writeFileSync": 1001,
+            "renameSync": 1001,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 1000,
+            "entryRenameSync": 1000,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 1004,
+            "writeFileSync": 1001,
+            "renameSync": 1001,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 1000,
+            "entryRenameSync": 1000,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 1005,
+            "writeFileSync": 1001,
+            "renameSync": 1001,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 456.747,
+        "2": 10.17,
+        "5": 10.162
+      }
+    },
+    {
+      "candidates": 1000,
+      "archive": "enabled",
+      "capacityMode": "below",
+      "maxEntries": 128,
+      "baseline": {
+        "count": 1000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.332,
+            "p95Ms": 0.465
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.3,
+            "p95Ms": 0.407
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.278,
+            "p95Ms": 0.359
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 27.69,
+          "p95Ms": 42.28
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 1.132,
+          "p95Ms": 1.347
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.981,
+          "p95Ms": 1.604
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 1.604,
+      "gateRepeatedP95Passed": true,
+      "survivors": 128,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 129,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 130,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 131,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 132,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 133,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 83.404,
+        "2": 3.773,
+        "5": 3.529
+      }
+    },
+    {
+      "candidates": 1000,
+      "archive": "disabled",
+      "capacityMode": "above",
+      "maxEntries": 1024,
+      "baseline": {
+        "count": 1000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.332,
+            "p95Ms": 0.465
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.3,
+            "p95Ms": 0.407
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.278,
+            "p95Ms": 0.359
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 0.218,
+          "p95Ms": 0.342
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.206,
+          "p95Ms": 0.233
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.205,
+          "p95Ms": 0.216
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.233,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.657,
+        "2": 0.687,
+        "5": 0.737
+      }
+    },
+    {
+      "candidates": 1000,
+      "archive": "disabled",
+      "capacityMode": "below",
+      "maxEntries": 128,
+      "baseline": {
+        "count": 1000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 0.332,
+            "p95Ms": 0.465
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 0.3,
+            "p95Ms": 0.407
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 0.278,
+            "p95Ms": 0.359
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 0.21,
+          "p95Ms": 0.233
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 0.205,
+          "p95Ms": 0.22
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 0.207,
+          "p95Ms": 0.274
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 0.274,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.633,
+        "2": 0.683,
+        "5": 0.745
+      }
+    },
+    {
+      "candidates": 10000,
+      "archive": "enabled",
+      "capacityMode": "maximum-below",
+      "maxEntries": 1024,
+      "baseline": {
+        "count": 10000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 3.877,
+            "p95Ms": 5.323
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 3.955,
+            "p95Ms": 4.889
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 3.841,
+            "p95Ms": 5.713
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 223.054,
+          "p95Ms": 244.282
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 7.766,
+          "p95Ms": 8.456
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 7.34,
+          "p95Ms": 8.795
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 8.795,
+      "gateRepeatedP95Passed": true,
+      "survivors": 1024,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 1024,
+            "entryRenameSync": 1024,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 1025,
+            "writeFileSync": 1025,
+            "renameSync": 1025,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 1024,
+            "entryRenameSync": 1024,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 1026,
+            "writeFileSync": 1025,
+            "renameSync": 1025,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 1024,
+            "entryRenameSync": 1024,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 1027,
+            "writeFileSync": 1025,
+            "renameSync": 1025,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 1024,
+            "entryRenameSync": 1024,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 1028,
+            "writeFileSync": 1025,
+            "renameSync": 1025,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 1024,
+            "entryRenameSync": 1024,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 1029,
+            "writeFileSync": 1025,
+            "renameSync": 1025,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 57.533,
+        "2": 1.964,
+        "5": 1.911
+      }
+    },
+    {
+      "candidates": 10000,
+      "archive": "enabled",
+      "capacityMode": "below",
+      "maxEntries": 128,
+      "baseline": {
+        "count": 10000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 3.877,
+            "p95Ms": 5.323
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 3.955,
+            "p95Ms": 4.889
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 3.841,
+            "p95Ms": 5.713
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 85.942,
+          "p95Ms": 92.549
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 5.165,
+          "p95Ms": 6.112
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 5.051,
+          "p95Ms": 5.873
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 6.112,
+      "gateRepeatedP95Passed": true,
+      "survivors": 128,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 1,
+            "lockReleaseSync": 1,
+            "mkdirSync": 2,
+            "chmodSync": 2,
+            "readFileSync": 129,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 1,
+            "readdirSync": 1,
+            "utimesSync": 1,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 1
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 2,
+            "lockReleaseSync": 2,
+            "mkdirSync": 3,
+            "chmodSync": 3,
+            "readFileSync": 130,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 2,
+            "readdirSync": 2,
+            "utimesSync": 2,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 2
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 3,
+            "lockReleaseSync": 3,
+            "mkdirSync": 4,
+            "chmodSync": 4,
+            "readFileSync": 131,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 3,
+            "readdirSync": 3,
+            "utimesSync": 3,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 3
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 4,
+            "lockReleaseSync": 4,
+            "mkdirSync": 5,
+            "chmodSync": 5,
+            "readFileSync": 132,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 4,
+            "readdirSync": 4,
+            "utimesSync": 4,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 4
+          },
+          {
+            "entryWriteFileSync": 128,
+            "entryRenameSync": 128,
+            "indexWriteFileSync": 1,
+            "indexRenameSync": 1,
+            "lockAcquireSync": 5,
+            "lockReleaseSync": 5,
+            "mkdirSync": 6,
+            "chmodSync": 6,
+            "readFileSync": 133,
+            "writeFileSync": 129,
+            "renameSync": 129,
+            "unlinkSync": 0,
+            "statSync": 5,
+            "readdirSync": 5,
+            "utimesSync": 5,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 5
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 1,
+          "lockReleaseSync": 1,
+          "readFileSync": 1
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 22.167,
+        "2": 1.306,
+        "5": 1.315
+      }
+    },
+    {
+      "candidates": 10000,
+      "archive": "disabled",
+      "capacityMode": "maximum-below",
+      "maxEntries": 1024,
+      "baseline": {
+        "count": 10000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 3.877,
+            "p95Ms": 5.323
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 3.955,
+            "p95Ms": 4.889
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 3.841,
+            "p95Ms": 5.713
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 2.294,
+          "p95Ms": 2.523
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 2.218,
+          "p95Ms": 2.496
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 2.134,
+          "p95Ms": 2.694
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 2.694,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.592,
+        "2": 0.561,
+        "5": 0.556
+      }
+    },
+    {
+      "candidates": 10000,
+      "archive": "disabled",
+      "capacityMode": "below",
+      "maxEntries": 128,
+      "baseline": {
+        "count": 10000,
+        "passTimingsMs": {
+          "1": {
+            "samples": 8,
+            "medianMs": 3.877,
+            "p95Ms": 5.323
+          },
+          "2": {
+            "samples": 8,
+            "medianMs": 3.955,
+            "p95Ms": 4.889
+          },
+          "5": {
+            "samples": 8,
+            "medianMs": 3.841,
+            "p95Ms": 5.713
+          }
+        }
+      },
+      "passTimingsMs": {
+        "1": {
+          "samples": 20,
+          "medianMs": 2.237,
+          "p95Ms": 2.517
+        },
+        "2": {
+          "samples": 20,
+          "medianMs": 2.113,
+          "p95Ms": 2.377
+        },
+        "5": {
+          "samples": 20,
+          "medianMs": 2.19,
+          "p95Ms": 2.595
+        }
+      },
+      "repeatedP95BudgetMs": 25,
+      "repeatedP95Ms": 2.595,
+      "gateRepeatedP95Passed": true,
+      "survivors": 0,
+      "operationCounts": {
+        "perPass": [
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          },
+          {
+            "entryWriteFileSync": 0,
+            "entryRenameSync": 0,
+            "indexWriteFileSync": 0,
+            "indexRenameSync": 0,
+            "lockAcquireSync": 0,
+            "lockReleaseSync": 0,
+            "mkdirSync": 0,
+            "chmodSync": 0,
+            "readFileSync": 0,
+            "writeFileSync": 0,
+            "renameSync": 0,
+            "unlinkSync": 0,
+            "statSync": 0,
+            "readdirSync": 0,
+            "utimesSync": 0,
+            "rmSync": 0,
+            "openSync": 0,
+            "closeSync": 0,
+            "realpathSync": 0,
+            "rmdirSync": 0
+          }
+        ],
+        "repeatedPassDelta": {
+          "entryWriteFileSync": 0,
+          "entryRenameSync": 0,
+          "indexWriteFileSync": 0,
+          "indexRenameSync": 0,
+          "lockAcquireSync": 0,
+          "lockReleaseSync": 0,
+          "readFileSync": 0
+        }
+      },
+      "ratiosVsUpstream": {
+        "1": 0.577,
+        "2": 0.534,
+        "5": 0.57
+      }
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-28T21:23:25.732Z",
+  "nodeVersion": "v25.8.2",
+  "sourceCommit": "71f9e396951c42687f0c3456727b2b5c8c625da1",
+  "implementation": "upstream context hook without recovery archive",
+  "measuredIterations": 8,
+  "measurements": [
+    {
+      "candidates": 100,
+      "passTimingsMs": {
+        "1": { "samples": 8, "medianMs": 0.037, "p95Ms": 0.057 },
+        "2": { "samples": 8, "medianMs": 0.036, "p95Ms": 0.39 },
+        "5": { "samples": 8, "medianMs": 0.036, "p95Ms": 0.169 }
+      }
+    },
+    {
+      "candidates": 300,
+      "passTimingsMs": {
+        "1": { "samples": 8, "medianMs": 0.107, "p95Ms": 0.173 },
+        "2": { "samples": 8, "medianMs": 0.109, "p95Ms": 0.223 },
+        "5": { "samples": 8, "medianMs": 0.113, "p95Ms": 0.274 }
+      }
+    },
+    {
+      "candidates": 1000,
+      "passTimingsMs": {
+        "1": { "samples": 8, "medianMs": 0.332, "p95Ms": 0.465 },
+        "2": { "samples": 8, "medianMs": 0.3, "p95Ms": 0.407 },
+        "5": { "samples": 8, "medianMs": 0.278, "p95Ms": 0.359 }
+      }
+    },
+    {
+      "candidates": 10000,
+      "passTimingsMs": {
+        "1": { "samples": 8, "medianMs": 3.877, "p95Ms": 5.323 },
+        "2": { "samples": 8, "medianMs": 3.955, "p95Ms": 4.889 },
+        "5": { "samples": 8, "medianMs": 3.841, "p95Ms": 5.713 }
+      }
+    }
+  ]
+}

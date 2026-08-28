@@ -442,6 +442,14 @@ export interface CompressOptions {
    *  unmasked (fail-open: the original output stays visible). Calls
    *  without this option keep the exact pre-archive placeholder bytes. */
   archive?: ArchiveSink;
+  /** Two-phase batch archive sink. When present, one context pass
+   *  collects every eligible bash or read candidate first, calls
+   *  prepareBatch exactly once, and applies placeholders only to
+   *  messages whose tool call came back with a live reference.
+   *  Messages without a returned reference keep their original
+   *  content fully visible (fail-open). A null return from the sink
+   * leaves every candidate visible. */
+  archiveBatch?: ArchiveBatchSink;
 }
 
 /** Storage boundary contract used by compressStaleToolResults. */
@@ -449,6 +457,15 @@ export interface ArchiveSink {
   /** Archive the blocks for one tool result. Returns the stable opaque
    *  reference id, or null when archiving failed (caller must not mask). */
   store(toolCallId: string | undefined, blocks: unknown[]): string | null;
+}
+
+/** Batch storage boundary: one call archives every eligible candidate
+ *  for the pass and returns live references keyed by tool call id. A
+ *  null result means the whole batch failed and nothing may be masked. */
+export interface ArchiveBatchSink {
+  prepareBatch(
+    candidates: ReadonlyArray<{ toolCallId: string | undefined; blocks: unknown[] }>,
+  ): Map<string, string> | null;
 }
 
 /** v1.10.0 fallback templates — exact byte match for the v1.9.0
@@ -537,6 +554,50 @@ export function compressStaleToolResults(
   const toolCallIndex = buildToolCallIndex(messages);
   const invalidationIndex = buildInvalidationIndex(messages, toolCallIndex, rules);
 
+  // Two-phase archive mode: collect every eligible candidate first, then
+  // hand the whole set to one batch call. Masking below consults only the
+  // returned live references, so candidates without a reference stay
+  // fully visible. A null batch result masks nothing.
+  let batchReferences: Map<string, string> | null = null;
+  if (opts.archiveBatch) {
+    const candidates: Array<{ toolCallId: string | undefined; blocks: unknown[] }> = [];
+    for (let idx = 0; idx < messages.length; idx++) {
+      const msg = messages[idx]?.message ?? messages[idx];
+      if (isAlreadyMasked(msg)) continue;
+      if (msg?.role === "toolResult" && msg.isError) continue;
+      let eligible = false;
+      if (isBashToolResult(msg)) {
+        const content = extractTextContent(msg);
+        if (content.length >= MIN_MASK_LENGTH) {
+          const command = extractCommand(msg, toolCallIndex);
+          const pastCutoff = idx < cutoffIdx;
+          const invalidated = !pastCutoff && isCommandInvalidated(command, idx, invalidationIndex, rules);
+          eligible = pastCutoff || invalidated;
+        }
+      } else if (isReadToolResult(msg)) {
+        const path = extractPath(msg, toolCallIndex);
+        const content = extractTextContent(msg);
+        eligible = Boolean(path && content.length >= MIN_MASK_LENGTH && !isReferenceFile(path, rules) && idx < cutoffIdx);
+      }
+      if (eligible) {
+        candidates.push({ toolCallId: msg?.toolCallId, blocks: Array.isArray(msg?.content) ? msg.content : [] });
+      }
+    }
+    batchReferences = opts.archiveBatch.prepareBatch(candidates);
+  }
+
+  /** Live reference for one message under the configured archive mode,
+   *  or undefined when no archive mode is configured. */
+  const referenceFor = (msg: any): string | null | undefined => {
+    if (opts.archiveBatch) {
+      if (batchReferences === null) return null;
+      if (typeof msg?.toolCallId !== "string") return null;
+      return batchReferences.get(msg.toolCallId) ?? null;
+    }
+    if (opts.archive) return opts.archive.store(msg.toolCallId, msg.content ?? []);
+    return undefined;
+  };
+
   let bytesSaved = 0;
   let masksApplied = 0;
   const maskedPaths: string[] = [];
@@ -557,13 +618,13 @@ export function compressStaleToolResults(
       const invalidated = !pastCutoff && isCommandInvalidated(command, idx, invalidationIndex, rules);
 
       if (pastCutoff || invalidated) {
-        // Recovery archive (optional): archive the complete ordered content
-        // before masking. A null return fails open — the message stays
-        // fully visible rather than receiving an unrecoverable transform.
+        // Recovery archive (optional): the batch sink already ran once
+        // for the whole pass. A missing reference fails this message open
+        // so no dead reference is ever emitted.
         let archiveSuffix = "";
-        if (opts.archive) {
-          const reference = opts.archive.store(msg.toolCallId, msg.content ?? []);
-          if (reference === null || reference === undefined) return m;
+        if (opts.archive || opts.archiveBatch) {
+          const reference = referenceFor(msg);
+          if (!reference) return m;
           archiveSuffix = ` [cm-archive ${reference}]`;
         }
         // v1.9.0 (ADR-029): `cm-` prefix brands placeholder as a
@@ -597,9 +658,9 @@ export function compressStaleToolResults(
         const sizeStr = formatSize(content.length);
         // Recovery archive (optional): see the bash branch above.
         let archiveSuffix = "";
-        if (opts.archive) {
-          const reference = opts.archive.store(msg.toolCallId, msg.content ?? []);
-          if (reference === null || reference === undefined) return m;
+        if (opts.archive || opts.archiveBatch) {
+          const reference = referenceFor(msg);
+          if (!reference) return m;
           archiveSuffix = ` [cm-archive ${reference}]`;
         }
         // v1.9.0 (ADR-029): `cm-` prefix (see bash branch above).
