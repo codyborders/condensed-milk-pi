@@ -14,7 +14,7 @@
  * Run: npx tsx test-recovery-admission.ts
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -52,7 +52,7 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
   return JSON.parse(real.readFileSync(join(root, sessionKey, "index.json"), "utf8"));
 }
 
-// --- entry-count rejection closes admission persistently ---
+// --- entry-count pressure rolls admission forward persistently ---
 {
   const real = defaultArchiveFilesystem();
   const store = makeStore("admit-count", { maxEntries: 2 });
@@ -61,74 +61,124 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
     { toolCallId: "tc-b", blocks: [{ type: "text", text: long("b") }] },
   ]);
   assert.ok(seeded && seeded.size === 2, "seeding succeeds under capacity");
+  const idA = seeded!.get("tc-a")!;
+  const idB = seeded!.get("tc-b")!;
   const refs = store.prepareBatch([
     { toolCallId: "tc-a", blocks: [{ type: "text", text: long("a") }] },
     { toolCallId: "tc-b", blocks: [{ type: "text", text: long("b") }] },
     { toolCallId: "tc-c", blocks: [{ type: "text", text: long("c") }] },
   ]);
   assert.ok(refs, "batch under capacity pressure succeeds");
-  assert.equal(refs!.size, 2, "existing live rows win over the new candidate");
-  assert.ok(refs!.has("tc-a") && refs!.has("tc-b"), "existing live rows win over new candidates");
-  assert.ok(!refs!.has("tc-c"), "rejected candidate emits no reference");
+  assert.equal(refs!.size, 2, "the entry cap holds");
+  assert.ok(refs!.has("tc-c"), "the newer candidate wins a slot");
+  assert.ok(refs!.has("tc-b"), "the newer existing row survives");
+  assert.ok(!refs!.has("tc-a"), "the oldest row is displaced without a reference");
+  assert.equal(store.retrieve(idA).kind, "evicted", "the displaced row keeps its distinct evicted state");
+  // A still-live row reuses its exact reference.
+  const reuse = store.prepareBatch([
+    { toolCallId: "tc-b", blocks: [{ type: "text", text: long("b") }] },
+  ]);
+  assert.equal(reuse!.get("tc-b"), idB, "a live row reuses its exact reference");
   const persisted = readIndexFile(real, "admit-count");
-  assert.equal(persisted.admissionClosed, true, "entry-count rejection persists admissionClosed=true");
-  // A fresh instance honors the persisted closure: no new id is admitted.
+  assert.equal(persisted.v, 2, "the rolling index persists");
+  assert.equal(Object.keys(persisted.entries).length, 2, "persisted entry count stays at the cap");
+  // A fresh instance keeps rolling: a new id is admitted, not refused.
   const fresh = makeStore("admit-count", { maxEntries: 2 });
-  const closedNew = fresh.prepareBatch([
+  const rolledNew = fresh.prepareBatch([
     { toolCallId: "tc-brand-new", blocks: [{ type: "text", text: long("n") }] },
   ]);
-  assert.ok(closedNew, "closed batch still succeeds");
-  assert.equal(closedNew!.size, 0, "closed archive never admits a previously non-live id");
-  // Live rows are still reused and validated after recreation.
-  const closedReuse = fresh.prepareBatch([
-    { toolCallId: "tc-a", blocks: [{ type: "text", text: long("a") }] },
-    { toolCallId: "tc-c", blocks: [{ type: "text", text: long("c") }] },
-  ]);
-  assert.equal(closedReuse!.get("tc-a"), deriveArchiveId("admit-count", "tc-a"), "live row reused after recreation");
-  assert.ok(!closedReuse!.has("tc-c"), "closed archive refuses the rejected id after recreation");
-  ok("admission: entry-count rejection closes admission across fresh instances");
+  assert.ok(rolledNew && rolledNew.size === 1, "rolling admission persists across fresh instances");
+  assert.equal(fresh.retrieve(rolledNew!.get("tc-brand-new")!).kind, "ok", "the fresh admission retrieves");
+  ok("admission: entry-count pressure rolls admission forward across fresh instances");
 }
 
-// --- fresh store after more than 512 capacity rejections stays closed ---
+// --- more than 512 removals: tombstone rollover stays bounded and never repoints ids ---
 {
   const session = "admit-overflow";
-  const store = makeStore(session, { maxEntries: 4 });
-  const candidates = Array.from({ length: 600 }, (_, i) => ({
-    toolCallId: `tc-${i}`,
+  const real = defaultArchiveFilesystem();
+  let clock = baseClock;
+  const store = makeStore(session, { maxEntries: 4 }, real, () => clock);
+  const seedBatch = Array.from({ length: 4 }, (_, i) => ({
+    toolCallId: `tc-seed-${i}`,
+    blocks: [{ type: "text", text: long(`s${i}`) }],
+  }));
+  const seeded = store.prepareBatch(seedBatch);
+  assert.ok(seeded && seeded.size === 4, "four seeded rows go live");
+  const seedIds = [...seeded!.values()];
+  // Replacing every seed with fresh content tombstones all four known ids.
+  clock += 1;
+  const replaceBatch = Array.from({ length: 4 }, (_, i) => ({
+    toolCallId: `tc-next-${i}`,
+    blocks: [{ type: "text", text: long(`n${i}`) }],
+  }));
+  const replaced = store.prepareBatch(replaceBatch);
+  assert.ok(replaced && replaced.size === 4, "four replacement rows go live");
+  for (const id of seedIds) {
+    assert.equal(store.retrieve(id).kind, "evicted", "the displaced seed reports evicted while tombstoned");
+  }
+  // More than 512 further removals overflow the bounded tombstone list.
+  clock += 1;
+  const flood = Array.from({ length: 600 }, (_, i) => ({
+    toolCallId: `tc-flood-${i}`,
     blocks: [{ type: "text", text: long(`o${i}`) }],
   }));
-  const first = store.prepareBatch(candidates);
-  assert.ok(first && first.size === 4, "cap 4 holds after 596 capacity rejections");
-  const liveIds = [...first!.values()];
-  // Fresh ArchiveStore: the bounded tombstone list dropped most rejected
-  // ids, but the persisted closure must still refuse every one of them.
-  const fresh = makeStore(session, { maxEntries: 4 });
-  const second = fresh.prepareBatch(candidates);
-  assert.ok(second, "fresh store batch succeeds");
-  assert.equal(second!.size, 4, "only the live set is reused");
-  assert.deepEqual([...second!.values()].sort(), [...liveIds].sort(), "the exact live set survives");
-  for (const id of second!.values()) {
-    assert.equal(fresh.retrieve(id).kind, "ok", "every emitted reference retrieves");
+  const flooded = store.prepareBatch(flood);
+  assert.ok(flooded && flooded.size === 4, "cap 4 holds after the flood");
+  for (const id of flooded!.values()) {
+    assert.equal(store.retrieve(id).kind, "ok", "every emitted reference retrieves");
   }
-  // The same live ids validated by this fresh instance are cached: the
-  // next pass emits them without rereading live content.
+  const index = readIndexFile(real, session);
+  assert.equal(Object.keys(index.entries).length, 4, "persisted entries stay at the cap");
+  // Rejected candidates consume no tombstone: only live-row evictions
+  // append removal records, so the list stays far below the bound here.
+  assert.equal(index.evicted.length, 8, "only live-row evictions append tombstones");
+  for (const id of seedIds) {
+    assert.equal(store.retrieve(id).kind, "evicted", "the displaced seed keeps its tombstoned state");
+  }
+  // Fresh-instance validation cache runs while the flood survivors are
+  // still the exact live set, so the warm pass performs pure reuse.
   const counting = defaultArchiveFilesystem();
   let entryReads = 0;
   const countingFs = { ...counting, readFileSync: (path: string, encoding: "utf8") => {
-    if (/\/cm-[0-9a-f]{16}\.json$/.test(path)) entryReads += 1;
+    if (/\/(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(path)) entryReads += 1;
     return counting.readFileSync(path, encoding);
   } };
   const cached = makeStore(session, { maxEntries: 4 }, countingFs);
-  const warm = cached.prepareBatch(candidates);
-  assert.ok(warm && warm.size === 4);
+  const liveOnly = flood.filter((candidate) => flooded!.has(candidate.toolCallId));
+  const warm = cached.prepareBatch(liveOnly);
+  assert.ok(warm && warm.size === 4, "live-only warm pass reuses every row");
   const readsAfterWarm = entryReads;
-  const again = cached.prepareBatch(candidates);
+  const again = cached.prepareBatch(liveOnly);
   assert.ok(again && again.size === 4);
   assert.equal(entryReads - readsAfterWarm, 0, "cached validation does not reread live content");
-  ok("admission: fresh store after 512+ capacity rejections never re-admits dropped ids");
+  // Genuine rollover past 512 removals driven only by live-row
+  // evictions: repeated full batches keep rolling the window forward.
+  let rollClock = clock;
+  const roller = makeStore(session, { maxEntries: 4 }, real, () => rollClock);
+  for (let round = 0; round < 130; round++) {
+    rollClock += 1;
+    const rolled = roller.prepareBatch(Array.from({ length: 5 }, (_, i) => ({
+      toolCallId: `tc-roll-${round}-${i}`,
+      blocks: [{ type: "text", text: long(`r${round}-${i}`) }],
+    })));
+    assert.ok(rolled, `rollover round ${round} succeeds`);
+  }
+  const rolledIndex = readIndexFile(real, session);
+  assert.equal(rolledIndex.evicted.length, 512, "the tombstone list is bounded at 512 after overflow");
+  // The oldest tombstones rolled off: those ids are simply unknown now.
+  // Rolling ids are sequence-bound, so a rolled-off id can never repoint.
+  assert.equal(store.retrieve(seedIds[0]).kind, "missing", "a rolled-off tombstone reads as missing, never recreated");
+  // Re-admission after rollover: the same content consumes a fresh
+  // sequence, never the rolled-off reference.
+  const readmitted = roller.prepareBatch([seedBatch[0]]);
+  assert.ok(readmitted, "re-admission batch succeeds after rollover");
+  const readmitId = readmitted!.get("tc-seed-0");
+  assert.ok(readmitId && !seedIds.includes(readmitId), "re-admitted content receives a brand-new rolling reference");
+  assert.equal(roller.retrieve(readmitId!).kind, "ok", "the new reference retrieves");
+  ok("admission: 512+ removals roll tombstones over without ever repointing an id");
 }
 
-// --- existing rows over changed limits: deterministic eviction + closure ---
+// --- existing rows over changed limits: deterministic eviction, admission keeps rolling ---
 {
   const real = defaultArchiveFilesystem();
   let clock = baseClock;
@@ -138,8 +188,8 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
     clock += 10;
     ids.push(seed.store(`tc-t${i}`, [{ type: "text", text: long(`t${i}`) }])!);
   }
-  // Same directory, tighter limits: the oldest existing row is evicted
-  // deterministically and admission closes.
+  // Same directory, tighter limits: the oldest existing rows are evicted
+  // deterministically down to the new cap and admission keeps rolling.
   const tighter = makeStore("admit-tighten", { maxEntries: 2 }, real, () => clock);
   const refs = tighter.prepareBatch([
     { toolCallId: "tc-t0", blocks: [{ type: "text", text: long("t0") }] },
@@ -150,22 +200,24 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
   assert.ok(!refs!.has("tc-t0"), "oldest existing row is evicted deterministically");
   assert.equal(tighter.retrieve(ids[0]).kind, "evicted", "evicted row reports evicted");
   assert.equal(tighter.retrieve(ids[2]).kind, "ok", "newest rows survive the tightened limit");
-  const persisted = readIndexFile(real, "admit-tighten");
-  assert.equal(persisted.admissionClosed, true, "changed-limit eviction closes admission");
-  const after = tighter.prepareBatch([{ toolCallId: "tc-t-new", blocks: [{ type: "text", text: long("x") }] }]);
-  assert.ok(after && after.size === 0, "closed archive refuses a new id after tightening");
-  ok("admission: changed limits evict deterministically and close admission");
+  assert.equal(Object.keys(readIndexFile(real, "admit-tighten").entries).length, 2,
+    "the persisted entry set compacts to the new cap");
+  const after = tighter.store("tc-t-new", [{ type: "text", text: long("x") }]);
+  assert.ok(after, "a new semantic id still wins a slot after tightening");
+  assert.ok(!ids.includes(after!), "the new admission uses a distinct rolling reference");
+  assert.equal(tighter.retrieve(after!).kind, "ok", "the post-tightening admission retrieves exactly");
+  ok("admission: changed limits evict deterministically and admission keeps rolling");
 }
 
-// --- changed aggregate limits close before any new candidate can fill freed bytes ---
+// --- changed aggregate limits evict older bytes; rolling admission refills them ---
 {
   const real = defaultArchiveFilesystem();
   let clock = baseClock;
   const session = "admit-tighten-bytes";
   const seed = makeStore(session, { maxEntries: 10, maxAggregateBytes: 8_192 }, real, () => clock);
-  assert.ok(seed.store("tc-large-a", [{ type: "text", text: long("a") }]));
+  const idA = seed.store("tc-large-a", [{ type: "text", text: long("a") }])!;
   clock += 1;
-  assert.ok(seed.store("tc-large-b", [{ type: "text", text: long("b") }]));
+  const idB = seed.store("tc-large-b", [{ type: "text", text: long("b") }])!;
   const initial = readIndexFile(real, session);
   const rowBytes = Object.values(initial.entries).map((entry: any) => entry.bytes as number);
   const tightenedBytes = Math.max(...rowBytes) + 300;
@@ -180,13 +232,17 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
     { toolCallId: "tc-large-b", blocks: [{ type: "text", text: long("b") }] },
     { toolCallId: "tc-small-new", blocks: [{ type: "text", text: "small" }] },
   ]);
-  assert.ok(refs && refs.size === 1, "one existing row survives the tighter byte limit");
-  assert.ok(!refs!.has("tc-small-new"), "closure prevents a new row from using bytes freed by limit eviction");
-  assert.equal(readIndexFile(real, session).admissionClosed, true, "byte-limit eviction closes admission");
-  ok("admission: changed byte limits close before new candidates can fill freed capacity");
+  assert.ok(refs && refs.size === 2, "the tighter byte cap keeps the newest large row plus the small row");
+  assert.ok(refs!.has("tc-large-b"), "the newest large row survives the tighter byte limit");
+  assert.ok(refs!.has("tc-small-new"), "a small candidate reuses bytes freed by limit eviction");
+  assert.ok(!refs!.has("tc-large-a"), "the older large row loses its bytes deterministically");
+  assert.equal(tighter.retrieve(idA).kind, "evicted", "the displaced large row reports evicted");
+  assert.equal(tighter.retrieve(idB).kind, "ok", "the surviving large row stays retrievable");
+  assert.equal(tighter.retrieve(refs!.get("tc-small-new")!).kind, "ok", "the refilled slot retrieves exactly");
+  ok("admission: changed byte limits evict older bytes and rolling admission refills them");
 }
 
-// --- aggregate-byte capacity rejection also closes admission ---
+// --- aggregate-byte capacity pressure keeps rolling admission ---
 {
   const real = defaultArchiveFilesystem();
   const store = makeStore("admit-bytes", { maxEntries: 10, maxAggregateBytes: 4_096 });
@@ -199,13 +255,19 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
   assert.ok(refs, "batch succeeds while rejecting by aggregate bytes");
   assert.ok(refs!.size < entries, "aggregate-byte capacity rejected at least one candidate");
   const persisted = readIndexFile(real, "admit-bytes");
-  assert.equal(persisted.admissionClosed, true, "aggregate-byte rejection persists admissionClosed=true");
+  assert.equal(Object.keys(persisted.entries).length, refs!.size, "persisted entries match the byte-bounded live set");
+  let totalBytes = Object.values(persisted.entries).reduce((sum: number, entry: any) => sum + entry.bytes, 0);
+  assert.ok(totalBytes <= 4_096, "the live set respects the aggregate cap");
   const next = store.prepareBatch([{ toolCallId: "tc-b-extra", blocks: [{ type: "text", text: long("e") }] }]);
-  assert.ok(next && next.size === 0, "closed archive refuses new ids after byte rejection");
-  ok("admission: aggregate-byte capacity rejection closes admission");
+  assert.ok(next && next.size === 1, "a later candidate still admits after byte pressure");
+  const nextId = next!.get("tc-b-extra")!;
+  assert.equal(store.retrieve(nextId).kind, "ok", "the later admission retrieves exactly");
+  totalBytes = Object.values(readIndexFile(real, "admit-bytes").entries).reduce((sum: number, entry: any) => sum + entry.bytes, 0);
+  assert.ok(totalBytes <= 4_096, "rolling eviction keeps the aggregate cap after the later admission");
+  ok("admission: aggregate-byte pressure keeps rolling within the cap");
 }
 
-// --- TTL expiry remains allowed while admission is closed ---
+// --- TTL expiry runs before rolling admission ---
 {
   const real = defaultArchiveFilesystem();
   let clock = baseClock;
@@ -213,24 +275,25 @@ function readIndexFile(real: ReturnType<typeof defaultArchiveFilesystem>, sessio
   const seeded = store.prepareBatch([
     { toolCallId: "tc-keep", blocks: [{ type: "text", text: long("l") }] },
   ]);
-  assert.ok(seeded && seeded.size === 1, "one live row under capacity");
-  // A second candidate loses the single slot: admission closes.
+  const keepId = seeded?.get("tc-keep");
+  assert.ok(keepId, "one live row starts under capacity");
+  clock += 1;
   const pressured = store.prepareBatch([
-    { toolCallId: "tc-keep", blocks: [{ type: "text", text: long("l") }] },
     { toolCallId: "tc-drop", blocks: [{ type: "text", text: long("d") }] },
   ]);
-  assert.ok(pressured && pressured.size === 1 && pressured.has("tc-keep"), "live row wins and admission closes");
-  const keepId = pressured!.get("tc-keep")!;
-  clock += 120_000; // past the TTL
-  const expired = store.prepareBatch([
-    { toolCallId: "tc-keep", blocks: [{ type: "text", text: long("l") }] },
+  const dropId = pressured?.get("tc-drop");
+  assert.ok(dropId && dropId !== keepId, "newer work replaces the older row at capacity");
+  assert.equal(store.retrieve(keepId!).kind, "evicted", "the displaced reference keeps its eviction outcome");
+  clock += 120_000;
+  const afterExpiry = store.prepareBatch([
+    { toolCallId: "tc-after-ttl", blocks: [{ type: "text", text: long("n") }] },
   ]);
-  assert.ok(expired, "batch succeeds on an expired row");
-  assert.equal(expired!.size, 0, "TTL expiry removes the row and the closed archive never re-admits it");
-  const index = readIndexFile(real, "admit-ttl");
-  assert.equal(index.admissionClosed, true, "closure persists across the expiry batch");
-  assert.equal(store.retrieve(keepId).kind, "expired", "expired reason survives while closed");
-  ok("admission: TTL expiry remains allowed while admission is closed");
+  const afterId = afterExpiry?.get("tc-after-ttl");
+  assert.ok(afterId && afterId !== dropId, "TTL removal admits a distinct new reference in the same batch");
+  assert.equal(store.retrieve(dropId!).kind, "expired", "the expired reference keeps its distinct outcome");
+  assert.equal(store.retrieve(afterId!).kind, "ok", "the post-TTL reference retrieves immediately");
+  assert.equal(Object.keys(readIndexFile(real, "admit-ttl").entries).length, 1, "TTL-first rolling retention stays bounded");
+  ok("admission: TTL expiry runs before rolling admission");
 }
 
 // ── Live reference validation ──
@@ -253,7 +316,7 @@ const invalidLiveCases: Array<{ name: string; mutate: (real: ReturnType<typeof d
     name: "unsupported-version",
     mutate: (real, dir, id) => {
       const parsed = JSON.parse(real.readFileSync(join(dir, `${id}.json`), "utf8"));
-      parsed.v = 2;
+      parsed.v = 3;
       writeFileSync(join(dir, `${id}.json`), JSON.stringify(parsed), { mode: 0o600 });
     },
   },
@@ -354,12 +417,35 @@ for (const failure of invalidLiveCases) {
   ok("live validation: corrupt live reference emits no placeholder through the context pass");
 }
 
+// --- a missing indexed file fails the context batch open ---
+{
+  const rules = resolveRules(emptyUserConfig());
+  const session = "live-missing-context";
+  const real = defaultArchiveFilesystem();
+  const id = seedOne(session, "call-missing");
+  real.unlinkSync(join(root, session, `${id}.json`));
+  const store = makeStore(session, undefined, real);
+  const messages: any[] = [
+    { role: "user", content: [{ type: "text", text: "turn" }] },
+    { role: "toolResult", toolCallId: "call-missing", toolName: "bash", isError: false, details: { command: "echo missing" }, content: [{ type: "text", text: long("missing") }] },
+    { role: "user", content: [{ type: "text", text: "end" }] },
+  ];
+  const original = JSON.stringify(messages);
+  const result = compressStaleToolResults(messages, {
+    thresholds: [0.3], coverage: [1], contextUsage: 1, previousCutoff: 0, zoneEntered: -1, rules,
+    archiveBatch: { prepareBatch: (candidates) => store.prepareBatch(candidates) },
+  });
+  assert.equal(result, null, "missing indexed content emits no historical placeholder");
+  assert.equal(JSON.stringify(messages), original, "missing indexed content leaves original redacted content visible");
+  ok("live validation: missing indexed file fails the context batch open");
+}
+
 // --- validation cache: writes enter the cache, repeats do not reread ---
 {
   const real = defaultArchiveFilesystem();
   let entryReads = 0;
   const fs = { ...real, readFileSync: (path: string, encoding: "utf8") => {
-    if (/\/cm-[0-9a-f]{16}\.json$/.test(path)) entryReads += 1;
+    if (/\/(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(path)) entryReads += 1;
     return real.readFileSync(path, encoding);
   } };
   const store = makeStore("live-cache", undefined, fs);
@@ -375,6 +461,87 @@ for (const failure of invalidLiveCases) {
   assert.ok(second && second.size === 2);
   assert.equal(entryReads, 2, "repeated passes validate from the cache without rereading");
   ok("live validation: verified writes enter the per-instance cache");
+}
+
+// --- selection defers sequence, id, and tombstone allocation to survivors ---
+{
+  const real = defaultArchiveFilesystem();
+  const store = makeStore("admit-selection", { maxEntries: 4 }, real);
+  const batch = (count: number) => Array.from({ length: count }, (_, i) => ({
+    toolCallId: `tc-sel-${i}`,
+    blocks: [{ type: "text", text: long(`sel${i}`) }],
+  }));
+  const first = store.prepareBatch(batch(8));
+  assert.ok(first && first.size === 4, "capacity 4 holds");
+  for (let i = 4; i < 8; i++) {
+    assert.ok(first!.has(`tc-sel-${i}`), `raw position ${i} wins a slot`);
+  }
+  for (let i = 0; i < 4; i++) {
+    assert.ok(!first!.has(`tc-sel-${i}`), `rejected position ${i} stays visible with no reference`);
+  }
+  const persisted = readIndexFile(real, "admit-selection");
+  assert.equal(persisted.nextSequence, 5, "rejected candidates consume no persisted sequence");
+  assert.equal(persisted.evicted.length, 0, "rejected candidates leave no removal record");
+  // An identical repeated batch must be byte-identical and perform zero
+  // entry or index writes and renames while keeping every id stable.
+  const idsBefore = Object.keys(persisted.entries).sort().join(",");
+  const counting = defaultArchiveFilesystem();
+  let writes = 0;
+  let renames = 0;
+  const countingFs = {
+    ...counting,
+    writeFileSync: (path: string, data: string, options?: { mode?: number }) => {
+      writes += 1;
+      return counting.writeFileSync(path, data, options);
+    },
+    renameSync: (from: string, to: string) => {
+      renames += 1;
+      return counting.renameSync(from, to);
+    },
+  };
+  const repeatStore = makeStore("admit-selection", { maxEntries: 4 }, countingFs);
+  const second = repeatStore.prepareBatch(batch(8));
+  assert.ok(second && second.size === 4, "identical repeat keeps exactly the cap");
+  assert.deepEqual(
+    [...second!.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+    [...first!.entries()].sort((a, b) => a[0].localeCompare(b[0])),
+    "identical repeat returns byte-identical placeholders",
+  );
+  const persistedAfter = readIndexFile(real, "admit-selection");
+  assert.equal(Object.keys(persistedAfter.entries).sort().join(","), idsBefore, "identical repeat keeps ids stable");
+  assert.equal(writes, 0, "identical repeat writes zero entry or index files");
+  assert.equal(renames, 0, "identical repeat renames zero files");
+  ok("admission: selection defers sequence, id, and tombstone allocation to survivors");
+}
+
+// --- a progressive batch with appended results admits them and evicts older live rows ---
+{
+  const store = makeStore("admit-progressive", { maxEntries: 4 });
+  const candidate = (i: number) => ({
+    toolCallId: `tc-prog-${i}`,
+    blocks: [{ type: "text", text: long(`prog${i}`) }],
+  });
+  const base = Array.from({ length: 6 }, (_, i) => candidate(i));
+  const first = store.prepareBatch(base);
+  assert.ok(first && first.size === 4, "first pass keeps the cap");
+  for (let i = 2; i < 6; i++) {
+    assert.ok(first!.has(`tc-prog-${i}`), `position ${i} survives the first pass`);
+  }
+  const evictedId = first!.get("tc-prog-2")!;
+  const keptId = first!.get("tc-prog-5")!;
+  const appended = [...base, candidate(6), candidate(7)];
+  const second = store.prepareBatch(appended);
+  assert.ok(second && second.size === 4, "progressive pass keeps the cap");
+  for (let i = 4; i < 8; i++) {
+    assert.ok(second!.has(`tc-prog-${i}`), `appended newest position ${i} admits`);
+  }
+  for (let i = 2; i < 4; i++) {
+    assert.ok(!second!.has(`tc-prog-${i}`), `older live row ${i} loses its slot`);
+  }
+  assert.equal(store.retrieve(evictedId).kind, "evicted", "the displaced older live row keeps its eviction state");
+  assert.equal(store.retrieve(second!.get("tc-prog-6")!).kind, "ok", "an appended admission retrieves");
+  assert.equal(store.retrieve(keptId).kind, "ok", "a reused live row keeps its reference");
+  ok("admission: progressive batches admit appended results and evict older live rows");
 }
 
 // --- a non-boolean persisted admissionClosed fails open ---
@@ -394,21 +561,24 @@ for (const failure of invalidLiveCases) {
   ok("admission: malformed persisted admissionClosed fails open");
 }
 
-// --- open archives keep admitting until capacity actually rejects ---
+// --- full archives keep admitting through deterministic rolling eviction ---
 {
   const store = makeStore("admit-open-until-reject", { maxEntries: 3 });
-  for (let i = 0; i < 3; i++) {
+  const ids: string[] = [];
+  for (let i = 0; i < 5; i++) {
     const ref = store.store(`tc-open-${i}`, [{ type: "text", text: long(`o${i}`) }]);
-    assert.ok(ref, `store ${i} succeeds while under capacity`);
+    assert.ok(ref, `store ${i} succeeds through rolling capacity`);
+    ids.push(ref!);
   }
-  const rejected = store.store("tc-open-3", [{ type: "text", text: long("o3") }]);
-  assert.equal(rejected, null, "capacity rejection returns no reference");
-  const refused = store.store("tc-open-4", [{ type: "text", text: long("o4") }]);
-  assert.equal(refused, null, "closed archive refuses the next candidate");
-  ok("admission: admission stays open until capacity actually rejects");
+  assert.equal(store.retrieve(ids[0]).kind, "evicted", "the oldest reference is evicted first");
+  assert.equal(store.retrieve(ids[1]).kind, "evicted", "the second oldest reference rolls out next");
+  assert.equal(store.retrieve(ids[4]).kind, "ok", "the latest reference retrieves exactly");
+  const index = JSON.parse(readFileSync(join(store.directory(), "index.json"), "utf8"));
+  assert.equal(Object.keys(index.entries).length, 3, "rolling admission keeps the entry bound");
+  ok("admission: full archives keep admitting through deterministic rolling eviction");
 }
 
-// --- any persisted removal closes admission before tombstones can roll off ---
+// --- persisted expiry permits collision-safe readmission after reload ---
 {
   const real = defaultArchiveFilesystem();
   let clock = baseClock;
@@ -420,14 +590,14 @@ for (const failure of invalidLiveCases) {
   const expiredPass = store.prepareBatch([
     { toolCallId: "tc-expiring", blocks: [{ type: "text", text: long("e") }] },
   ]);
-  assert.ok(expiredPass && expiredPass.size === 0, "expired entry is not recreated in the removal pass");
-  assert.equal(store.retrieve(live!).kind, "expired", "expiry reason remains available");
-  const persisted = readIndexFile(real, session);
-  assert.equal(persisted.admissionClosed, true, "the first persisted removal closes future admission");
+  const readmitted = expiredPass?.get("tc-expiring");
+  assert.ok(readmitted && readmitted !== live, "expired content can return only under a distinct reference");
+  assert.equal(store.retrieve(live!).kind, "expired", "the old reference keeps its expiry outcome");
+  assert.equal(store.retrieve(readmitted!).kind, "ok", "the readmitted reference retrieves exactly");
   const fresh = makeStore(session, { maxEntries: 4, ttlMs: 60_000 }, real, () => clock);
   const later = fresh.store("tc-after-expiry", [{ type: "text", text: long("n") }]);
-  assert.equal(later, null, "a fresh store cannot admit a new id after a persisted removal");
-  ok("admission: persisted removals close admission before bounded tombstones roll off");
+  assert.ok(later && later !== live && later !== readmitted, "a fresh store admits later work without aliasing old references");
+  ok("admission: persisted expiry permits collision-safe readmission after reload");
 }
 
 console.log(`recovery admission tests: ${passed} groups passed`);

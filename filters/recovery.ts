@@ -2,12 +2,13 @@
  * Bounded, secret-safe archive for pre-transform tool output.
  * Retrieval supports exact paging plus bounded search modes.
  */
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
   mkdirSync,
   openSync,
+  opendirSync,
   realpathSync,
   readFileSync,
   readdirSync,
@@ -30,11 +31,13 @@ import { redactPrivacyLines } from "./dispatch.js";
 // never depend on filter import order elsewhere.
 import "./env.js";
 
-/** Opaque archive reference shape: cm- + 16 hex chars. */
-export const ARCHIVE_ID_PATTERN = /^cm-[0-9a-f]{16}$/;
+/** Legacy and rolling archive reference shapes. Legacy references remain
+ *  readable but are never assigned to new entries. */
+export const LEGACY_ARCHIVE_ID_PATTERN = /^cm-[0-9a-f]{16}$/;
+export const ROLLING_ARCHIVE_ID_PATTERN = /^cm2-[0-9a-f]{64}$/;
+export const ARCHIVE_ID_PATTERN = /^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})$/;
 
-/** Stable opaque archive id for one session tool result. Hashing keeps
- *  commands, paths, content, and credentials out of the id. */
+/** Stable legacy archive id. Kept only for v1 compatibility and tests. */
 export function deriveArchiveId(sessionKey: string, toolCallId: string): string {
   const digest = createHash("sha256")
     .update("condensed-milk-archive-v1\0")
@@ -43,6 +46,35 @@ export function deriveArchiveId(sessionKey: string, toolCallId: string): string 
     .update(toolCallId)
     .digest("hex");
   return `cm-${digest.slice(0, 16)}`;
+}
+
+function sha256(input: string | Buffer): string {
+  return createHash("sha256").update(input).digest("hex");
+}
+
+/** A rolling id binds one admission to its session generation, tool
+ *  identity, normalized content, and persisted sequence. Changed content
+ *  or a later sequence therefore cannot repoint an old reference. */
+function deriveRollingArchiveId(
+  sessionKey: string,
+  generation: string,
+  toolDigest: string,
+  contentDigest: string,
+  sequence: number,
+): string {
+  const digest = createHash("sha256")
+    .update("condensed-milk-archive-v2\0")
+    .update(sessionKey)
+    .update("\0")
+    .update(generation)
+    .update("\0")
+    .update(toolDigest)
+    .update("\0")
+    .update(contentDigest)
+    .update("\0")
+    .update(String(sequence))
+    .digest("hex");
+  return `cm2-${digest}`;
 }
 
 /** Minimal filesystem surface the store needs. Injectable so tests and
@@ -58,11 +90,12 @@ export interface ArchiveFilesystem {
   writeFileSync(path: string, data: string, options?: { mode?: number }): void;
   renameSync(from: string, to: string): void;
   unlinkSync(path: string): void;
-  statSync(path: string): { mtimeMs: number; isDirectory?: () => boolean };
+  statSync(path: string): { size: number; mtimeMs: number; ctimeMs: number; isDirectory?: () => boolean };
   readdirSync(path: string): string[];
   utimesSync(path: string, atime: number, mtime: number): void;
   rmSync(path: string, options: { recursive: boolean; force: boolean }): void;
   openSync(path: string, flags: "wx", mode?: number): number;
+  opendirSync(path: string): { readSync(): { name: string } | null; closeSync(): void };
   closeSync(fd: number): void;
   realpathSync(path: string): string;
   rmdirSync(path: string): void;
@@ -83,10 +116,47 @@ export function defaultArchiveFilesystem(): ArchiveFilesystem {
     utimesSync: (path, atime, mtime) => utimesSync(path, atime, mtime),
     rmSync: (path, options) => rmSync(path, options),
     openSync: (path, flags, mode) => openSync(path, flags, mode),
+    opendirSync: (path) => opendirSync(path),
     closeSync: (fd) => closeSync(fd),
     realpathSync: (path) => realpathSync(path),
     rmdirSync: (path) => rmdirSync(path),
   };
+}
+
+/** Read at most `limit` names without materializing an unbounded root
+ *  listing. An oversized or uncertain directory fails open. */
+function readDirectoryBounded(
+  fs: ArchiveFilesystem,
+  path: string,
+  limit: number,
+): string[] | null {
+  let directory: ReturnType<ArchiveFilesystem["opendirSync"]>;
+  try {
+    directory = fs.opendirSync(path);
+  } catch {
+    return null;
+  }
+  const names: string[] = [];
+  let valid = true;
+  try {
+    for (let index = 0; index <= limit; index++) {
+      const entry = directory.readSync();
+      if (entry === null) break;
+      if (index === limit) {
+        valid = false;
+        break;
+      }
+      names.push(entry.name);
+    }
+  } catch {
+    valid = false;
+  }
+  try {
+    directory.closeSync();
+  } catch {
+    valid = false;
+  }
+  return valid ? names : null;
 }
 
 /** Counting wrapper: one tick per operation name. Counters are live. */
@@ -174,7 +244,7 @@ export interface ArchiveConfig {
  *  a warning and the default is retained. */
 export const ARCHIVE_LIMIT_CEILINGS: ArchiveLimits = {
   maxEntries: 1_024,
-  maxEntryBytes: 1_048_576,
+  maxEntryBytes: 2_097_152,
   maxAggregateBytes: 16_777_216,
   ttlMs: 604_800_000,
 };
@@ -187,6 +257,10 @@ const MIN_TTL_MS = 60_000;
  *  supplied; it is frozen at write time, so the stored bytes are stable. */
 export function canonicalArchiveText(id: string, createdAtMs: number, blocks: unknown[]): string {
   return JSON.stringify({ v: 1, id, createdAt: createdAtMs, blocks });
+}
+
+function canonicalRollingArchiveText(id: string, createdAtMs: number, blocks: unknown[]): string {
+  return JSON.stringify({ v: 2, id, createdAt: createdAtMs, blocks });
 }
 
 /** Deterministic searchable rendering used by tail, literal, and regex
@@ -675,16 +749,37 @@ export function executeRetrieveRequest(
 
 // ── Store ──
 
-interface IndexEntry {
+export type ArchiveCandidateKind = "semantic" | "historical";
+
+interface LegacyIndexEntry {
   bytes: number;
   createdAt: number;
 }
 
+interface RollingIndexEntry extends LegacyIndexEntry {
+  format: 2;
+  sha256: string;
+  contentDigest: string;
+  toolDigest: string;
+  sequence: number;
+  kind: ArchiveCandidateKind;
+}
+
+type IndexEntry = LegacyIndexEntry | RollingIndexEntry;
+
 interface StoreIndex {
-  v: 1;
+  v: 2;
+  generation: string;
+  nextSequence: number;
   entries: Record<string, IndexEntry>;
-  /** Bounded removal records carrying the removal reason so later
-   *  retrievals can distinguish expired from evicted persistently. */
+  /** Bounded removal records. Correctness does not depend on retaining an
+   *  old record because rolling ids are never reused. */
+  evicted: Array<string | { id: string; reason: "expired" | "evicted" }>;
+}
+
+interface LegacyStoreIndex {
+  v: 1;
+  entries: Record<string, LegacyIndexEntry>;
   evicted: Array<string | { id: string; reason: "expired" | "evicted" }>;
   admissionClosed?: boolean;
 }
@@ -695,12 +790,28 @@ function sleepSync(ms: number): void {
   Atomics.wait(cell, 0, 0, ms);
 }
 
-function emptyIndex(): StoreIndex {
-  return { v: 1, entries: {}, evicted: [] };
+function newArchiveGeneration(): string {
+  return randomBytes(16).toString("hex");
+}
+
+function emptyIndex(_sessionKey: string): StoreIndex {
+  return {
+    v: 2,
+    generation: newArchiveGeneration(),
+    nextSequence: 1,
+    entries: {},
+    evicted: [],
+  };
 }
 
 /** Bounded tombstone list for distinct evicted/expired errors. */
 const MAX_TOMBSTONES = 512;
+const MAX_BATCH_CANDIDATES = 10_000;
+const MAX_DIRECTORY_ENTRIES = 8_192;
+const MAX_SWEEP_SESSIONS = 128;
+const MAX_INDEX_BYTES = 2_097_152;
+const MAX_CANDIDATE_NODES = 10_000;
+const MAX_CANDIDATE_DEPTH = 64;
 
 export type RetrieveOutcome =
   | { kind: "ok"; canonical: string; searchable: string; bytes: number; createdAt: number }
@@ -722,29 +833,14 @@ export class ArchiveStore {
   private readonly fs: ArchiveFilesystem;
   private readonly dir: string;
   private dirEnsured = false;
-  /** Session memory of every tombstoned id, including records the
-   *  bounded index list dropped, so repeated batches never rewrite the
-   *  index just to re-record forgotten tombstones. */
-  /** toolCallId -> archive id cache so repeated batches skip rehashing
-   *  every candidate. The whole cache resets at a fixed bound. */
-  private readonly idCache = new Map<string, string>();
-  /** Live ids whose entry file this instance already verified against
-   *  the index row (id, blocks array, createdAt, exact byte count).
-   *  Repeated passes validate from this cache instead of rereading live
-   *  content; any removal clears the cached validity for that id. */
-  private readonly verifiedLive = new Set<string>();
-  private static readonly MAX_ID_CACHE_ENTRIES = 20_000;
-
-  /** Cached deriveArchiveId for the batch candidate loop. */
-  private idCacheFor(toolCallId: string): string {
-    const cached = this.idCache.get(toolCallId);
-    if (cached !== undefined) return cached;
-    if (this.idCache.size >= ArchiveStore.MAX_ID_CACHE_ENTRIES) this.idCache.clear();
-    const id = deriveArchiveId(this.sessionKey, toolCallId);
-    this.idCache.set(toolCallId, id);
-    return id;
-  }
-
+  /** Metadata-aware verification records. A metadata change forces a
+   *  fresh read and digest check. Bounded by the live entry count. */
+  private readonly verifiedLive = new Map<string, {
+    size: number;
+    mtimeMs: number;
+    ctimeMs: number;
+    indexedDigest: string;
+  }>();
   constructor(rootDir: string, sessionKey: string, limits: ArchiveLimits, now: () => number = () => Date.now(), fs: ArchiveFilesystem = defaultArchiveFilesystem()) {
     this.rootDir = rootDir;
     this.sessionKey = sanitizeSessionKey(sessionKey);
@@ -784,44 +880,69 @@ export class ArchiveStore {
   }
 
   private readIndex(): StoreIndex | null {
+    const path = this.indexPath();
+    let indexedSize: number;
+    try {
+      indexedSize = this.fs.statSync(path).size;
+    } catch (error: any) {
+      if (error?.code === "ENOENT") return emptyIndex(this.sessionKey);
+      return null;
+    }
+    if (!Number.isSafeInteger(indexedSize) || indexedSize < 0 || indexedSize > MAX_INDEX_BYTES) return null;
     let raw: string;
     try {
-      raw = this.fs.readFileSync(this.indexPath(), "utf8");
-    } catch (e: any) {
-      if (e?.code === "ENOENT") return emptyIndex();
-      return null; // unreadable index: storage is unavailable, not empty
+      raw = this.fs.readFileSync(path, "utf8");
+    } catch {
+      return null;
     }
+    if (Buffer.byteLength(raw, "utf8") !== indexedSize || indexedSize > MAX_INDEX_BYTES) return null;
     try {
-      const parsed = JSON.parse(raw) as StoreIndex;
-      if (!isPlainObject(parsed) || parsed.v !== 1 || !isPlainObject(parsed.entries) || !Array.isArray(parsed.evicted)) {
-        return null;
+      const parsed = JSON.parse(raw) as StoreIndex | LegacyStoreIndex;
+      if (!isPlainObject(parsed) || !isPlainObject(parsed.entries) || !Array.isArray(parsed.evicted)) return null;
+      if (parsed.v !== 1 && parsed.v !== 2) return null;
+      if (parsed.v === 1 && parsed.admissionClosed !== undefined && typeof parsed.admissionClosed !== "boolean") return null;
+      if (parsed.v === 2) {
+        if (typeof parsed.generation !== "string" || !/^[0-9a-f]{32}$/.test(parsed.generation)) return null;
+        if (!Number.isSafeInteger(parsed.nextSequence) || parsed.nextSequence < 1) return null;
       }
-      if (parsed.admissionClosed !== undefined && typeof parsed.admissionClosed !== "boolean") {
-        return null; // malformed closure flag: integrity uncertain, fail open
-      }
-      for (const [id, entry] of Object.entries(parsed.entries)) {
+
+      const parsedEntries = Object.entries(parsed.entries);
+      if (parsedEntries.length > ARCHIVE_LIMIT_CEILINGS.maxEntries) return null;
+      if (parsed.evicted.length > MAX_TOMBSTONES) return null;
+      for (const [id, entry] of parsedEntries) {
         if (!ARCHIVE_ID_PATTERN.test(id) || !isPlainObject(entry)) return null;
-        if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 0) return null;
+        if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 0 || entry.bytes > ARCHIVE_LIMIT_CEILINGS.maxEntryBytes) return null;
         if (!Number.isFinite(entry.createdAt) || entry.createdAt < 0) return null;
+        if ("format" in entry) {
+          if (parsed.v !== 2 || entry.format !== 2 || !ROLLING_ARCHIVE_ID_PATTERN.test(id)) return null;
+          if (typeof entry.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(entry.sha256)) return null;
+          if (typeof entry.contentDigest !== "string" || !/^[0-9a-f]{64}$/.test(entry.contentDigest)) return null;
+          if (typeof entry.toolDigest !== "string" || !/^[0-9a-f]{64}$/.test(entry.toolDigest)) return null;
+          if (typeof entry.sequence !== "number" || !Number.isSafeInteger(entry.sequence) || entry.sequence < 1) return null;
+          if (entry.kind !== "semantic" && entry.kind !== "historical") return null;
+        } else if (!LEGACY_ARCHIVE_ID_PATTERN.test(id)) {
+          return null;
+        }
       }
-      for (const tombstone of parsed.evicted) {
-        if (typeof tombstone === "string") {
-          if (!ARCHIVE_ID_PATTERN.test(tombstone)) return null;
+      for (const removed of parsed.evicted) {
+        if (typeof removed === "string") {
+          if (!ARCHIVE_ID_PATTERN.test(removed)) return null;
           continue;
         }
-        if (!isPlainObject(tombstone) || typeof tombstone.id !== "string") return null;
-        if (!ARCHIVE_ID_PATTERN.test(tombstone.id)) return null;
-        if (tombstone.reason !== "expired" && tombstone.reason !== "evicted") return null;
+        if (!isPlainObject(removed) || typeof removed.id !== "string") return null;
+        if (!ARCHIVE_ID_PATTERN.test(removed.id)) return null;
+        if (removed.reason !== "expired" && removed.reason !== "evicted") return null;
       }
-      // Legacy indexes predate the explicit closure flag. Any persisted
-      // removal means admission must stay closed so a tombstone that later
-      // rolls off the bounded list can never be recreated.
-      if (parsed.admissionClosed === undefined && parsed.evicted.length > 0) {
-        parsed.admissionClosed = true;
-      }
-      return parsed;
+      if (parsed.v === 2) return parsed;
+      return {
+        v: 2,
+        generation: newArchiveGeneration(),
+        nextSequence: 1,
+        entries: parsed.entries,
+        evicted: parsed.evicted,
+      };
     } catch {
-      return null; // corrupted index: unavailable (fail open), never empty
+      return null;
     }
   }
 
@@ -844,10 +965,6 @@ export class ArchiveStore {
   }
 
   private tombstone(index: StoreIndex, id: string, reason: "expired" | "evicted"): void {
-    // Every persisted removal closes admission. This keeps the exact
-    // tombstone list bounded without permitting an older removed id to be
-    // recreated after its record rolls off that list.
-    index.admissionClosed = true;
     // Drop any earlier record for the same id, then append with its reason.
     index.evicted = index.evicted.filter((entry) =>
       typeof entry === "string" ? entry !== id : entry.id !== id,
@@ -877,12 +994,7 @@ export class ArchiveStore {
     reason: "expired" | "evicted",
   ): boolean {
     const prior = seen.get(id);
-    let changed = false;
-    if (index.admissionClosed !== true) {
-      index.admissionClosed = true;
-      changed = true;
-    }
-    if (prior === reason) return changed;
+    if (prior === reason) return false;
     seen.delete(id);
     this.tombstone(index, id, reason);
     seen.set(id, reason);
@@ -890,15 +1002,54 @@ export class ArchiveStore {
   }
 
   private removeEntry(index: StoreIndex, id: string, reason: "expired" | "evicted" = "evicted"): boolean {
-    this.verifiedLive.delete(id); // removal clears cached validity
+    delete index.entries[id];
+    this.tombstone(index, id, reason);
+    if (!this.writeIndex(index)) return false;
+    this.verifiedLive.delete(id);
     try {
       this.fs.unlinkSync(this.entryPath(id));
     } catch (error: any) {
       if (error?.code !== "ENOENT") return false;
     }
-    delete index.entries[id];
-    this.tombstone(index, id, reason);
-    return this.writeIndex(index);
+    return true;
+  }
+
+  /** Reject oversized or pathologically nested candidate structures
+   *  before normalization or JSON serialization can allocate without a
+   *  fixed bound. */
+  private candidateFitsPreflight(blocks: unknown[]): boolean {
+    if (blocks.length > MAX_CANDIDATE_NODES) return false;
+    let remainingBytes = this.limits.maxEntryBytes;
+    // The synthetic root array does not consume one of the value slots.
+    let visitedNodes = -1;
+    const seen = new Set<object>();
+    const pending: Array<{ value: unknown; depth: number }> = [{ value: blocks, depth: 0 }];
+    while (pending.length > 0) {
+      const current = pending.pop()!;
+      visitedNodes += 1;
+      if (visitedNodes > MAX_CANDIDATE_NODES) return false;
+      if (typeof current.value === "string") {
+        if (current.value.length > remainingBytes) return false;
+        remainingBytes -= Buffer.byteLength(current.value, "utf8");
+        if (remainingBytes < 0) return false;
+        continue;
+      }
+      if (current.value === null || typeof current.value !== "object") {
+        remainingBytes -= 16;
+        if (remainingBytes < 0) return false;
+        continue;
+      }
+      if (current.depth >= MAX_CANDIDATE_DEPTH || seen.has(current.value)) return false;
+      seen.add(current.value);
+      for (const key in current.value) {
+        if (!Object.prototype.hasOwnProperty.call(current.value, key)) continue;
+        if (key.length > remainingBytes) return false;
+        remainingBytes -= Buffer.byteLength(key, "utf8") + 4;
+        if (remainingBytes < 0) return false;
+        pending.push({ value: (current.value as Record<string, unknown>)[key], depth: current.depth + 1 });
+      }
+    }
+    return true;
   }
 
   /** Normalize blocks for storage: text blocks are ANSI-stripped and pass
@@ -922,30 +1073,29 @@ export class ArchiveStore {
   store(toolCallId: string | undefined, blocks: unknown[]): string | null {
     if (typeof toolCallId !== "string" || toolCallId.length === 0) return null;
     if (!Array.isArray(blocks)) return null;
-    return this.prepareBatch([{ toolCallId, blocks }])?.get(toolCallId) ?? null;
+    return this.prepareBatch([{ toolCallId, blocks, kind: "semantic" }])?.get(toolCallId) ?? null;
   }
 
-  /** Two-phase batch archive API (release-blocker correction). Collect all
-   *  eligible candidates for one context pass, then call this once. Reads
-   *  the index once, runs retention once, persists the index at most once,
-   *  and returns references only for ids live after final retention. Any
-   *  storage, verification, or index failure returns null so callers fail
-   *  open. Existing live entries are reused without content reads or
-   *  rewrites. Tombstoned ids are never recreated. */
+  /** Two-phase batch archive API. It keeps the newest bounded candidate
+   *  window, reads the index once, runs retention once, and commits at
+   *  most one final index. Returned references are live after retention
+   *  and digest verification. Any uncertainty returns null. Live entries
+   *  avoid rewrites, while metadata changes force content revalidation. */
   prepareBatch(
-    candidates: ReadonlyArray<{ toolCallId: string | undefined; blocks: unknown[] }>,
+    candidates: ReadonlyArray<{ toolCallId: string | undefined; blocks: unknown[]; kind?: ArchiveCandidateKind }>,
   ): Map<string, string> | null {
-    const normalized: Array<{ toolCallId: string; id: string; blocks: unknown[] }> = [];
+    const normalized: Array<{ toolCallId: string; blocks: unknown[]; kind: ArchiveCandidateKind }> = [];
     const seen = new Set<string>();
-    for (const candidate of candidates) {
+    const start = Math.max(0, candidates.length - MAX_BATCH_CANDIDATES);
+    for (let candidateIndex = start; candidateIndex < candidates.length; candidateIndex++) {
+      const candidate = candidates[candidateIndex];
       if (candidate === null || typeof candidate !== "object") continue;
       const toolCallId = candidate.toolCallId;
       if (typeof toolCallId !== "string" || toolCallId.length === 0) continue;
       if (!Array.isArray(candidate.blocks)) continue;
-      let id = this.idCacheFor(toolCallId);
-      if (seen.has(id)) continue; // first submission wins on duplicate ids
-      seen.add(id);
-      normalized.push({ toolCallId, id, blocks: candidate.blocks });
+      if (seen.has(toolCallId)) continue;
+      seen.add(toolCallId);
+      normalized.push({ toolCallId, blocks: candidate.blocks, kind: candidate.kind ?? "historical" });
     }
     const references = new Map<string, string>();
     if (normalized.length === 0) return references; // no candidates: no IO at all
@@ -1014,7 +1164,7 @@ export class ArchiveStore {
    *  directory. Single index read, single retention run, single index
    *  persist, bounded writes. */
   private runBatch(
-    candidates: ReadonlyArray<{ toolCallId: string; id: string; blocks: unknown[] }>,
+    rawCandidates: ReadonlyArray<{ toolCallId: string; blocks: unknown[]; kind: ArchiveCandidateKind }>,
     references: Map<string, string>,
   ): Map<string, string> | null {
     const index = this.readIndex();
@@ -1024,13 +1174,25 @@ export class ArchiveStore {
 
     // One bounded directory read drives retention presence checks AND the
     // later orphan pass, so no per-entry stat calls are needed.
-    let listing: string[];
-    try {
-      listing = this.fs.readdirSync(this.dir);
-    } catch {
-      return null; // unreadable directory: final state unknown
-    }
+    const listing = readDirectoryBounded(this.fs, this.dir, MAX_DIRECTORY_ENTRIES);
+    if (listing === null) return null;
     const present = new Set(listing);
+
+    // Clear bounded crash leftovers before identity collision checks. A
+    // cleanup failure leaves storage uncertain and emits no references.
+    for (const name of listing) {
+      const entryMatch = /^((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\.json$/.exec(name);
+      const entryTemporary = /^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json\..+\.tmp$/.test(name);
+      const indexTemporary = /^index\.json\..+\.tmp$/.test(name);
+      if (entryMatch && index.entries[entryMatch[1]] !== undefined) continue;
+      if (!entryMatch && !entryTemporary && !indexTemporary) continue;
+      try {
+        this.fs.unlinkSync(join(this.dir, name));
+        present.delete(name);
+      } catch (error: any) {
+        if (error?.code !== "ENOENT") return null;
+      }
+    }
 
     // Tombstone lookups in O(1): the evicted list is bounded but scanned
     // once per candidate otherwise.
@@ -1041,144 +1203,287 @@ export class ArchiveStore {
     }
 
     // Retention over existing entries: drop rows whose file vanished,
-    // then expire rows past the TTL.
+    // then expire rows past the TTL. Existing files are deleted only after
+    // the final index commits, so an index failure preserves old state.
+    const removalsToUnlink = new Set<string>();
     for (const id of Object.keys(index.entries)) {
       if (!present.has(`${id}.json`)) {
-        delete index.entries[id];
-        this.verifiedLive.delete(id);
-        if (this.tombstoneChanged(tombstoned, index, id, "evicted")) dirty = true;
-        continue;
+        // An indexed row without its file is an integrity failure. Do not
+        // admit a replacement in this pass because caller content must
+        // remain visible and no uncertain reference may be emitted.
+        return null;
       }
       if (now - index.entries[id].createdAt >= this.limits.ttlMs) {
-        try {
-          this.fs.unlinkSync(this.entryPath(id));
-        } catch (e: any) {
-          if (e?.code !== "ENOENT") return null; // uncertain final state
-        }
+        removalsToUnlink.add(id);
         delete index.entries[id];
         this.verifiedLive.delete(id);
         if (this.tombstoneChanged(tombstoned, index, id, "expired")) dirty = true;
       }
     }
 
-    // Classify candidates. Live ids are reused with no rewrite. A closed
-    // archive never admits any previously non-live id. Tombstoned ids are
-    // never recreated. Oversize and unserializable candidates are rejected
-    // (stay visible) without failing the batch.
-    const pending: Array<{ id: string; canonical: string; bytes: number }> = [];
-    for (const candidate of candidates) {
-      if (index.entries[candidate.id] !== undefined) continue;
-      if (index.admissionClosed === true) continue; // closed forever
-      if (tombstoned.has(candidate.id)) continue;
-      let canonical: string;
+    // Resolve live reuse only after TTL removal, so an expired tool
+    // result can receive a distinct sequence-bound id in this batch.
+    // Every non-live candidate stays a temporary in-memory
+    // representation: no persisted sequence, final id, entry file, index
+    // row, or removal record exists before survivor selection.
+    const liveByDigest = new Map<string, string>();
+    for (const [id, row] of Object.entries(index.entries)) {
+      if (!("format" in row)) continue;
+      const key = `${row.toolDigest}\0${row.contentDigest}`;
+      if (!liveByDigest.has(key)) liveByDigest.set(key, id);
+    }
+
+    interface TemporaryCandidate {
+      key: string;
+      toolCallId: string;
+      blocks: unknown[];
+      toolDigest: string;
+      contentDigest: string;
+      kind: ArchiveCandidateKind;
+      /** Exact estimated canonical bytes: the placeholder id has the
+       * fixed width of every final cm2 id, so the estimate equals the
+       * final byte count. */
+      estimatedBytes: number;
+      /** Raw batch position. Descending position ranks the newest
+       * context results first and keeps an identical complete batch
+       * stable across passes. */
+      position: number;
+    }
+    const candidates: Array<{
+      toolCallId: string;
+      liveId: string | null;
+      temp: TemporaryCandidate | null;
+    }> = [];
+    const batchPositionByLiveId = new Map<string, number>();
+    const placeholderId = `cm2-${"0".repeat(64)}`;
+    for (let position = 0; position < rawCandidates.length; position++) {
+      const raw = rawCandidates[position];
+      if (!this.candidateFitsPreflight(raw.blocks)) continue;
+      let blocks: unknown[];
+      let contentText: string;
       try {
-        canonical = canonicalArchiveText(candidate.id, now, this.normalizeBlocks(candidate.blocks));
+        blocks = this.normalizeBlocks(raw.blocks);
+        contentText = JSON.stringify(blocks);
       } catch {
         continue;
       }
-      const bytes = Buffer.byteLength(canonical, "utf8");
-      if (bytes > this.limits.maxEntryBytes) continue;
-      pending.push({ id: candidate.id, canonical, bytes });
-    }
-
-    // Deterministic survivor selection BEFORE any write. Existing valid
-    // live rows win over new candidates: new rows fill only remaining
-    // capacity, so the survivor window among new rows is the submission
-    // tail. Existing rows are evicted only when they exceed changed
-    // limits (oldest first, ties by id). Any capacity rejection — a new
-    // candidate that does not fit, or existing rows over new limits —
-    // closes admission persistently, so a closed archive never admits a
-    // previously non-live id again (store recreation and bounded
-    // tombstone-list overflow included).
-    const existingRows = Object.entries(index.entries).map(([id, entry]) => ({
-      id,
-      bytes: entry.bytes,
-      createdAt: entry.createdAt,
-    }));
-    const survivorIds = new Set(existingRows.map((row) => row.id));
-    let totalBytes = existingRows.reduce((sum, row) => sum + row.bytes, 0);
-    let count = existingRows.length;
-    if (count > this.limits.maxEntries || totalBytes > this.limits.maxAggregateBytes) {
-      existingRows.sort((a, b) => a.createdAt - b.createdAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-      for (const row of existingRows) {
-        if (count <= this.limits.maxEntries && totalBytes <= this.limits.maxAggregateBytes) break;
-        survivorIds.delete(row.id);
-        totalBytes -= row.bytes;
-        count -= 1;
-      }
-      index.admissionClosed = true; // changed limits forced existing eviction
-      dirty = true;
-    }
-    if (pending.length > 0 && index.admissionClosed !== true) {
-      // Among new rows the submission tail wins: admit from the newest
-      // backwards while capacity remains, so earlier submissions are the
-      // ones that stay visible.
-      let rejectedAny = false;
-      for (let i = pending.length - 1; i >= 0; i--) {
-        const entry = pending[i];
-        if (count + 1 > this.limits.maxEntries || totalBytes + entry.bytes > this.limits.maxAggregateBytes) {
-          rejectedAny = true;
-          continue;
+      const toolDigest = sha256(raw.toolCallId);
+      const contentDigest = sha256(contentText);
+      const liveId = liveByDigest.get(`${toolDigest}\0${contentDigest}`);
+      if (liveId !== undefined) {
+        const liveRow = index.entries[liveId] as RollingIndexEntry;
+        if (raw.kind === "semantic" && liveRow.kind === "historical") {
+          liveRow.kind = "semantic";
+          dirty = true;
         }
-        survivorIds.add(entry.id);
-        totalBytes += entry.bytes;
-        count += 1;
-      }
-      if (rejectedAny) {
-        index.admissionClosed = true; // a candidate lost to capacity
-        dirty = true;
-      }
-    }
-
-    // Evict existing non-survivors (unlink + tombstone). An unlink
-    // failure leaves uncertain final state, so the batch fails open.
-    for (const id of Object.keys(index.entries)) {
-      if (survivorIds.has(id)) continue;
-      try {
-        this.fs.unlinkSync(this.entryPath(id));
-      } catch (e: any) {
-        if (e?.code !== "ENOENT") return null;
-      }
-      delete index.entries[id];
-      this.verifiedLive.delete(id);
-      if (this.tombstoneChanged(tombstoned, index, id, "evicted")) dirty = true;
-    }
-
-    // Write only new survivors, each verified by readback. Bounded by the
-    // capacity simulation above. Any write/rename/verify failure fails the
-    // whole batch open (no references).
-    for (const entry of pending) {
-      if (!survivorIds.has(entry.id)) {
-        // Evicted before writing: tombstone so it is never recreated.
-        if (this.tombstoneChanged(tombstoned, index, entry.id, "evicted")) dirty = true;
+        batchPositionByLiveId.set(liveId, position);
+        candidates.push({ toolCallId: raw.toolCallId, liveId, temp: null });
         continue;
       }
+      const estimatedBytes = Buffer.byteLength(
+        canonicalRollingArchiveText(placeholderId, now, blocks),
+        "utf8",
+      );
+      if (estimatedBytes > this.limits.maxEntryBytes) continue;
+      candidates.push({
+        toolCallId: raw.toolCallId,
+        liveId: null,
+        temp: {
+          key: `pending\0${position}\0${raw.toolCallId}`,
+          toolCallId: raw.toolCallId,
+          blocks,
+          toolDigest,
+          contentDigest,
+          kind: raw.kind,
+          estimatedBytes,
+          position,
+        },
+      });
+    }
+
+    // TTL runs first. Capacity then ranks the complete live and temporary
+    // pool by recovery value: semantic before historical, then candidates
+    // present in the current batch by descending raw position, so the
+    // newest context results win and an identical complete batch stays
+    // stable. Rows absent from the batch fall back to persisted sequence,
+    // creation time, and id as later tie-breakers. This policy gives new
+    // work a deterministic path into a full archive without allowing
+    // historical masks to displace semantic recovery.
+    const ranked: Array<{
+      key: string;
+      liveId: string | null;
+      temp: TemporaryCandidate | null;
+      bytes: number;
+      kind: ArchiveCandidateKind;
+      position: number;
+      sequence: number;
+      createdAt: number;
+      tieBreak: string;
+    }> = [];
+    for (const [id, row] of Object.entries(index.entries)) {
+      const position = batchPositionByLiveId.get(id);
+      ranked.push({
+        key: id,
+        liveId: id,
+        temp: null,
+        bytes: row.bytes,
+        kind: "format" in row ? row.kind : "semantic",
+        position: position === undefined ? -1 : position,
+        sequence: "format" in row ? row.sequence : 0,
+        createdAt: row.createdAt,
+        tieBreak: id,
+      });
+    }
+    for (const candidate of candidates) {
+      if (candidate.temp === null) continue;
+      ranked.push({
+        key: candidate.temp.key,
+        liveId: null,
+        temp: candidate.temp,
+        bytes: candidate.temp.estimatedBytes,
+        kind: candidate.temp.kind,
+        position: candidate.temp.position,
+        sequence: 0,
+        createdAt: now,
+        tieBreak: candidate.temp.key,
+      });
+    }
+    ranked.sort((left, right) => {
+      if (left.kind !== right.kind) return left.kind === "semantic" ? -1 : 1;
+      if (left.position !== right.position) return right.position - left.position;
+      if (left.sequence !== right.sequence) return right.sequence - left.sequence;
+      if (left.createdAt !== right.createdAt) return right.createdAt - left.createdAt;
+      return left.tieBreak < right.tieBreak ? -1 : left.tieBreak > right.tieBreak ? 1 : 0;
+    });
+    const survivorKeys = new Set<string>();
+    let totalBytes = 0;
+    for (const candidate of ranked) {
+      if (candidate.bytes > this.limits.maxEntryBytes) continue;
+      if (survivorKeys.size >= this.limits.maxEntries) continue;
+      if (totalBytes + candidate.bytes > this.limits.maxAggregateBytes) continue;
+      survivorKeys.add(candidate.key);
+      totalBytes += candidate.bytes;
+    }
+
+    // Stage existing non-survivors for deletion after the index commits.
+    for (const candidate of ranked) {
+      if (candidate.liveId === null) continue;
+      if (survivorKeys.has(candidate.key)) continue;
+      removalsToUnlink.add(candidate.liveId);
+      delete index.entries[candidate.liveId];
+      this.verifiedLive.delete(candidate.liveId);
+      dirty = true;
+      if (this.tombstoneChanged(tombstoned, index, candidate.liveId, "evicted")) dirty = true;
+    }
+
+    // Allocate nextSequence and derive final cm2 ids only for selected
+    // non-live candidates, in deterministic survivor order. Rejected
+    // candidates stay visible and consume no sequence, tombstone, write,
+    // or index commit.
+    const pending: Array<{ id: string; canonical: string; bytes: number; row: RollingIndexEntry }> = [];
+    const idByTempKey = new Map<string, string>();
+    let nextSequence = index.nextSequence;
+    for (const candidate of ranked) {
+      if (candidate.temp === null || !survivorKeys.has(candidate.key)) continue;
+      if (!Number.isSafeInteger(nextSequence) || nextSequence < 1 || nextSequence >= Number.MAX_SAFE_INTEGER) return null;
+      const sequence = nextSequence++;
+      const id = deriveRollingArchiveId(
+        this.sessionKey,
+        index.generation,
+        candidate.temp.toolDigest,
+        candidate.temp.contentDigest,
+        sequence,
+      );
+      idByTempKey.set(candidate.key, id);
+      const canonical = canonicalRollingArchiveText(id, now, candidate.temp.blocks);
+      const bytes = Buffer.byteLength(canonical, "utf8");
+      pending.push({
+        id,
+        canonical,
+        bytes,
+        row: {
+          format: 2,
+          bytes,
+          createdAt: now,
+          sha256: sha256(canonical),
+          contentDigest: candidate.temp.contentDigest,
+          toolDigest: candidate.temp.toolDigest,
+          sequence,
+          kind: candidate.temp.kind,
+        },
+      });
+    }
+    if (nextSequence !== index.nextSequence) {
+      index.nextSequence = nextSequence;
+      dirty = true;
+    }
+
+    // Write only the selected survivors. Track every final file so a
+    // pre-commit failure can restore the prior on-disk live set.
+    const newFilesWritten: string[] = [];
+    const rollbackNewFiles = (): void => {
+      for (const id of newFilesWritten) {
+        this.verifiedLive.delete(id);
+        try { this.fs.unlinkSync(this.entryPath(id)); } catch { /* best effort */ }
+      }
+    };
+    for (const entry of pending) {
       const path = this.entryPath(entry.id);
+      if (present.has(`${entry.id}.json`)) {
+        rollbackNewFiles();
+        return null;
+      }
       const tmp = this.uniqueTemp(path);
       try {
         this.fs.writeFileSync(tmp, entry.canonical, { mode: 0o600 });
         this.fs.renameSync(tmp, path);
+        newFilesWritten.push(entry.id);
         if (this.fs.readFileSync(path, "utf8") !== entry.canonical) {
-          try { this.fs.unlinkSync(path); } catch { /* best effort */ }
+          rollbackNewFiles();
           return null;
         }
+        const metadata = this.fs.statSync(path);
+        if (metadata.size !== entry.bytes || ![metadata.mtimeMs, metadata.ctimeMs].every(Number.isFinite)) {
+          rollbackNewFiles();
+          return null;
+        }
+        this.verifiedLive.set(entry.id, {
+          size: metadata.size,
+          mtimeMs: metadata.mtimeMs,
+          ctimeMs: metadata.ctimeMs,
+          indexedDigest: entry.row.sha256,
+        });
       } catch {
         try { this.fs.unlinkSync(tmp); } catch { /* best effort */ }
+        rollbackNewFiles();
         return null;
       }
-      index.entries[entry.id] = { bytes: entry.bytes, createdAt: now };
-      this.verifiedLive.add(entry.id); // verified write enters the cache
+      index.entries[entry.id] = entry.row;
       dirty = true;
     }
 
-    if (dirty && !this.writeIndex(index)) return null;
+    if (dirty && !this.writeIndex(index)) {
+      rollbackNewFiles();
+      return null;
+    }
+
+    // The index now names the final set. Delete old files before returning
+    // references. Cleanup uncertainty emits no placeholders.
+    for (const id of removalsToUnlink) {
+      try {
+        this.fs.unlinkSync(this.entryPath(id));
+      } catch (error: any) {
+        if (error?.code !== "ENOENT") return null;
+      }
+      this.verifiedLive.delete(id);
+    }
 
     // Orphan pass reuses the single directory listing taken before any
     // write: entry files and stale temporary files absent from the final
     // index are removed (best effort; the index stays authoritative).
     for (const name of listing) {
-      const entryMatch = /^(cm-[0-9a-f]{16})\.json$/.exec(name);
-      const tmpMatch = /^(cm-[0-9a-f]{16})\.json\..+\.tmp$/.exec(name);
+      const entryMatch = /^((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\.json$/.exec(name);
+      const tmpMatch = /^((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\.json\..+\.tmp$/.exec(name);
       const target = entryMatch?.[1] ?? tmpMatch?.[1];
       const staleIndexTemporary = /^index\.json\..+\.tmp$/.test(name);
       if (!staleIndexTemporary && (target === undefined || index.entries[target] !== undefined)) continue;
@@ -1189,45 +1494,68 @@ export class ArchiveStore {
       }
     }
 
-    // Emit references only for candidates whose id is live after the
-    // pass. A reused live reference is emitted only after this instance
-    // has verified the entry file once: readable canonical archive JSON
-    // with matching id, blocks array, createdAt equal to the index row,
-    // and the exact indexed byte count. Any invalid or unreadable live
-    // candidate fails the whole batch open so caller content stays
-    // visible and no invalid placeholder is emitted. Successful
-    // validation is cached per instance; newly verified writes below
-    // entered the cache already.
+    // Emit references only for final live candidates that pass
+    // metadata-aware content verification. Any uncertainty fails open.
     for (const candidate of candidates) {
-      if (index.entries[candidate.id] === undefined) continue;
-      if (!this.verifiedLive.has(candidate.id)) {
-        if (!this.verifyLiveEntry(candidate.id, index.entries[candidate.id])) return null;
-        this.verifiedLive.add(candidate.id);
-      }
-      references.set(candidate.toolCallId, candidate.id);
+      const id = candidate.liveId
+        ?? (candidate.temp !== null ? idByTempKey.get(candidate.temp.key) : undefined);
+      if (id === undefined || index.entries[id] === undefined) continue;
+      if (!this.verifyLiveEntry(id, index.entries[id])) return null;
+      references.set(candidate.toolCallId, id);
     }
     return references;
   }
 
-  /** Validate one live entry file against its index row before its
-   *  reference may be reused. Reads the file once; callers cache the
-   *  success in this instance. */
+  /** Validate one live file against its row and a bounded metadata cache. */
   private verifyLiveEntry(id: string, row: IndexEntry): boolean {
+    const path = this.entryPath(id);
+    const indexedDigest = "format" in row ? row.sha256 : `legacy:${row.bytes}:${row.createdAt}`;
+    let before: { size: number; mtimeMs: number; ctimeMs: number };
+    try {
+      before = this.fs.statSync(path);
+    } catch {
+      return false;
+    }
+    if (![before.size, before.mtimeMs, before.ctimeMs].every(Number.isFinite)) return false;
+    if (before.size !== row.bytes || row.bytes > ARCHIVE_LIMIT_CEILINGS.maxEntryBytes) return false;
+    const cached = this.verifiedLive.get(id);
+    if (cached
+      && cached.size === before.size
+      && cached.mtimeMs === before.mtimeMs
+      && cached.ctimeMs === before.ctimeMs
+      && cached.indexedDigest === indexedDigest) {
+      return true;
+    }
+
     let raw: string;
     try {
-      raw = this.fs.readFileSync(this.entryPath(id), "utf8");
+      raw = this.fs.readFileSync(path, "utf8");
     } catch {
-      return false; // unreadable (or a directory collision): fail open
+      return false;
     }
+    let after: { size: number; mtimeMs: number; ctimeMs: number };
+    try {
+      after = this.fs.statSync(path);
+    } catch {
+      return false;
+    }
+    if (before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs) return false;
     let parsed: any;
     try {
       parsed = JSON.parse(raw);
     } catch {
       return false;
     }
-    if (!isPlainObject(parsed) || parsed.v !== 1 || parsed.id !== id || !Array.isArray(parsed.blocks)) return false;
+    if (!isPlainObject(parsed) || parsed.id !== id || !Array.isArray(parsed.blocks)) return false;
     if (typeof parsed.createdAt !== "number" || parsed.createdAt !== row.createdAt) return false;
-    return Buffer.byteLength(raw, "utf8") === row.bytes;
+    if (Buffer.byteLength(raw, "utf8") !== row.bytes || after.size !== row.bytes) return false;
+    if ("format" in row) {
+      if (row.format !== 2 || parsed.v !== 2 || sha256(raw) !== row.sha256) return false;
+    } else if (parsed.v !== 1) {
+      return false;
+    }
+    this.verifiedLive.set(id, { ...after, indexedDigest });
+    return true;
   }
 
   /** Load one entry for retrieval. Distinguishes evicted (tombstoned),
@@ -1257,6 +1585,25 @@ export class ArchiveStore {
       return { kind: "missing" };
     }
     const path = this.entryPath(id);
+    const row = index.entries[id];
+    try {
+      const metadata = this.fs.statSync(path);
+      if (!Number.isFinite(metadata.size) || row.bytes > ARCHIVE_LIMIT_CEILINGS.maxEntryBytes) {
+        return { kind: "unavailable" };
+      }
+      if (metadata.size !== row.bytes) {
+        return this.removeEntry(index, id, "evicted")
+          ? { kind: "missing" }
+          : { kind: "unavailable" };
+      }
+    } catch (error: any) {
+      if (error?.code === "ENOENT") {
+        return this.removeEntry(index, id, "evicted")
+          ? { kind: "evicted" }
+          : { kind: "unavailable" };
+      }
+      return { kind: "unavailable" };
+    }
     let raw: string;
     try {
       raw = this.fs.readFileSync(path, "utf8");
@@ -1277,7 +1624,9 @@ export class ArchiveStore {
         ? { kind: "missing" }
         : { kind: "unavailable" };
     }
-    if (parsed?.id !== id || !Array.isArray(parsed?.blocks) || typeof parsed?.createdAt !== "number") {
+    const validVersion = "format" in row ? parsed?.v === 2 : parsed?.v === 1;
+    const validDigest = !("format" in row) || sha256(raw) === row.sha256;
+    if (!validVersion || !validDigest || parsed?.id !== id || !Array.isArray(parsed?.blocks) || typeof parsed?.createdAt !== "number" || parsed.createdAt !== row.createdAt || Buffer.byteLength(raw, "utf8") !== row.bytes) {
       return this.removeEntry(index, id, "evicted")
         ? { kind: "missing" }
         : { kind: "unavailable" };
@@ -1325,6 +1674,8 @@ export class ArchiveStore {
     const index = this.readIndex();
     if (!index) return false;
     const now = this.now();
+    let dirty = false;
+    const removals = new Map<string, "expired" | "evicted">();
 
     for (const id of Object.keys(index.entries)) {
       try {
@@ -1334,58 +1685,79 @@ export class ArchiveStore {
         delete index.entries[id];
         this.verifiedLive.delete(id);
         this.tombstone(index, id, "evicted");
+        dirty = true;
       }
     }
 
     for (const id of Object.keys(index.entries)) {
       if (now - index.entries[id].createdAt < this.limits.ttlMs) continue;
+      delete index.entries[id];
+      this.verifiedLive.delete(id);
+      this.tombstone(index, id, "expired");
+      removals.set(id, "expired");
+      dirty = true;
+    }
+
+    const candidates: Array<{
+      id: string;
+      row: IndexEntry;
+      accessedAt: number;
+      kind: ArchiveCandidateKind;
+      sequence: number;
+    }> = [];
+    for (const [id, row] of Object.entries(index.entries)) {
+      let accessedAt: number;
+      try {
+        accessedAt = Math.round(this.fs.statSync(this.entryPath(id)).mtimeMs);
+      } catch {
+        return false;
+      }
+      candidates.push({
+        id,
+        row,
+        accessedAt,
+        kind: "format" in row ? row.kind : "semantic",
+        sequence: "format" in row ? row.sequence : 0,
+      });
+    }
+    candidates.sort((left, right) => {
+      if (left.kind !== right.kind) return left.kind === "semantic" ? -1 : 1;
+      if (left.sequence !== right.sequence) return right.sequence - left.sequence;
+      if (left.accessedAt !== right.accessedAt) return right.accessedAt - left.accessedAt;
+      if (left.row.createdAt !== right.row.createdAt) return right.row.createdAt - left.row.createdAt;
+      return left.id.localeCompare(right.id);
+    });
+    const survivors = new Set<string>();
+    let totalBytes = 0;
+    for (const candidate of candidates) {
+      if (candidate.row.bytes > this.limits.maxEntryBytes) continue;
+      if (survivors.size >= this.limits.maxEntries) continue;
+      if (totalBytes + candidate.row.bytes > this.limits.maxAggregateBytes) continue;
+      survivors.add(candidate.id);
+      totalBytes += candidate.row.bytes;
+    }
+    for (const candidate of candidates) {
+      if (survivors.has(candidate.id)) continue;
+      delete index.entries[candidate.id];
+      this.verifiedLive.delete(candidate.id);
+      this.tombstone(index, candidate.id, "evicted");
+      removals.set(candidate.id, "evicted");
+      dirty = true;
+    }
+
+    if (dirty && !this.writeIndex(index)) return false;
+    for (const id of removals.keys()) {
       try {
         this.fs.unlinkSync(this.entryPath(id));
       } catch (error: any) {
         if (error?.code !== "ENOENT") return false;
       }
-      delete index.entries[id];
-      this.verifiedLive.delete(id);
-      this.tombstone(index, id, "expired");
     }
 
-    const candidates: Array<{ id: string; atime: number; createdAt: number; bytes: number }> = [];
-    for (const id of Object.keys(index.entries)) {
-      let atime: number;
-      try {
-        atime = Math.round(this.fs.statSync(this.entryPath(id)).mtimeMs);
-      } catch {
-        return false;
-      }
-      candidates.push({ id, atime, createdAt: index.entries[id].createdAt, bytes: index.entries[id].bytes });
-    }
-    candidates.sort((left, right) =>
-      left.atime - right.atime || left.createdAt - right.createdAt || left.id.localeCompare(right.id),
-    );
-    let totalBytes = candidates.reduce((sum, candidate) => sum + candidate.bytes, 0);
-    let count = candidates.length;
-    for (const candidate of candidates) {
-      if (count <= this.limits.maxEntries && totalBytes <= this.limits.maxAggregateBytes) break;
-      try {
-        this.fs.unlinkSync(this.entryPath(candidate.id));
-      } catch (error: any) {
-        if (error?.code !== "ENOENT") return false;
-      }
-      delete index.entries[candidate.id];
-      this.verifiedLive.delete(candidate.id);
-      this.tombstone(index, candidate.id, "evicted");
-      totalBytes -= candidate.bytes;
-      count -= 1;
-    }
-
-    let names: string[];
-    try {
-      names = this.fs.readdirSync(this.dir);
-    } catch {
-      return false;
-    }
+    const names = readDirectoryBounded(this.fs, this.dir, MAX_DIRECTORY_ENTRIES);
+    if (names === null) return false;
     for (const name of names) {
-      const match = /^(cm-[0-9a-f]{16})\.json$/.exec(name);
+      const match = /^((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\.json$/.exec(name);
       const staleIndexTemporary = /^index\.json\..+\.tmp$/.test(name);
       if (!staleIndexTemporary && (!match || index.entries[match[1]] !== undefined)) continue;
       try {
@@ -1394,8 +1766,7 @@ export class ArchiveStore {
         if (error?.code !== "ENOENT") return false;
       }
     }
-
-    return this.writeIndex(index);
+    return true;
   }
 
   /** Retire all live entries after a session becomes inactive. The index
@@ -1414,14 +1785,10 @@ export class ArchiveStore {
         this.tombstone(index, id, "evicted");
       }
       if (!this.writeIndex(index)) return;
-      let names: string[];
-      try {
-        names = this.fs.readdirSync(this.dir);
-      } catch {
-        return;
-      }
+      const names = readDirectoryBounded(this.fs, this.dir, MAX_DIRECTORY_ENTRIES);
+      if (names === null) return;
       for (const name of names) {
-        if (!/^cm-[0-9a-f]{16}\.json$/.test(name) && !/^index\.json\..+\.tmp$/.test(name)) continue;
+        if (!/^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(name) && !/^index\.json\..+\.tmp$/.test(name)) continue;
         try {
           this.fs.unlinkSync(join(this.dir, name));
         } catch {
@@ -1438,12 +1805,8 @@ export class ArchiveStore {
   /** Sweep stale session directories through each target store's strict,
    *  locked retirement path. Malformed indexes remain untouched. */
   sweepStaleSessions(): void {
-    let names: string[];
-    try {
-      names = this.fs.readdirSync(this.rootDir);
-    } catch {
-      return;
-    }
+    const names = readDirectoryBounded(this.fs, this.rootDir, MAX_SWEEP_SESSIONS);
+    if (names === null) return;
     const now = this.now();
     for (const name of names) {
       if (!/^[A-Za-z0-9._-]{1,128}$/.test(name) || name === this.sessionKey) continue;
@@ -1453,7 +1816,9 @@ export class ArchiveStore {
         if (directoryStat.isDirectory && !directoryStat.isDirectory()) continue;
         let newest = -Infinity;
         let sawChild = false;
-        for (const child of this.fs.readdirSync(directory)) {
+        const children = readDirectoryBounded(this.fs, directory, MAX_DIRECTORY_ENTRIES);
+        if (children === null) continue;
+        for (const child of children) {
           if (child === ArchiveStore.LOCK_FILE) continue;
           const childMtime = this.fs.statSync(join(directory, child)).mtimeMs;
           sawChild = true;

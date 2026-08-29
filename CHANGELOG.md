@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased: 1.10.1-remediated.2
+
+This unreleased corrective prerelease adds rolling archive admission, documentation, and a manual release gate. It does not claim production approval.
+
+### Recovery identity and retention
+
+New archive admissions use full-width `cm2-` identities. Each identity binds a persisted random session generation, tool digest, content digest, and persisted sequence. Legacy `cm-` references remain readable and are never repointed.
+
+Retention applies TTL before capacity. Semantic rows have priority over historical rows. Current context position and persisted metadata provide deterministic tie-breakers. Bounded removal records may become `missing`. Verification uses SHA-256 canonical-byte checks with metadata-aware rehash.
+
+Archive `enabled` remains false by default. The earlier `1.10.1-remediated.1` release remains immutable.
+
+### Evaluation and release gate
+
+The prior paid study used 42.18% more reported tokens for the fork. No new paid token result exists. Local filesystem benchmarks establish runtime only. Fresh provider evaluation is required before production approval.
+
+The manual release workflow is workflow-dispatch only. It verifies main, exact commit, package versions, clean state, tags, tests, evaluation gates, masking dry-run, benchmark gates, production dependencies, and packed runtime contents. A protected environment gates annotated tag creation and GitHub prerelease creation. It never publishes to npm.
+
 ## 1.10.1-remediated.1
 
 This corrective prerelease carries the independent review corrections for the recovery archive. The earlier corrective prerelease `v1.10.1-remediated.0` stays unchanged. It preserves upstream author credit from `tomooshi`. It does not claim production approval.

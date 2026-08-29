@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ArchiveStore, DEFAULT_ARCHIVE_LIMITS, defaultArchiveFilesystem, deriveArchiveId } from "./filters/recovery.js";
+import { ArchiveStore, DEFAULT_ARCHIVE_LIMITS, defaultArchiveFilesystem } from "./filters/recovery.js";
 import { compressStaleToolResults, resolveRules, emptyUserConfig } from "./filters/context-compress.js";
 
 let passed = 0;
@@ -63,13 +63,10 @@ function visibleText(message: any): string {
     m.role === "toolResult" && visibleText(m).startsWith("[cm-masked bash]"));
   assert.equal(masked.length, 1, "exactly one message masked under capacity 1");
   const maskedOutput = visibleText(masked[0]);
-  const ref = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(maskedOutput);
+  const ref = /\[cm-archive ((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\]/.exec(maskedOutput);
   assert.ok(ref, "masked message carries a live archive reference");
-  assert.equal(
-    maskedOutput,
-    `[cm-masked bash] echo 1 [cm-archive ${deriveArchiveId("ctx-cap1", "call-1")}]`,
-    "survivor choice and placeholder bytes are deterministic",
-  );
+  assert.match(maskedOutput, /^\[cm-masked bash\] echo 1 \[cm-archive cm2-[0-9a-f]{64}\]$/,
+    "the newest deterministic survivor carries a rolling reference");
   assert.equal(store.retrieve(ref[1]).kind, "ok", "the emitted reference retrieves");
   for (const message of result!.messages) {
     if (message === masked[0]) continue;
@@ -92,7 +89,7 @@ function visibleText(message: any): string {
   for (const message of result!.messages) {
     if (message.role !== "toolResult") continue;
     const text = visibleText(message);
-    const ref = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(text);
+    const ref = /\[cm-archive ((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\]/.exec(text);
     if (text.startsWith("[cm-masked bash]")) {
       masked++;
       assert.ok(ref, "every mask carries a reference");
@@ -167,9 +164,9 @@ function visibleText(message: any): string {
     },
     {
       name: "index read",
-      fs: { ...base, readFileSync: (path: string, encoding: "utf8") => {
+      fs: { ...base, statSync: (path: string) => {
         if (path.endsWith("index.json")) throw Object.assign(new Error("index denied"), { code: "EACCES" });
-        return base.readFileSync(path, encoding);
+        return base.statSync(path);
       } },
     },
     {
@@ -177,6 +174,20 @@ function visibleText(message: any): string {
       fs: { ...base, renameSync: (from: string, to: string) => {
         if (to.endsWith("index.json")) throw new Error("index rename refused");
         return base.renameSync(from, to);
+      } },
+    },
+    {
+      name: "lock acquisition",
+      fs: { ...base, mkdirSync: (path: string, options?: { recursive?: boolean; mode?: number }) => {
+        if (path.endsWith("batch.lock")) throw Object.assign(new Error("lock denied"), { code: "EACCES" });
+        return base.mkdirSync(path, options);
+      } },
+    },
+    {
+      name: "lock release",
+      fs: { ...base, rmdirSync: (path: string) => {
+        if (path.endsWith("batch.lock")) throw Object.assign(new Error("release denied"), { code: "EIO" });
+        return base.rmdirSync(path);
       } },
     },
   ];
@@ -195,7 +206,7 @@ function visibleText(message: any): string {
     assert.equal(result, null, `${failure.name} failure masks nothing`);
     assert.equal(JSON.stringify(messages), before, `${failure.name} failure does not mutate input`);
   }
-  ok("context batch: write, rename, verification, and index failures preserve content");
+  ok("context batch: storage, index, verification, and lock failures preserve content");
 }
 
 console.log(`recovery context tests: ${passed} groups passed`);

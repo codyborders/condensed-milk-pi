@@ -94,10 +94,16 @@ assert.equal(texts[1].length, 200, "global basename rule was not merged");
 assert.equal(texts[2].length, 200, "project substring rule was not merged");
 assert.equal(texts[3].length, 200, "default basename rule was not retained");
 assert.match(texts[4], /^\[cm-masked read\]/, "ordinary file was not masked");
-assert.deepEqual(resolved.messages, JSON.parse(run("deterministic", ({ home, cwd }) => {
+const deterministic = JSON.parse(run("deterministic", ({ home, cwd }) => {
   globalConfig(home, JSON.stringify({ referenceBasenames: ["global.txt"] }));
   projectConfig(cwd, JSON.stringify({ referencePathSubstrings: ["/project-ref/"] }));
-}, { context: true }).stdout).messages, "resolved behavior was not deterministic");
+}, { context: true }).stdout);
+const normalizeArchiveIds = (messages) => JSON.stringify(messages).replace(/cm2-[0-9a-f]{64}/g, "cm2-<generation-bound-id>");
+assert.equal(
+  normalizeArchiveIds(resolved.messages),
+  normalizeArchiveIds(deterministic.messages),
+  "resolved behavior was not deterministic apart from generation-bound archive identity",
+);
 
 assertFailure("malformed-json", ({ home }) => globalConfig(home, "{\"referenceBasenames\":["), [/rules config/ , /condensed-milk-config\.json/]);
 assertFailure("root-array", ({ home }) => globalConfig(home, "[]"), [/rules config/, /condensed-milk-config\.json/]);

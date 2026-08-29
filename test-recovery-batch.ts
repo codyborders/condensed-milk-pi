@@ -60,22 +60,36 @@ process.on("exit", () => {
   assert.equal(refs!.size, 1, "exactly one survivor under maxEntries 1");
   const survivor = [...refs!.entries()][0];
   assert.equal(survivor[0], "tc-second", "deterministic survivor: later submission order wins the tie");
-  assert.equal(survivor[1], deriveArchiveId("batch-cap1", "tc-second"));
+  assert.match(survivor[1], /^cm2-[0-9a-f]{64}$/, "rolling admissions use full-width cm2 references");
   assert.equal(store.retrieve(survivor[1]).kind, "ok", "emitted reference retrieves");
-  const evictedId = deriveArchiveId("batch-cap1", "tc-first");
-  assert.equal(store.retrieve(evictedId).kind, "evicted", "evicted candidate is tombstoned, not stored");
+  // The rejected candidate never allocates a rolling id under deferred
+  // selection, so rejection itself leaves no removal record and consumes
+  // no sequence: only the survivor reached the persisted state.
+  const persisted = JSON.parse(defaultArchiveFilesystem().readFileSync(join(root, "batch-cap1", "index.json"), "utf8"));
+  assert.equal(persisted.nextSequence, 2, "only the survivor consumed a sequence");
+  assert.equal(persisted.evicted.length, 0, "the rejected candidate leaves no tombstone");
   // Determinism: a fresh store makes the identical decision.
   const store2 = makeStore("batch-cap1-b", { maxEntries: 1 });
   const refs2 = store2.prepareBatch([
     { toolCallId: "tc-first", blocks: [{ type: "text", text: long("first") }] },
     { toolCallId: "tc-second", blocks: [{ type: "text", text: long("second") }] },
   ]);
-  assert.equal(refs2!.get("tc-second"), deriveArchiveId("batch-cap1-b", "tc-second"), "survivor selection is deterministic");
-  // Tombstoned id can never be recreated by a later batch.
+  assert.ok(refs2!.has("tc-second") && /^cm2-[0-9a-f]{64}$/.test(refs2!.get("tc-second")!), "survivor selection is deterministic");
+  // Re-submitting the rejected candidate alone wins the single slot,
+  // evicts the live row under its own tombstoned id, and admits with a
+  // distinct rolling reference.
   const again = store.prepareBatch([{ toolCallId: "tc-first", blocks: [{ type: "text", text: long("first") }] }]);
   assert.ok(again);
-  assert.equal(again!.get("tc-first"), undefined, "tombstoned id is not recreated");
-  assert.equal(store.retrieve(evictedId).kind, "evicted");
+  const readmitId = again!.get("tc-first");
+  assert.ok(readmitId && readmitId !== survivor[1], "re-admission uses a distinct rolling reference");
+  assert.equal(store.retrieve(readmitId!).kind, "ok", "the re-admitted reference retrieves");
+  assert.equal(store.retrieve(survivor[1]).kind, "evicted", "the displaced live row keeps its own tombstoned id");
+  // A tombstoned live id is never recreated by later batches: identical
+  // content reuses the live row instead.
+  const onceMore = store.prepareBatch([{ toolCallId: "tc-first", blocks: [{ type: "text", text: long("first") }] }]);
+  assert.ok(onceMore);
+  assert.equal(onceMore!.get("tc-first"), readmitId, "live reuse keeps the reference stable");
+  assert.equal(store.retrieve(survivor[1]).kind, "evicted", "the tombstoned id stays distinct");
   ok("batch: maxEntries 1 with 2 candidates, deterministic survivor, no tombstone recreation");
 }
 
@@ -90,8 +104,8 @@ process.on("exit", () => {
   clock += 1_000;
   seeder.prepareBatch([{ toolCallId: "old-b", blocks: [{ type: "text", text: long("b") }] }]);
   clock += 1_000;
-  // Tightened limits evict the oldest existing row deterministically and
-  // close admission; the unlink must run through the injected filesystem.
+  // Tightened limits evict the oldest rows deterministically; rolling
+  // admission still lets the newest candidate take the single slot.
   const store = makeStore("batch-inject-evict", { maxEntries: 1 }, fs, () => clock);
   const refs = store.prepareBatch([
     { toolCallId: "old-a", blocks: [{ type: "text", text: long("a") }] },
@@ -99,9 +113,9 @@ process.on("exit", () => {
     { toolCallId: "new-c", blocks: [{ type: "text", text: long("c") }] },
   ]);
   assert.ok(refs, "batch succeeds after changed-limit eviction");
-  assert.ok(refs.has("old-b"), "newest existing row survives the tightened limit");
+  assert.ok(refs.has("new-c"), "the newest candidate wins the tightened slot");
   assert.ok(!refs.has("old-a"), "oldest existing row loses the tightened limit");
-  assert.ok(!refs.has("new-c"), "changed-limit eviction closes admission to new ids");
+  assert.ok(!refs.has("old-b"), "older existing rows yield to the newer admission");
   assert.ok(unlinks >= 1, "eviction unlinks through the injected filesystem");
   ok("injected filesystem: eviction unlinks run through injected operations");
 }
@@ -267,7 +281,7 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   assert.ok(seeded && seeded.size === 2);
   clock += 1_000;
   const broken = { ...real, unlinkSync: (p: string) => {
-    if (/^cm-[0-9a-f]{16}\.json$/.test(p.substring(p.lastIndexOf("/") + 1))) throw new Error("unlink refused");
+    if (/^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(p.substring(p.lastIndexOf("/") + 1))) throw new Error("unlink refused");
     return real.unlinkSync(p);
   } };
   // Tightened limits force an existing eviction; the refused unlink
@@ -290,7 +304,7 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   seeded.prepareBatch([{ toolCallId: "aged", blocks: [{ type: "text", text: long("a") }] }]);
   clock += 86_400_000 * 2; // well past the 24 h TTL
   const broken = { ...real, unlinkSync: (p: string) => {
-    if (/^cm-[0-9a-f]{16}\.json$/.test(p.substring(p.lastIndexOf("/") + 1))) throw new Error("unlink refused");
+    if (/^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(p.substring(p.lastIndexOf("/") + 1))) throw new Error("unlink refused");
     return real.unlinkSync(p);
   } };
   const store2 = new ArchiveStore(root, "batch-ttl-unlink", { ...DEFAULT_ARCHIVE_LIMITS }, () => clock, broken);
@@ -299,7 +313,7 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   ok("batch: TTL expiry unlink failure fails the batch open");
 }
 
-// --- repeated batches never rewrite the index after tombstone overflow ---
+// --- live-only repeats write nothing; full repeats churn but stay bounded ---
 {
   const real = defaultArchiveFilesystem();
   const counts: Record<string, number> = {};
@@ -321,12 +335,31 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   }));
   const first = store.prepareBatch(candidates);
   assert.ok(first && first.size === 10, "cap 10 holds after overflow");
+  for (const id of first!.values()) {
+    assert.equal(store.retrieve(id).kind, "ok", "every reference emitted under pressure retrieves");
+  }
+  // Repeating only the live set performs no writes at all: every row is
+  // reused, retention is stable, and the index stays clean.
+  const liveCandidates = candidates.filter((candidate) => first!.has(candidate.toolCallId));
   const writesAfterFirst = counts.writeFileSync ?? 0;
-  const second = store.prepareBatch(candidates);
-  assert.ok(second && second.size === 10, "second pass keeps the live set");
+  const renamesAfterFirst = counts.renameSync ?? 0;
+  const liveRepeat = store.prepareBatch(liveCandidates);
+  assert.ok(liveRepeat && liveRepeat.size === 10, "live-only repeat reuses every row");
   assert.equal((counts.writeFileSync ?? 0) - writesAfterFirst, 0,
-    "tombstone-list overflow must not cause repeated index writes");
-  ok("batch: tombstone overflow does not churn the index on repeated passes");
+    "live-only repeats perform no index or entry writes");
+  assert.equal((counts.renameSync ?? 0) - renamesAfterFirst, 0,
+    "live-only repeats perform no renames");
+  // A full repeated batch rolls the window forward; the entry set and
+  // the tombstone list both stay bounded.
+  const second = store.prepareBatch(candidates);
+  assert.ok(second && second.size === 10, "second full pass keeps exactly the cap");
+  for (const id of second!.values()) {
+    assert.equal(store.retrieve(id).kind, "ok", "every reference emitted by the churning pass retrieves");
+  }
+  const persisted = JSON.parse(real.readFileSync(join(root, "batch-tomb-overflow", "index.json"), "utf8"));
+  assert.equal(Object.keys(persisted.entries).length, 10, "entry set stays at the cap after churn");
+  assert.ok(persisted.evicted.length <= 512, "tombstone list stays bounded after churn");
+  ok("batch: live-only repeats write nothing while churn stays bounded");
 }
 
 // --- repeated 10000-candidate batch stays inside the 25 ms gate ---
@@ -336,17 +369,18 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
     toolCallId: `perf-${i}`,
     blocks: [{ type: "text", text: long(`p${i}`) }],
   }));
-  store.prepareBatch(Array.from({ length: 128 }, (_, index) => candidates[index])); // warm the live set
+  const warm = store.prepareBatch(candidates); // warm the live set
+  const liveCandidates = candidates.filter((candidate) => warm!.has(candidate.toolCallId));
   let best = Infinity;
   for (let attempt = 0; attempt < 3; attempt++) {
     const started = performance.now();
-    const refs = store.prepareBatch(candidates);
+    const refs = store.prepareBatch(liveCandidates);
     best = Math.min(best, performance.now() - started);
     assert.ok(refs, "repeated batch succeeds");
     assert.equal(refs!.size, 128, "live set stays at capacity");
   }
-  assert.ok(best < 25, `best repeated 10000-candidate batch took ${best.toFixed(1)}ms`);
-  ok("batch: repeated 10000-candidate pass inside the 25 ms budget");
+  assert.ok(best < 25, `best repeated live-only batch took ${best.toFixed(1)}ms`);
+  ok("batch: repeated live-only pass inside the 25 ms budget");
 }
 
 // --- normalization changes only text and preserves every other field ---

@@ -373,11 +373,11 @@ export default function tokenCompressor(pi: ExtensionAPI) {
     description:
       "Recover tool output archived by condensed-milk before semantic compression or historical masking. " +
       "Modes: page (offset/limit over UTF-8 bytes), tail (last N bytes), literal search, or regex search (flags i, m, s, u only). " +
-      "Modes are mutually exclusive. Use the cm- reference from a [cm-archive ...] placeholder.",
+      "Modes are mutually exclusive. Use the cm- or cm2- reference from a [cm-archive ...] placeholder.",
     promptSnippet: "Recover archived tool output by reference with paging, tail, literal, or regex search",
     executionMode: "sequential",
     parameters: Type.Object({
-      id: Type.String({ description: "Archive reference from a [cm-archive cm-...] placeholder" }),
+      id: Type.String({ description: "Legacy cm- or rolling cm2- reference from a [cm-archive ...] placeholder" }),
       offset: Type.Optional(Type.Integer({ minimum: 0, maximum: MAX_OFFSET_BYTES, description: "Page mode: UTF-8 byte offset" })),
       limit: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_PAGE_BYTES, description: "Page mode: bytes to return" })),
       tail: Type.Optional(Type.Integer({ minimum: 1, maximum: MAX_PAGE_BYTES, description: "Tail mode: trailing bytes" })),
@@ -702,7 +702,7 @@ export default function tokenCompressor(pi: ExtensionAPI) {
         };
         const baseText = baseBlocks.find((block) => block.type === "text")?.text ?? "";
         const summaryText = content.find((block) => block.type === "text")?.text ?? "";
-        const referenceBytes = "\n[cm-archive cm-0000000000000000]".length;
+        const referenceBytes = `\n[cm-archive cm2-${"0".repeat(64)}]`.length;
         if (summaryText.length + referenceBytes >= baseText.length) return failOpen() as any;
 
         const reference = archiveStore?.store(event.toolCallId, baseBlocks) ?? null;
