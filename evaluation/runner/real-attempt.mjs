@@ -20,6 +20,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readdirSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -139,6 +140,29 @@ export function attemptPaths(attemptDir) {
  * evaluator scaffolding, the isolated Condensed Milk config, and the
  * credential-free isolated models.json (mode 0600).
  */
+function dependencyFiles(root, prefix = "") {
+  const files = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const relativePath = prefix.length === 0 ? entry.name : `${prefix}/${entry.name}`;
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) files.push(...dependencyFiles(path, relativePath));
+    else if (entry.isFile() && statSync(path).isFile()) files.push(relativePath);
+  }
+  return files.sort();
+}
+
+function dependencyDirectorySha256(root) {
+  const files = dependencyFiles(root);
+  const hash = createHash("sha256");
+  hash.update(`${files.length}\n`);
+  for (const relativePath of files) {
+    hash.update(`${relativePath}:`);
+    hash.update(createHash("sha256").update(readFileSync(join(root, relativePath))).digest("hex"));
+    hash.update("\n");
+  }
+  return hash.digest("hex");
+}
+
 export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, proxyBaseUrl, template = null, dummyApiKey, study = null }) {
   const paths = attemptPaths(attemptDir);
   mkdirSync(paths.sessions, { recursive: true });
@@ -152,6 +176,29 @@ export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, 
     mkdirSync(dirname(target), { recursive: true });
     copyFileSync(source, target);
     chmodSync(target, statSync(source).mode & 0o777);
+  }
+  for (const dependency of study?.implementationDependencies ?? []) {
+    if (
+      dependency === null
+      || typeof dependency !== "object"
+      || typeof dependency.name !== "string"
+      || !/^[a-z0-9._-]+$/.test(dependency.name)
+      || typeof dependency.sourcePath !== "string"
+      || typeof dependency.sha256 !== "string"
+      || !/^[0-9a-f]{64}$/.test(dependency.sha256)
+      || !existsSync(join(dependency.sourcePath, "package.json"))
+    ) {
+      throw new Error("study implementation dependency is malformed or unavailable");
+    }
+    if (dependencyDirectorySha256(dependency.sourcePath) !== dependency.sha256) {
+      throw new Error(`study implementation dependency ${dependency.name} differs from its frozen digest`);
+    }
+    const target = join(paths.implementation, "node_modules", dependency.name);
+    mkdirSync(dirname(target), { recursive: true });
+    cpSync(dependency.sourcePath, target, { recursive: true, dot: true });
+    if (dependencyDirectorySha256(target) !== dependency.sha256) {
+      throw new Error(`staged implementation dependency ${dependency.name} differs from its frozen digest`);
+    }
   }
   mkdirSync(join(paths.worktree, ".git", "info"), { recursive: true });
   const excludePath = join(paths.worktree, ".git", "info", "exclude");

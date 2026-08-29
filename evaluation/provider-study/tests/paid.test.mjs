@@ -424,6 +424,18 @@ describe("provider-study paid execution", () => {
           for (const path of extensions) {
             assert.equal(path.startsWith(attemptDir), true, `extension ${path} must live inside the attempt tree`);
           }
+          if (arm !== "none") {
+            assert.equal(
+              existsSync(join(attemptDir, "worktree", "implementation", "node_modules", "proper-lockfile", "package.json")),
+              true,
+              `${arm} receives the frozen production dependency tree`,
+            );
+            assert.equal(
+              existsSync(join(attemptDir, "worktree", "implementation", "node_modules", "typebox", "package.json")),
+              true,
+              `${arm} receives the frozen typebox package`,
+            );
+          }
 
           const config = providerStudyArmConfig(repoRoot, arm);
           const homeConfig = readFileSync(join(attemptDir, "home", ".config", "condensed-milk.json"), "utf8");

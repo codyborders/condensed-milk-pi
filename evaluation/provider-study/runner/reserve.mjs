@@ -57,7 +57,7 @@ export function providerStudyPublishCompletion(attemptDir) {
   if (!existsSync(resultPath)) throw new Error("provider-study completion needs a finalized result.json");
   const bytes = readFileSync(resultPath);
   const result = JSON.parse(bytes.toString("utf8"));
-  if (result?.study !== "provider-study" && Object.keys(result ?? {}).length > 0) {
+  if (result?.study !== "provider-study") {
     throw new Error("provider-study completion refuses a non-study result");
   }
   const resultSha256 = createHash("sha256").update(bytes).digest("hex");

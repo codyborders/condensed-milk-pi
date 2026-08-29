@@ -20,6 +20,7 @@ import { providerStudyArmIdentityMap, NEUTRAL_RETRIEVAL_EXTENSION, stableJson } 
 import { providerStudyJudgeRubricSha256 } from "./judge.mjs";
 import { computeRuntimeDigest } from "../../runner/runtime-digest.mjs";
 import { holdoutBundleEnvelopeSha256, readHoldoutBundleEnvelope } from "./holdout.mjs";
+import { providerStudyDependenciesSha256 } from "./dependencies.mjs";
 
 export function providerStudyFreezeLockPath(repoRoot) {
   return join(repoRoot, "evaluation", "provider-study", "freeze-lock.json");
@@ -109,6 +110,8 @@ export function providerStudyFreezeDigests(repoRoot) {
     libModulesSha256: sha256MjsDir(join(repoRoot, "evaluation", "lib")),
     developmentScorersSha256: sha256Directory(join(repoRoot, "evaluation", "scorers")),
     taskManifestSha256: sha256File(join(repoRoot, "evaluation", "task-manifest.json")),
+    packageLockSha256: sha256File(join(repoRoot, "package-lock.json")),
+    runtimeDependenciesSha256: providerStudyDependenciesSha256(repoRoot),
     developmentManifestSha256: development.sha256,
     holdoutManifestSha256: holdout.sha256,
     profilesSha256: sha256Directory(join(providerStudyRoot, "profiles")),

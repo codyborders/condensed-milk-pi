@@ -71,7 +71,7 @@ test("completed slots resume without reinvocation and abandoned slots fail close
     });
     assert.equal(claim.claimed, true);
     // A preliminary shared result without the provider-study completion marker remains incomplete.
-    writeFileSync(join(claim.attemptDir, "result.json"), "{}\n", "utf8");
+    writeFileSync(join(claim.attemptDir, "result.json"), '{"study":"provider-study","status":"completed"}\n', "utf8");
     const incomplete = providerStudyReserve({
       runDir,
       runId: "run-x",

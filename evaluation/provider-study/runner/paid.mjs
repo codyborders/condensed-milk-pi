@@ -30,6 +30,7 @@ import { withHoldoutTasks } from "./holdout.mjs";
 import { normalizeProviderUsage, providerTotalTokens, proxyRequestAccounting, providerTrafficAnomaly } from "./metrics.mjs";
 import { primaryInterval, fiveToTenRequired } from "./stats.mjs";
 import { providerStudyObserverStudyObservers } from "./observer.mjs";
+import { providerStudyDependenciesSha256, providerStudyDependencySpecs } from "./dependencies.mjs";
 import { fixturesCacheRoot, publishFixtureCache } from "../../lib/cache.mjs";
 import { scoreWorktree } from "../../lib/scorer.mjs";
 import { buildAttemptPrompt, sha256Text } from "../../runner/prompt.mjs";
@@ -397,6 +398,7 @@ async function executeProviderStudySlot({
     profileSha256: config.sha256,
     scorerSha256: taskData.scorerSha256,
     extensionPaths,
+    implementationDependencies: armDef.kind === "commit" ? providerStudyDependencySpecs(repoRoot) : [],
     observers: providerStudyObserverStudyObservers(),
     scoreWorktree: ({ repoRoot: root, worktree, taskId }) =>
       scoreWorktree({ repoRoot: root, worktree, taskId, assertions: taskData.assertions }),
@@ -408,6 +410,7 @@ async function executeProviderStudySlot({
       conditional: conditional === true,
       neutralStubSha256: stagedNeutral.sha256,
       noPaidRetry: true,
+      runtimeDependenciesSha256: providerStudyDependenciesSha256(repoRoot),
     },
   };
   let outcome;

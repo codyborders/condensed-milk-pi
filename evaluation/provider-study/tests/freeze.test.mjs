@@ -40,6 +40,8 @@ test("freeze writes a lock over every study input and validates it", () => {
     assert.match(lock.digests.libModulesSha256, /^[0-9a-f]{64}$/);
     assert.match(lock.digests.developmentScorersSha256, /^[0-9a-f]{64}$/);
     assert.match(lock.digests.taskManifestSha256, /^[0-9a-f]{64}$/);
+    assert.match(lock.digests.packageLockSha256, /^[0-9a-f]{64}$/);
+    assert.match(lock.digests.runtimeDependenciesSha256, /^[0-9a-f]{64}$/);
     assert.match(lock.digests.protocolSha256, /^[0-9a-f]{64}$/);
     assert.match(lock.digests.profilesSha256, /^[0-9a-f]{64}$/);
     assert.match(lock.digests.neutralStubSha256, /^[0-9a-f]{64}$/);
