@@ -101,4 +101,38 @@ describe("runPaidPreflight", () => {
       rmSync(runsDir, { recursive: true, force: true });
     }
   });
+  test("verifies exactly the caller-requested arm names against an explicit manifest", () => {
+    const runsDir = mkdtempSync(join(tmpdir(), "cm-preflight-arms-"));
+    try {
+      const runDir = join(runsDir, "run");
+      mkdirSync(runDir, { recursive: true });
+      writeFileSync(join(runDir, "run.json"), JSON.stringify({ runId: "preflight-run", mode: "real" }), "utf8");
+      const base = loadManifestFile(join(repoRoot, "evaluation", "task-manifest.json"));
+      const manifest = {
+        ...base,
+        evaluation: {
+          ...base.evaluation,
+          arms: [
+            { name: "study-arm", role: "baseline", commit: "71f9e396951c42687f0c3456727b2b5c8c625da1" },
+          ],
+        },
+      };
+      const credentialSource = fakeCredentialSource(join(runsDir, "creds"));
+      const outcome = runPaidPreflight({
+        flags: { "--credential-source": credentialSource, "--cache-dir": join(runsDir, "cache") },
+        manifest,
+        repoRoot,
+        runDir,
+        armNames: ["study-arm"],
+      });
+      if (!outcome.ok) {
+        assert.fail(`expected preflight success, got: ${outcome.error}`);
+      }
+      assert.ok(outcome.armInfos["study-arm"], "the requested study arm must verify");
+      assert.equal(outcome.armInfos.upstream, undefined, "default arms stay unloaded when armNames is explicit");
+      assert.equal(outcome.armInfos.fork, undefined);
+    } finally {
+      rmSync(runsDir, { recursive: true, force: true });
+    }
+  });
 });

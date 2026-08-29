@@ -153,7 +153,7 @@ function safeScorerStatus(attemptDir) {
  * Returns { ok: true, ... } or { ok: false, error, code }. Never
  * reserves an attempt.
  */
-export function runPaidPreflight({ flags, manifest, repoRoot, runDir, armFilter = null, verifyObserverOrdering = null, implementationPolicy = "standard" }) {
+export function runPaidPreflight({ flags, manifest, repoRoot, runDir, armFilter = null, armNames = null, verifyObserverOrdering = null, implementationPolicy = "standard" }) {
   let timeoutMs = manifest.evaluation.timeoutMsPerAttempt;
   if (flags["--timeout-ms"] !== undefined) {
     const raw = flags["--timeout-ms"];
@@ -179,8 +179,9 @@ export function runPaidPreflight({ flags, manifest, repoRoot, runDir, armFilter 
     return { ok: false, error: `credential source refused: ${error.message}`, code: 2 };
   }
   const cacheRoot = flags["--cache-dir"] ?? defaultCacheRoot();
+  const preflightArms = armNames ?? ["upstream", "fork"];
   const armInfos = {};
-  for (const armName of ["upstream", "fork"]) {
+  for (const armName of preflightArms) {
     if (armFilter && armName !== armFilter) continue;
     const arm = manifest.evaluation.arms.find((entry) => entry.name === armName);
     try {

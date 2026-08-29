@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "study": "provider-study",
+  "phase": "holdout",
+  "evaluation": {
+    "provider": "z-ai",
+    "model": "glm-5.3-flash",
+    "thinking": "high",
+    "piVersion": "0.84.2",
+    "tools": [
+      "read",
+      "bash",
+      "edit",
+      "write",
+      "grep",
+      "find",
+      "ls",
+      "condensed_milk_retrieve"
+    ],
+    "timeoutMsPerAttempt": 3600000,
+    "repetitionsPreallocated": 5,
+    "conditionalRepetitions": [
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "noPaidRetry": true,
+    "armSet": "baseline-four",
+    "seed": "provider-study-holdout-2026-04"
+  },
+  "bundle": {
+    "algorithm": "aes-256-gcm",
+    "authenticated": true,
+    "bundleSha256": "9590cf7bcfb482030ed56ef54ab7eb0f3f81085ac9b0ae3b1c6eb385495648c7"
+  },
+  "tasks": [
+    {
+      "id": "holdout-task-01",
+      "coverage": [
+        "noisy-tests"
+      ],
+      "taskSha256": "fc8d57f8d337801f6e9674880cc3d02ba3973bf4f7ff0677d667c578843827bb",
+      "scorerSha256": "a5664a540926d4f7b4d948455848a8004299a18192adb0fbef3ce7efc3c246ef",
+      "solutionSha256": "6ab8711cf489ad55b04a1aebbadda08fa5b52a626e2df9ad6dc42a45f0779205",
+      "fixtureSha256": "8071318f413792d11ad6bf899d4cd7feb6f249ecc32e0210fb69aeb777f9124e"
+    },
+    {
+      "id": "holdout-task-02",
+      "coverage": [
+        "typescript-build-failures"
+      ],
+      "taskSha256": "cfc860cdf48719fd54d75bf34340ab931cc4b0b80983036ffd57dc2db2ed0489",
+      "scorerSha256": "7f80b07b87759f5e0ebbaa8800425674c5c0278fb326b9043f215b5c91ef090c",
+      "solutionSha256": "20fb4c20495a3e6f5bdcdb9c2be856467d82495a24def5a2cadd368bb8a064ec",
+      "fixtureSha256": "972ffd04bff8d1c520f6f5e456c2bd86fef7b8a8bc9797f78bac6a279cb24b74"
+    },
+    {
+      "id": "holdout-task-03",
+      "coverage": [
+        "git-status-large-diffs"
+      ],
+      "taskSha256": "416f1bba32bff32cb69e63ffb0e3d8b1985193575ce510caf61168f8bcaf0562",
+      "scorerSha256": "60a7c8c042df6748a9aa15aac59059943cc44ecfdf9db7bab733854ba11a6856",
+      "solutionSha256": "eeac2eba348df92d3309655d059ff6f913d0b2d8994203504615601850c0dbb2",
+      "fixtureSha256": "7a613f565dc5226f0bd9055c241e865c162d1bb7e4e0830e4a1d8e337fd55df6"
+    },
+    {
+      "id": "holdout-task-04",
+      "coverage": [
+        "repeated-reads"
+      ],
+      "taskSha256": "7582a59ba3fdde0c63b8b75d8985ba1080162ea325100a530f2a252e4ce04fb0",
+      "scorerSha256": "b2a9663dc6fc16877ec0a526e8426e8b23c34471f5c173f4e46a9440ca69b463",
+      "solutionSha256": "833d85f12b6ed820d7d3de55b4ca03afd50699c00f448394cc1e92bfba917deb",
+      "fixtureSha256": "136598cf12e193a20567a7ca566f17d3ec4d2f085a485f7e908987e39cf70c78"
+    },
+    {
+      "id": "holdout-task-05",
+      "coverage": [
+        "search",
+        "repetitive-logs"
+      ],
+      "taskSha256": "370c230350ef13f3f0ea52cda5c08b5a5d1ea4ef7650227c198580996b7d74f1",
+      "scorerSha256": "d43ccc80fe2e46e7f982a5d219b156e91824d3afad4ba6137355f4ef18daaea4",
+      "solutionSha256": "52ed7df9ad3f5e5d06ec7d34e5e3fd8b9a3d5249418d18489f089b66f9a20648",
+      "fixtureSha256": "bfbfbbb2962266a7c2ddea8aa83b01e07f130d52c4ebec6970e75b48e92907b0"
+    },
+    {
+      "id": "holdout-task-06",
+      "coverage": [
+        "repetitive-logs",
+        "successful-failed-commands"
+      ],
+      "taskSha256": "e9dbb2d4fb83c1f7e63c076c6006102d488eb5dcc690549e8236dc42d82ebe37",
+      "scorerSha256": "3bae8fb5ce994eb2ab6e0cf5b961dfe7afaab3eb15b3858c0fa6bc79fe8dd253",
+      "solutionSha256": "53e4494c4fb896da4a0fa21ccee7f11077f779a10593fb0059dd7057c35913a1",
+      "fixtureSha256": "e05b5f835ade9fda4b81ec37c27ac4e90620f52e3c132681a48b9fc6d07478f9"
+    },
+    {
+      "id": "holdout-task-07",
+      "coverage": [
+        "long-masking-pressure",
+        "exact-warnings-paths",
+        "archive-recovery"
+      ],
+      "taskSha256": "684e458efac372f805248a9fb4ec2b4f58c245f9e08b13e0ba5fdb3dfa019585",
+      "scorerSha256": "061053a5ebff50377f1f5ca4700837bd8d39b9d4747b226585ad83cabdf88c6e",
+      "solutionSha256": "449e13380303db10ac8eda5c3ab11146618ca00278354af77fd4cc898316a6dc",
+      "fixtureSha256": "76d9713215a076014e9f9f4de8f9bc9d23f52c26b785d2aab620a1a14adbc3db"
+    },
+    {
+      "id": "holdout-task-08",
+      "coverage": [
+        "multi-step-implementation"
+      ],
+      "taskSha256": "712225dc022e748127c7445ab9cf24bb63fa490aa1ed9faa12f8ee2e16bd77b9",
+      "scorerSha256": "92af9a8bb25e32d8bca1a4ae7010284c6126cdeb862e6871208072089c35541d",
+      "solutionSha256": "41de38f96a6b30a246f52eabac849fbda1697db7009daed10d0e06c8ec1431e1",
+      "fixtureSha256": "00c2cefb893a8f21efd9bcab8fde63861345917f57f7cabf9fbf700f1a958ba7"
+    }
+  ]
+}

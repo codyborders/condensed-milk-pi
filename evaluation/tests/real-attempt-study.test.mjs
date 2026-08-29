@@ -154,7 +154,7 @@ describe("real-attempt study configuration", () => {
     }
   });
 
-  test("resolved study observers force the [pre, implementation, post] order and pin both digests", () => {
+  test("resolved study observers wrap the loaded extensions as [pre, extensions, post] and pin both digests", () => {
     const work = mkdtempSync(join(tmpdir(), "cm-study-obs-"));
     try {
       const attemptDir = join(work, "attempt");
@@ -175,7 +175,7 @@ describe("real-attempt study configuration", () => {
         task: { id: "task-01", prompt: "p" },
         arm: { commit: "7".repeat(40) },
         piCliPath: "/tmp/cli.js",
-        // extensionPaths must not override the forced observer order.
+        // Explicit study extension paths load inside the observer sandwich.
         study: { extensionPaths: ["/elsewhere/index.ts"], observers },
       });
       const flags = plan.argv.flatMap((part, index) =>
@@ -183,11 +183,31 @@ describe("real-attempt study configuration", () => {
       );
       assert.deepEqual(flags, [
         join(attemptDir, "observer", "pre.mjs"),
-        join(paths.implementation, "index.ts"),
+        "/elsewhere/index.ts",
         join(attemptDir, "observer", "post.mjs"),
       ]);
       assert.equal(plan.pinned.observerSha256, "1".repeat(64));
       assert.equal(plan.pinned.observerWrapperSha256, "2".repeat(64));
+      // Without explicit extension paths the arm implementation loads in
+      // the middle slot.
+      const defaultPlan = planRealInvocation({
+        paths,
+        manifest: {
+          evaluation: { provider: "z-ai", model: "glm-5.3-flash", thinking: "high", piVersion: "0.84.2", tools: ["read"] },
+        },
+        task: { id: "task-01", prompt: "p" },
+        arm: { commit: "7".repeat(40) },
+        piCliPath: "/tmp/cli.js",
+        study: { observers },
+      });
+      const defaultFlags = defaultPlan.argv.flatMap((part, index) =>
+        part === "-e" ? [defaultPlan.argv[index + 1]] : [],
+      );
+      assert.deepEqual(defaultFlags, [
+        join(attemptDir, "observer", "pre.mjs"),
+        join(paths.implementation, "index.ts"),
+        join(attemptDir, "observer", "post.mjs"),
+      ]);
     } finally {
       rmSync(work, { recursive: true, force: true });
     }

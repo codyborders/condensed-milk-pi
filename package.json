@@ -66,7 +66,21 @@
     "masking:plan": "node evaluation/runner/cli.mjs masking-plan",
     "masking:dry-run": "node evaluation/runner/cli.mjs masking-dry-run",
     "masking:run": "node evaluation/runner/cli.mjs masking-run",
-    "masking:report": "node evaluation/runner/cli.mjs masking-report --latest"
+    "masking:report": "node evaluation/runner/cli.mjs masking-report --latest",
+    "provider-study:validate": "node evaluation/provider-study/runner/cli.mjs validate",
+    "provider-study:test": "node --test --test-concurrency=1 \"evaluation/provider-study/tests/*.test.mjs\"",
+    "provider-study:freeze": "node evaluation/provider-study/runner/cli.mjs freeze",
+    "provider-study:seal-holdout": "node evaluation/provider-study/runner/cli.mjs seal-holdout",
+    "provider-study:fixtures": "node evaluation/provider-study/runner/cli.mjs fixtures --phase holdout",
+    "provider-study:plan": "node evaluation/provider-study/runner/cli.mjs plan --phase development && node evaluation/provider-study/runner/cli.mjs plan --phase holdout",
+    "provider-study:dry-run": "node evaluation/provider-study/runner/cli.mjs dry-run --phase development",
+    "provider-study:prepare": "node evaluation/provider-study/runner/cli.mjs prepare --phase development --run-id provider-study-dev-1",
+    "provider-study:run": "node evaluation/provider-study/runner/cli.mjs run --phase development --run-id provider-study-dev-1",
+    "provider-study:judge-export": "node evaluation/provider-study/runner/cli.mjs judge-export --phase development",
+    "provider-study:judge-run": "node evaluation/provider-study/runner/cli.mjs judge-run --phase development",
+    "provider-study:judge-import": "node evaluation/provider-study/runner/cli.mjs judge-import --phase development",
+    "provider-study:report": "node evaluation/provider-study/runner/cli.mjs report --phase development --label dev-1",
+    "provider-study:status": "node evaluation/provider-study/runner/cli.mjs status"
   },
   "keywords": [
     "pi",

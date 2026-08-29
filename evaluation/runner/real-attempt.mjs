@@ -257,11 +257,18 @@ export function planRealInvocation({ paths, manifest, task, arm, piCliPath, node
   const scorerSha256 = study?.scorerSha256 ?? scorerDefinitionSha256(SOURCE_ROOT, task.id);
   // Ordered study extension paths replace the single standard -e flag.
   // The order is preserved exactly as given. Resolved study observers
-  // force [pre observer, arm implementation, post observer].
+  // wrap the loaded list as [pre observer, extensions, post observer].
   const observers = study?.observers ? validateObserverSetup(study.observers, null) : null;
   let extensionArgs;
   if (observers) {
-    extensionArgs = ["-e", observers.preExtensionPath, "-e", extensionPath, "-e", observers.postExtensionPath];
+    const loaded = study?.extensionPaths && study.extensionPaths.length > 0
+      ? study.extensionPaths
+      : [extensionPath];
+    extensionArgs = [
+      "-e", observers.preExtensionPath,
+      ...loaded.flatMap((extension) => ["-e", extension]),
+      "-e", observers.postExtensionPath,
+    ];
   } else if (study?.extensionPaths && study.extensionPaths.length > 0) {
     extensionArgs = study.extensionPaths.flatMap((extension) => ["-e", extension]);
   } else {
