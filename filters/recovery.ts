@@ -6,6 +6,7 @@ import { createHash, randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
+  lstatSync,
   mkdirSync,
   openSync,
   opendirSync,
@@ -91,6 +92,7 @@ export interface ArchiveFilesystem {
   renameSync(from: string, to: string): void;
   unlinkSync(path: string): void;
   statSync(path: string): { size: number; mtimeMs: number; ctimeMs: number; isDirectory?: () => boolean };
+  lstatSync(path: string): { size: number; mtimeMs: number; ctimeMs: number; isDirectory?: () => boolean };
   readdirSync(path: string): string[];
   utimesSync(path: string, atime: number, mtime: number): void;
   rmSync(path: string, options: { recursive: boolean; force: boolean }): void;
@@ -112,6 +114,7 @@ export function defaultArchiveFilesystem(): ArchiveFilesystem {
     renameSync: (from, to) => renameSync(from, to),
     unlinkSync: (path) => unlinkSync(path),
     statSync: (path) => statSync(path),
+    lstatSync: (path) => lstatSync(path),
     readdirSync: (path) => readdirSync(path),
     utimesSync: (path, atime, mtime) => utimesSync(path, atime, mtime),
     rmSync: (path, options) => rmSync(path, options),
@@ -159,7 +162,7 @@ function readDirectoryBounded(
   return valid ? names : null;
 }
 
-/** Counting wrapper: one tick per operation name. Counters are live. */
+/** Counting wrapper: one tick per filesystem or directory-handle call. */
 export function createCountingFilesystem(base: ArchiveFilesystem = defaultArchiveFilesystem()): {
   fs: ArchiveFilesystem;
   counts: Record<string, number>;
@@ -170,9 +173,23 @@ export function createCountingFilesystem(base: ArchiveFilesystem = defaultArchiv
     counts[key] = 0;
     (fs as any)[key] = (...args: unknown[]) => {
       counts[key] = (counts[key] ?? 0) + 1;
-      return (base[key] as (...a: unknown[]) => unknown)(...args);
+      const value = (base[key] as (...a: unknown[]) => unknown)(...args);
+      if (key !== "opendirSync") return value;
+      const directory = value as ReturnType<ArchiveFilesystem["opendirSync"]>;
+      return {
+        readSync() {
+          counts.directoryReadSync = (counts.directoryReadSync ?? 0) + 1;
+          return directory.readSync();
+        },
+        closeSync() {
+          counts.directoryCloseSync = (counts.directoryCloseSync ?? 0) + 1;
+          directory.closeSync();
+        },
+      };
     };
   }
+  counts.directoryReadSync = 0;
+  counts.directoryCloseSync = 0;
   return { fs, counts };
 }
 
@@ -808,10 +825,35 @@ function emptyIndex(_sessionKey: string): StoreIndex {
 const MAX_TOMBSTONES = 512;
 const MAX_BATCH_CANDIDATES = 10_000;
 const MAX_DIRECTORY_ENTRIES = 8_192;
-const MAX_SWEEP_SESSIONS = 128;
 const MAX_INDEX_BYTES = 2_097_152;
 const MAX_CANDIDATE_NODES = 10_000;
 const MAX_CANDIDATE_DEPTH = 64;
+
+/** Direct session directory names below the recovery root. */
+const SESSION_NAME_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
+
+/** Hard cap on direct session directories below the recovery root.
+ *  Exceeding it fails new archive admission open; existing session
+ *  directories are never removed to make room. */
+export const MAX_ROOT_SESSIONS = 512;
+
+/** Fixed allowance for root state and one lock per bounded session. */
+const MAX_ROOT_CONTROL_ENTRIES = MAX_ROOT_SESSIONS + 16;
+
+/** Root scan ceiling. The direct-session cap remains separately enforced. */
+export const MAX_ROOT_SCAN_ENTRIES = MAX_ROOT_SESSIONS + MAX_ROOT_CONTROL_ENTRIES;
+
+/** Session directories selected by one stale sweep. */
+export const MAX_SWEEP_BATCH_SESSIONS = 128;
+
+/** Session children examined by each preliminary and locked retirement check. */
+const MAX_SWEEP_SESSION_ENTRIES = 2_048;
+
+/** Conservative fixed call ceiling implied by all sweep loop bounds. */
+export const MAX_SWEEP_FILESYSTEM_OPERATIONS = 1_400_000;
+
+/** Constant-size sweep state bound: a v1 envelope plus one name. */
+const MAX_SWEEP_STATE_BYTES = 256;
 
 export type RetrieveOutcome =
   | { kind: "ok"; canonical: string; searchable: string; bytes: number; createdAt: number }
@@ -855,20 +897,93 @@ export class ArchiveStore {
     return this.dir;
   }
 
-  /** Ensure root and session directories exist with mode 0700. Returns
-   *  false when the tree cannot be created or locked down. */
-  private ensureDir(): boolean {
-    if (this.dirEnsured) return true;
+  private rememberVerified(id: string, record: {
+    size: number;
+    mtimeMs: number;
+    ctimeMs: number;
+    indexedDigest: string;
+  }): void {
+    this.verifiedLive.delete(id);
+    this.verifiedLive.set(id, record);
+    while (this.verifiedLive.size > this.limits.maxEntries) {
+      const oldest = this.verifiedLive.keys().next().value;
+      if (typeof oldest !== "string") break;
+      this.verifiedLive.delete(oldest);
+    }
+  }
+
+  private isRootControlName(name: string): boolean {
+    return name === ArchiveStore.ROOT_LOCK_FILE
+      || name === ArchiveStore.ROOT_SWEEP_STATE_FILE
+      || /^\.session-[0-9a-f]{64}\.batch\.lock$/.test(name);
+  }
+
+  private sessionPathIsDirect(): boolean {
     try {
-      this.fs.mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-      if (process.platform !== "win32") {
-        this.fs.chmodSync(this.dir, 0o700);
-      }
-      this.dirEnsured = true;
-      return true;
+      return this.isDirectSessionDirectory(this.sessionKey, this.fs.realpathSync(this.rootDir));
     } catch {
       return false;
     }
+  }
+
+  /** Ensure root and session directories exist with mode 0700. Every
+   *  ensure runs under the root maintenance lock and enforces the direct
+   *  session cap. Lock and release uncertainty emits no reference. */
+  private ensureDir(): boolean {
+    if (this.isRootControlName(this.sessionKey)) return false;
+    if (this.dirEnsured) return this.sessionPathIsDirect();
+    try {
+      this.fs.mkdirSync(this.rootDir, { recursive: true, mode: 0o700 });
+    } catch {
+      return false;
+    }
+    const lock = this.acquireRootLock();
+    if (lock === null) return false;
+    let prepared = false;
+    try {
+      const resolvedRoot = this.fs.realpathSync(this.rootDir);
+      if (this.rootWithinSessionCap(resolvedRoot)) {
+        this.fs.mkdirSync(this.dir, { recursive: true, mode: 0o700 });
+        if (!this.isDirectSessionDirectory(this.sessionKey, resolvedRoot)) throw new Error("unsafe session directory");
+        if (process.platform !== "win32") this.fs.chmodSync(this.dir, 0o700);
+        prepared = true;
+      }
+    } catch {
+      prepared = false;
+    }
+    const released = this.releaseRootLock(lock);
+    if (!prepared || !released) return false;
+    this.dirEnsured = true;
+    return true;
+  }
+
+  private isDirectSessionDirectory(name: string, resolvedRoot: string): boolean {
+    const path = join(this.rootDir, name);
+    const stat = this.fs.lstatSync(path);
+    if (stat.isDirectory && !stat.isDirectory()) return false;
+    return this.fs.realpathSync(path) === join(resolvedRoot, name);
+  }
+
+  /** Count resolved direct session directories in one bounded root scan.
+   *  Symlinks never count and cannot become the current session path. */
+  private rootWithinSessionCap(resolvedRoot: string): boolean {
+    const names = readDirectoryBounded(this.fs, this.rootDir, MAX_ROOT_SCAN_ENTRIES);
+    if (names === null) return false;
+    let sessions = 0;
+    let currentExists = false;
+    for (const name of names) {
+      if (this.isRootControlName(name)) continue;
+      if (!SESSION_NAME_PATTERN.test(name)) continue;
+      const isDirectDirectory = this.isDirectSessionDirectory(name, resolvedRoot);
+      if (!isDirectDirectory) {
+        if (name === this.sessionKey) return false;
+        continue;
+      }
+      sessions += 1;
+      if (name === this.sessionKey) currentExists = true;
+      if (sessions > MAX_ROOT_SESSIONS) return false;
+    }
+    return currentExists ? sessions <= MAX_ROOT_SESSIONS : sessions < MAX_ROOT_SESSIONS;
   }
 
   private entryPath(id: string): string {
@@ -1104,7 +1219,7 @@ export class ArchiveStore {
     if (lockFd === null) return null; // lock unavailable: no references
     let refs: Map<string, string> | null = null;
     try {
-      refs = this.runBatch(normalized, references);
+      refs = this.sessionPathIsDirect() ? this.runBatch(normalized, references) : null;
     } catch {
       refs = null; // any unexpected failure fails open
     } finally {
@@ -1113,24 +1228,40 @@ export class ArchiveStore {
     return refs;
   }
 
-  /** Per-session atomic lock directory. */
+  /** Per-session lock suffix. Locks live directly below the trusted root. */
   private static readonly LOCK_FILE = "batch.lock";
+  /** Root maintenance lock directory and sweep cursor control file. */
+  private static readonly ROOT_LOCK_FILE = "root.lock";
+  private static readonly ROOT_SWEEP_STATE_FILE = "sweep.state";
   private static readonly LOCK_ATTEMPTS = 5;
   private static readonly LOCK_RETRY_DELAY_MS = 5;
   private static readonly LOCK_STALE_MS = 300_000;
 
-  private lockPath(): string {
-    return join(this.dir, ArchiveStore.LOCK_FILE);
+  private sessionLockName(): string {
+    return `.session-${sha256(this.sessionKey)}.${ArchiveStore.LOCK_FILE}`;
   }
 
-  /** Acquire an atomic directory lock. The lock library removes stale
-   *  crash-left directories before retrying its mkdir operation. */
+  private lockPath(): string {
+    return join(this.rootDir, this.sessionLockName());
+  }
+
+  /** Acquire a root-contained session lock. Directory replacement cannot
+   *  redirect lock creation outside the recovery root. */
   private acquireLock(): ArchiveLock | null {
+    return this.acquireLockAt(this.rootDir, this.sessionLockName());
+  }
+
+  private acquireRootLock(): ArchiveLock | null {
+    return this.acquireLockAt(this.rootDir, ArchiveStore.ROOT_LOCK_FILE);
+  }
+
+  private acquireLockAt(directory: string, lockFile: string): ArchiveLock | null {
+    const lockfilePath = join(directory, lockFile);
     for (let attempt = 0; attempt < ArchiveStore.LOCK_ATTEMPTS; attempt++) {
       try {
-        const release = lockSync(this.dir, {
+        const release = lockSync(directory, {
           fs: this.fs,
-          lockfilePath: this.lockPath(),
+          lockfilePath,
           realpath: false,
           retries: 0,
           stale: ArchiveStore.LOCK_STALE_MS,
@@ -1138,7 +1269,7 @@ export class ArchiveStore {
           onCompromised: () => {},
         });
         try {
-          this.fs.chmodSync(this.lockPath(), 0o700);
+          this.fs.chmodSync(lockfilePath, 0o700);
         } catch {
           try { release(); } catch { /* best effort */ }
           return null;
@@ -1152,6 +1283,17 @@ export class ArchiveStore {
   }
 
   private releaseLock(lock: ArchiveLock): boolean {
+    try {
+      lock.release();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** A failed release leaves ownership uncertain. Do not remove a lock
+   *  that another process might already own. */
+  private releaseRootLock(lock: ArchiveLock): boolean {
     try {
       lock.release();
       return true;
@@ -1178,6 +1320,29 @@ export class ArchiveStore {
     if (listing === null) return null;
     const present = new Set(listing);
 
+    // Integrity repair: find every index row whose entry file is missing.
+    // Each row is tombstoned as evicted in memory and committed through
+    // the same atomic index write used everywhere else. The pass then
+    // returns null: no candidate file is written, nextSequence stays
+    // unchanged, and no reference is emitted while storage is uncertain.
+    // A failed commit leaves the old index bytes intact and also returns
+    // null, so the next pass retries the repair before admitting. Rolling
+    // ids are sequence-bound and monotonic, so a repaired id is never
+    // reused by a later admission.
+    const missingRows: string[] = [];
+    for (const id of Object.keys(index.entries)) {
+      if (!present.has(`${id}.json`)) missingRows.push(id);
+    }
+    if (missingRows.length > 0) {
+      for (const id of missingRows) {
+        delete index.entries[id];
+        this.verifiedLive.delete(id);
+        this.tombstone(index, id, "evicted");
+      }
+      this.writeIndex(index);
+      return null;
+    }
+
     // Clear bounded crash leftovers before identity collision checks. A
     // cleanup failure leaves storage uncertain and emits no references.
     for (const name of listing) {
@@ -1202,17 +1367,12 @@ export class ArchiveStore {
       else tombstoned.set(entry.id, entry.reason);
     }
 
-    // Retention over existing entries: drop rows whose file vanished,
-    // then expire rows past the TTL. Existing files are deleted only after
-    // the final index commits, so an index failure preserves old state.
+    // Retention over existing entries: rows whose file vanished were
+    // repaired above, so this pass only applies the TTL. Existing files
+    // are deleted only after the final index commits, so an index failure
+    // preserves old state.
     const removalsToUnlink = new Set<string>();
     for (const id of Object.keys(index.entries)) {
-      if (!present.has(`${id}.json`)) {
-        // An indexed row without its file is an integrity failure. Do not
-        // admit a replacement in this pass because caller content must
-        // remain visible and no uncertain reference may be emitted.
-        return null;
-      }
       if (now - index.entries[id].createdAt >= this.limits.ttlMs) {
         removalsToUnlink.add(id);
         delete index.entries[id];
@@ -1447,7 +1607,7 @@ export class ArchiveStore {
           rollbackNewFiles();
           return null;
         }
-        this.verifiedLive.set(entry.id, {
+        this.rememberVerified(entry.id, {
           size: metadata.size,
           mtimeMs: metadata.mtimeMs,
           ctimeMs: metadata.ctimeMs,
@@ -1554,7 +1714,7 @@ export class ArchiveStore {
     } else if (parsed.v !== 1) {
       return false;
     }
-    this.verifiedLive.set(id, { ...after, indexedDigest });
+    this.rememberVerified(id, { ...after, indexedDigest });
     return true;
   }
 
@@ -1567,7 +1727,7 @@ export class ArchiveStore {
     if (lockFd === null) return { kind: "unavailable" };
     let outcome: RetrieveOutcome;
     try {
-      outcome = this.loadEntry(id);
+      outcome = this.sessionPathIsDirect() ? this.loadEntry(id) : { kind: "unavailable" };
     } catch {
       outcome = { kind: "unavailable" };
     }
@@ -1663,7 +1823,7 @@ export class ArchiveStore {
     const lockFd = this.acquireLock();
     if (lockFd === null) return;
     try {
-      this.cleanupUnderLock();
+      if (this.sessionPathIsDirect()) this.cleanupUnderLock();
     } finally {
       this.releaseLock(lockFd);
     }
@@ -1769,28 +1929,84 @@ export class ArchiveStore {
     return true;
   }
 
-  /** Retire all live entries after a session becomes inactive. The index
-   *  commits tombstones before entry cleanup, so leftover orphan files
-   *  cannot revive references. */
+  /** Retirement maintenance path: the target directory was already
+   *  observed by the sweep's bounded root scan, so plain existence plus
+   *  permissions is enough. Root-cap admission checks do not gate
+   *  retirement, and retirement must not re-scan the root per target. */
+  private ensureRetirementDir(): boolean {
+    try {
+      const resolvedRoot = this.fs.realpathSync(this.rootDir);
+      if (!this.isDirectSessionDirectory(this.sessionKey, resolvedRoot)) return false;
+      if (process.platform !== "win32") this.fs.chmodSync(this.dir, 0o700);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Retire all live entries after a session becomes inactive. The
+   *  final decision happens under this session's batch lock because a
+   *  preliminary unlocked freshness check may have raced with concurrent
+   *  activity: the child listing, child stats, index validation, indexed
+   *  entry presence, and newest mtime are all re-read while the lock is
+   *  held, and any uncertainty or renewed freshness skips retirement.
+   *  When still stale, the index commits tombstones before entry cleanup,
+   *  so leftover orphan files cannot revive references and old references
+   *  keep their exact evicted retrieval outcome. */
   private retireInactiveSession(): void {
-    if (!this.ensureDir()) return;
+    if (!this.ensureRetirementDir()) return;
     const lockFd = this.acquireLock();
     if (lockFd === null) return;
     try {
+      const resolvedRoot = this.fs.realpathSync(this.rootDir);
+      if (!this.isDirectSessionDirectory(this.sessionKey, resolvedRoot)) return;
+      // Bounded child listing under the lock.
+      const children = readDirectoryBounded(this.fs, this.dir, MAX_SWEEP_SESSION_ENTRIES);
+      if (children === null) return;
+      // Stat every relevant child except the lock itself.
+      let newest = -Infinity;
+      let sawChild = false;
+      for (const child of children) {
+        if (child === ArchiveStore.LOCK_FILE) continue;
+        let childStat: { mtimeMs: number };
+        try {
+          childStat = this.fs.statSync(join(this.dir, child));
+        } catch {
+          return; // uncertain stat: skip retirement
+        }
+        sawChild = true;
+        if (childStat.mtimeMs > newest) newest = childStat.mtimeMs;
+      }
+      // Read and validate the index under the lock.
       const index = this.readIndex();
       if (!index) return;
+      // Confirm every indexed entry file is still present.
+      const childNames = new Set(children);
+      for (const id of Object.keys(index.entries)) {
+        if (!childNames.has(`${id}.json`)) return; // uncertain presence: skip
+      }
+      // Recompute the newest mtime, falling back to the directory itself
+      // when no relevant children exist.
+      if (!sawChild) {
+        try {
+          newest = this.fs.statSync(this.dir).mtimeMs;
+        } catch {
+          return;
+        }
+      }
+      const now = this.now();
+      if (now - newest < this.limits.ttlMs) return; // became fresh: skip
+      // Still stale: tombstone all rows, commit, then delete entry files.
       for (const id of Object.keys(index.entries)) {
         delete index.entries[id];
         this.verifiedLive.delete(id);
         this.tombstone(index, id, "evicted");
       }
       if (!this.writeIndex(index)) return;
-      const names = readDirectoryBounded(this.fs, this.dir, MAX_DIRECTORY_ENTRIES);
-      if (names === null) return;
-      for (const name of names) {
-        if (!/^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(name) && !/^index\.json\..+\.tmp$/.test(name)) continue;
+      for (const child of children) {
+        if (!/^(?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64})\.json$/.test(child) && !/^index\.json\..+\.tmp$/.test(child)) continue;
         try {
-          this.fs.unlinkSync(join(this.dir, name));
+          this.fs.unlinkSync(join(this.dir, child));
         } catch {
           // The committed tombstone index keeps leftover files inaccessible.
         }
@@ -1802,21 +2018,116 @@ export class ArchiveStore {
     }
   }
 
+  /** Read the persisted lexical sweep cursor. An empty string is the
+   *  initial cursor; a present-but-invalid state file is uncertainty and
+   *  fails the sweep open. */
+  private readSweepCursor(): string | null {
+    const path = join(this.rootDir, ArchiveStore.ROOT_SWEEP_STATE_FILE);
+    let size: number;
+    try {
+      size = this.fs.statSync(path).size;
+    } catch (error: any) {
+      if (error?.code === "ENOENT") return "";
+      return null;
+    }
+    if (!Number.isSafeInteger(size) || size < 0 || size > MAX_SWEEP_STATE_BYTES) return null;
+    let raw: string;
+    try {
+      raw = this.fs.readFileSync(path, "utf8");
+    } catch {
+      return null;
+    }
+    if (Buffer.byteLength(raw, "utf8") !== size) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!isPlainObject(parsed) || parsed.v !== 1 || typeof parsed.cursor !== "string") return null;
+      if (parsed.cursor !== "" && !SESSION_NAME_PATTERN.test(parsed.cursor)) return null;
+      return parsed.cursor;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Atomically persist the sweep cursor. Constant size: one versioned
+   *  envelope plus one session name. */
+  private writeSweepCursor(cursor: string): boolean {
+    const path = join(this.rootDir, ArchiveStore.ROOT_SWEEP_STATE_FILE);
+    const tmp = this.uniqueTemp(path);
+    try {
+      this.fs.writeFileSync(tmp, JSON.stringify({ v: 1, cursor }), { mode: 0o600 });
+      this.fs.renameSync(tmp, path);
+      return true;
+    } catch {
+      try { this.fs.unlinkSync(tmp); } catch { /* best effort */ }
+      return false;
+    }
+  }
+
   /** Sweep stale session directories through each target store's strict,
-   *  locked retirement path. Malformed indexes remain untouched. */
+   *  locked retirement path. One bounded pass under the root maintenance
+   *  lock scans the root, sorts valid session names, selects at most
+   *  MAX_SWEEP_BATCH_SESSIONS names strictly after the persisted lexical
+   *  cursor (wrapping around), and commits the last selected name as the
+   *  new cursor. Retirement then runs outside the root lock, so repeated
+   *  calls make progress with fixed work regardless of root size.
+   *  Malformed indexes and any uncertain root state, lock, scan, or
+   *  cursor commit fail open by skipping retirement. */
   sweepStaleSessions(): void {
-    const names = readDirectoryBounded(this.fs, this.rootDir, MAX_SWEEP_SESSIONS);
-    if (names === null) return;
+    const rootLock = this.acquireRootLock();
+    if (rootLock === null) return;
+    let selected: string[] = [];
+    let released = false;
+    try {
+      const names = readDirectoryBounded(this.fs, this.rootDir, MAX_ROOT_SCAN_ENTRIES);
+      if (names === null) return;
+      const cursor = this.readSweepCursor();
+      if (cursor === null) return;
+      const resolvedRoot = this.fs.realpathSync(this.rootDir);
+      const sessions: string[] = [];
+      for (const name of names) {
+        if (!SESSION_NAME_PATTERN.test(name) || this.isRootControlName(name) || name === this.sessionKey) continue;
+        try {
+          if (this.isDirectSessionDirectory(name, resolvedRoot)) sessions.push(name);
+        } catch {
+          // An uncertain or non-directory root entry is not a retirement target.
+        }
+      }
+      sessions.sort();
+      if (sessions.length === 0) return;
+      // Wraparound selection is disjoint from the strictly-after segment
+      // and includes the cursor name itself, so with stable names every
+      // call selects each name at most once and no name starves between
+      // rounds.
+      const after = sessions.filter((name) => name > cursor);
+      const wrapped = sessions.filter((name) => name <= cursor);
+      selected = [...after, ...wrapped].filter((_, index) => index < MAX_SWEEP_BATCH_SESSIONS);
+      if (selected.length === 0) return;
+      if (!this.writeSweepCursor(selected[selected.length - 1])) return;
+    } finally {
+      released = this.releaseRootLock(rootLock);
+    }
+    if (!released) return; // uncertain root state: skip retirement
+    this.retireSelectedSessions(selected);
+  }
+
+  /** Preliminary unlocked freshness screening for sweep-selected names.
+   *  The final decision always happens under each target's session lock. */
+  private retireSelectedSessions(selected: string[]): void {
     const now = this.now();
-    for (const name of names) {
-      if (!/^[A-Za-z0-9._-]{1,128}$/.test(name) || name === this.sessionKey) continue;
+    let resolvedRoot: string;
+    try {
+      resolvedRoot = this.fs.realpathSync(this.rootDir);
+    } catch {
+      return;
+    }
+    for (const name of selected) {
       const directory = join(this.rootDir, name);
       try {
+        if (!this.isDirectSessionDirectory(name, resolvedRoot)) continue;
         const directoryStat = this.fs.statSync(directory);
-        if (directoryStat.isDirectory && !directoryStat.isDirectory()) continue;
         let newest = -Infinity;
         let sawChild = false;
-        const children = readDirectoryBounded(this.fs, directory, MAX_DIRECTORY_ENTRIES);
+        const children = readDirectoryBounded(this.fs, directory, MAX_SWEEP_SESSION_ENTRIES);
         if (children === null) continue;
         for (const child of children) {
           if (child === ArchiveStore.LOCK_FILE) continue;

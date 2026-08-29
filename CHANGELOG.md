@@ -12,6 +12,16 @@ Retention applies TTL before capacity. Semantic rows have priority over historic
 
 Archive `enabled` remains false by default. The earlier `1.10.1-remediated.1` release remains immutable.
 
+### Archive lifecycle correction
+
+A missing indexed file now triggers an atomic repair under the session lock. The discovering context pass keeps original redacted content visible and emits no reference. Repair removes every missing row, records bounded removal metadata, and consumes no admission sequence. A later pass can admit a distinct retrievable reference without a session restart.
+
+Stale-session cleanup now uses a bounded root scan and a constant-size rotating cursor. Each call scans at most 1,040 root entries and selects at most 128 session directories. Target checks inspect at most 2,048 children before and after target lock acquisition. Final retirement rechecks freshness, index state, and entry presence while holding that lock.
+
+Session paths must be non-symlink direct children of the resolved recovery root. Session locks now use deterministic root-contained names. Revalidation after lock acquisition prevents directory replacement from redirecting archive or retirement writes.
+
+The root accepts at most 512 direct session directories. Retired entry content is removed after the removal index commits. Bounded removal metadata remains. New session admission fails open at the directory cap. Archive-created live bytes remain bounded by the root cap and the 16 MiB per-session configuration ceiling.
+
 ### Evaluation and release gate
 
 The prior paid study used 42.18% more reported tokens for the fork. No new paid token result exists. Local filesystem benchmarks establish runtime only. Fresh provider evaluation is required before production approval.

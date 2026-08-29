@@ -4,7 +4,8 @@
  * Run: npx tsx test-recovery-batch.ts
  */
 import assert from "node:assert/strict";
-import { mkdtempSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, renameSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -24,6 +25,11 @@ function ok(name: string) {
 const root = mkdtempSync(join(tmpdir(), "cm-recovery-batch-"));
 const baseClock = 1_700_000_000_000;
 const long = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3);
+
+function sessionLockPath(sessionKey: string): string {
+  const digest = createHash("sha256").update(sessionKey).digest("hex");
+  return join(root, `.session-${digest}.batch.lock`);
+}
 
 function makeStore(
   sessionKey: string,
@@ -132,7 +138,7 @@ process.on("exit", () => {
   const refs = store.prepareBatch([{ toolCallId: "lock-1", blocks: [{ type: "text", text: long("l") }] }]);
   assert.ok(refs && refs.size === 1, "batch under the lock succeeds");
   assert.equal(lockCreates, 1, "lock acquired with one atomic directory create");
-  const left = (readdirSync(real, store.directory()) as string[]).filter((n) => n.includes("lock"));
+  const left = (readdirSync(real, root) as string[]).filter((name) => name.endsWith(".batch.lock"));
   assert.equal(left.length, 0, "no lock file remains after the batch");
   ok("locking: lock acquired once and released after a successful batch");
 }
@@ -145,7 +151,7 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
 {
   const real = defaultArchiveFilesystem();
   real.mkdirSync(join(root, "held-lock-session"), { recursive: true, mode: 0o700 });
-  const heldPath = join(root, "held-lock-session", "batch.lock");
+  const heldPath = sessionLockPath("held-lock-session");
   real.mkdirSync(heldPath, { recursive: false, mode: 0o700 });
   const store = makeStore("held-lock-session");
   const refs = store.prepareBatch([{ toolCallId: "held-1", blocks: [{ type: "text", text: long("h") }] }]);
@@ -178,14 +184,14 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
 {
   const real = defaultArchiveFilesystem();
   real.mkdirSync(join(root, "batch-lock-old"), { recursive: true, mode: 0o700 });
-  const lockPath = join(root, "batch-lock-old", "batch.lock");
+  const lockPath = sessionLockPath("batch-lock-old");
   real.mkdirSync(lockPath, { recursive: false, mode: 0o700 });
   const oldSeconds = (Date.now() - 600_000) / 1000;
   real.utimesSync(lockPath, oldSeconds, oldSeconds);
   const store = makeStore("batch-lock-old");
   const refs = store.prepareBatch([{ toolCallId: "old-lock-1", blocks: [{ type: "text", text: long("s") }] }]);
   assert.ok(refs?.has("old-lock-1"), "stale crash-left lock is replaced after the bounded age");
-  assert.ok(!real.readdirSync(join(root, "batch-lock-old")).includes("batch.lock"), "new owner releases only its own lock");
+  assert.ok(!real.readdirSync(root).includes(lockPath.substring(root.length + 1)), "new owner releases only its own lock");
   ok("locking: crash-left lock is safely reclaimed");
 }
 
@@ -194,12 +200,12 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   const real = defaultArchiveFilesystem();
   const directory = join(root, "single-store-lock");
   real.mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const lockPath = join(directory, "batch.lock");
+  const lockPath = sessionLockPath("single-store-lock");
   real.mkdirSync(lockPath, { recursive: false, mode: 0o700 });
   const store = makeStore("single-store-lock");
   const reference = store.store("single-1", [{ type: "text", text: long("single") }]);
   assert.equal(reference, null, "single-entry storage fails open while another process owns the lock");
-  assert.ok(real.readdirSync(directory).includes("batch.lock"), "single-entry storage does not disturb the owner lock");
+  assert.ok(real.readdirSync(root).includes(lockPath.substring(root.length + 1)), "single-entry storage does not disturb the owner lock");
   real.rmdirSync(lockPath);
   ok("locking: semantic one-entry storage uses batch locking");
 }
@@ -211,10 +217,10 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   const store = makeStore(session);
   const id = store.store("retrieve-lock-1", [{ type: "text", text: long("r") }]);
   assert.ok(id);
-  const lockPath = join(root, session, "batch.lock");
+  const lockPath = sessionLockPath(session);
   real.mkdirSync(lockPath, { recursive: false, mode: 0o700 });
   assert.equal(store.retrieve(id!).kind, "unavailable", "retrieval fails open while the batch lock is held");
-  assert.ok(real.readdirSync(join(root, session)).includes("batch.lock"), "retrieval does not disturb the owner lock");
+  assert.ok(real.readdirSync(root).includes(lockPath.substring(root.length + 1)), "retrieval does not disturb the owner lock");
   real.rmdirSync(lockPath);
   assert.equal(store.retrieve(id!).kind, "ok", "retrieval resumes after lock release");
   ok("locking: retrieval uses the batch lock");
@@ -246,7 +252,7 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   clock += 1;
   const second = writer.store("cleanup-lock-2", [{ type: "text", text: long("b") }]);
   assert.ok(first && second);
-  const lockPath = join(root, session, "batch.lock");
+  const lockPath = sessionLockPath(session);
   real.mkdirSync(lockPath, { recursive: false, mode: 0o700 });
   const cleaner = makeStore(session, { maxEntries: 1 });
   cleaner.cleanup();
@@ -254,6 +260,38 @@ function readdirSync(real: ReturnType<typeof defaultArchiveFilesystem>, dir: str
   assert.equal(writer.retrieve(first!).kind, "ok", "cleanup does not mutate the index without lock ownership");
   assert.equal(writer.retrieve(second!).kind, "ok", "cleanup leaves every live entry intact when lock is unavailable");
   ok("locking: retention cleanup uses the batch lock");
+}
+
+// --- cleanup revalidates the session path after lock acquisition ---
+if (process.platform !== "win32") {
+  const real = defaultArchiveFilesystem();
+  const session = "cleanup-lock-race";
+  const writer = makeStore(session);
+  assert.ok(writer.store("cleanup-race-1", [{ type: "text", text: long("race") }]), "cleanup-race seed is live");
+  const outside = mkdtempSync(join(tmpdir(), "cm-cleanup-race-outside-"));
+  let replaced = false;
+  let redirectedStats = 0;
+  const fs = {
+    ...real,
+    mkdirSync(path: string, options?: { recursive?: boolean; mode?: number }) {
+      if (path === sessionLockPath(session) && !replaced) {
+        replaced = true;
+        renameSync(join(root, session), join(root, `${session}-parked`));
+        symlinkSync(outside, join(root, session), "dir");
+      }
+      return real.mkdirSync(path, options);
+    },
+    statSync(path: string) {
+      if (replaced && path.startsWith(`${join(root, session)}/`)) redirectedStats += 1;
+      return real.statSync(path);
+    },
+  };
+  const cleaner = makeStore(session, undefined, fs);
+  cleaner.cleanup();
+  assert.equal(replaced, true, "cleanup replacement runs at session-lock acquisition");
+  assert.equal(redirectedStats, 0, "cleanup performs no file access through the replacement path");
+  real.rmSync(outside, { recursive: true, force: true });
+  ok("locking: cleanup revalidates its path after session-lock acquisition");
 }
 
 // --- lock release failure is uncertain final state: no references ---

@@ -1,23 +1,24 @@
 /**
  * Rolling admission (cm2) recovery tests — corrective PR.
  *
- * Active red cycle 1: a new admission through the public ArchiveStore.store
- * boundary must return a full-width cm2- identifier (256-bit hex) instead
- * of the legacy 16-hex cm- identifier.
- *
- * Deferred regression cases for later red cycles are tracked in the handoff
- * notes; they are intentionally not active assertions yet.
+ * Covers the cm2 identity shape, v2 persistence, migration, rolling
+ * retention, verification, PR #9 missing-entry index repair, the bounded
+ * cursor-driven stale-session sweep, and the locked retirement decision.
  *
  * Run: npx tsx test-recovery-rolling.ts
  */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ArchiveStore,
   DEFAULT_ARCHIVE_LIMITS,
+  MAX_ROOT_SCAN_ENTRIES,
+  MAX_SWEEP_BATCH_SESSIONS,
+  MAX_SWEEP_FILESYSTEM_OPERATIONS,
+  createCountingFilesystem,
   defaultArchiveFilesystem,
   deriveArchiveId,
 } from "./filters/recovery.js";
@@ -208,6 +209,22 @@ process.on("exit", () => {
   ok("rolling: same-size substitution invalidates prior verification");
 }
 
+// ── verification cache stays bounded across external live-set rotation ──
+{
+  const session = "roll-verification-cache";
+  const limits = { ...DEFAULT_ARCHIVE_LIMITS, maxEntries: 1 };
+  const writer = new ArchiveStore(root, session, limits, () => baseClock);
+  const reader = new ArchiveStore(root, session, limits, () => baseClock);
+  for (let index = 0; index < 20; index++) {
+    const id = writer.store(`tc-cache-${index}`, [{ type: "text", text: long(`cache-${index}`) }]);
+    assert.ok(id, `rotated live row ${index} admits`);
+    const reused = reader.prepareBatch([{ toolCallId: `tc-cache-${index}`, blocks: [{ type: "text", text: long(`cache-${index}`) }] }]);
+    assert.equal(reused?.get(`tc-cache-${index}`), id, `rotated live row ${index} verifies and reuses`);
+  }
+  assert.ok((reader as any).verifiedLive.size <= limits.maxEntries, "verification cache never exceeds the configured live-entry bound");
+  ok("rolling: verification cache remains bounded across store instances");
+}
+
 // ── cycle 5: failed index commit preserves the prior live set ──
 {
   const session = "roll-index-rollback";
@@ -257,6 +274,83 @@ process.on("exit", () => {
   const files = readdirSync(reopened.directory()).filter((name) => name.endsWith(".json"));
   assert.deepEqual(files.sort(), [`${oldId}.json`, "index.json"].sort(), "failed replacement removes its uncommitted entry file");
   ok("rolling: failed index commit rolls back new files and preserves prior rows");
+}
+
+// ── PR #9: a missing indexed entry file repairs the row and fails the batch open ──
+{
+  const session = "roll-missing-entry";
+  const directory = join(root, session);
+  const real = defaultArchiveFilesystem();
+  const seed = new ArchiveStore(root, session, DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+  const id1 = seed.store("tc-missing-seed", [{ type: "text", text: long("missing-seed") }]);
+  const id2 = seed.store("tc-missing-keep", [{ type: "text", text: long("missing-keep") }]);
+  assert.ok(id1 && id2 && id1 !== id2, "two seed rows go live");
+  const before = JSON.parse(readFileSync(join(directory, "index.json"), "utf8"));
+  // Delete ONLY the indexed entry file; index.json must stay in place.
+  real.unlinkSync(join(directory, `${id1}.json`));
+  const store = new ArchiveStore(root, session, DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+  const refs = store.prepareBatch([{ toolCallId: "tc-missing-new", blocks: [{ type: "text", text: long("missing-new") }] }]);
+  assert.equal(refs, null, "first missing pass returns null with no reference");
+  const entryFiles = readdirSync(directory).filter((name) => /^cm2-/.test(name));
+  assert.deepEqual(entryFiles, [`${id2}.json`], "no candidate entry file is written");
+  const repaired = JSON.parse(readFileSync(join(directory, "index.json"), "utf8"));
+  assert.equal(repaired.entries[id1], undefined, "the missing row is removed by the atomic repair");
+  assert.ok(repaired.entries[id2] !== undefined, "the surviving row is preserved");
+  assert.equal(repaired.nextSequence, before.nextSequence, "nextSequence stays unchanged through the repair");
+  assert.deepEqual(
+    repaired.evicted.find((removed: any) => typeof removed === "object" && removed.id === id1),
+    { id: id1, reason: "evicted" },
+    "the missing row is tombstoned as evicted",
+  );
+  assert.equal(store.retrieve(id2).kind, "ok", "the surviving row still retrieves exactly");
+  assert.equal(store.retrieve(id1).kind, "evicted", "the missing row reports evicted");
+  // The next pass admits a new distinct retrievable id; the old id is
+  // never reused because sequences stay monotonic.
+  const admitted = store.prepareBatch([{ toolCallId: "tc-missing-new", blocks: [{ type: "text", text: long("missing-new") }] }]);
+  const newId = admitted?.get("tc-missing-new");
+  assert.ok(newId && CM2_PATTERN.test(newId), "second pass admits without a retrieval or store restart");
+  assert.notEqual(newId, id1, "the missing id is never reused");
+  assert.notEqual(newId, id2, "the admitted id is distinct from the survivor");
+  assert.equal(store.retrieve(newId).kind, "ok", "the admitted reference retrieves immediately");
+  assert.equal(store.retrieve(id1).kind, "evicted", "the old id remains evicted");
+  ok("rolling: missing indexed entry file repairs the row and fails the batch open");
+}
+
+// ── PR #9: a failed repair commit keeps the exact old index bytes ──
+{
+  const session = "roll-missing-commit";
+  const directory = join(root, session);
+  const real = defaultArchiveFilesystem();
+  const seed = new ArchiveStore(root, session, DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+  const id1 = seed.store("tc-commit-seed", [{ type: "text", text: long("commit-seed") }]);
+  const id2 = seed.store("tc-commit-keep", [{ type: "text", text: long("commit-keep") }]);
+  assert.ok(id1 && id2, "failed-commit seed rows are live");
+  real.unlinkSync(join(directory, `${id1}.json`));
+  const before = readFileSync(join(directory, "index.json"), "utf8");
+  const failing = {
+    ...real,
+    renameSync(from: string, to: string) {
+      if (to.endsWith("/index.json")) {
+        throw Object.assign(new Error("repair commit failure"), { code: "EIO" });
+      }
+      real.renameSync(from, to);
+    },
+  };
+  const store = new ArchiveStore(root, session, DEFAULT_ARCHIVE_LIMITS, () => baseClock, failing);
+  assert.equal(
+    store.prepareBatch([{ toolCallId: "tc-commit-new", blocks: [{ type: "text", text: long("commit-new") }] }]),
+    null,
+    "failed repair commit returns null",
+  );
+  assert.equal(readFileSync(join(directory, "index.json"), "utf8"), before, "old index bytes remain exactly intact");
+  assert.deepEqual(
+    readdirSync(directory).filter((name) => /^cm2-/.test(name)),
+    [`${id2}.json`],
+    "failed repair writes no candidate file",
+  );
+  const reopened = new ArchiveStore(root, session, DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+  assert.equal(reopened.retrieve(id2).kind, "ok", "the surviving row stays retrievable after the failed commit");
+  ok("rolling: failed repair commit keeps the exact old index bytes");
 }
 
 // ── random generation prevents aliasing after complete local state loss ──
@@ -324,37 +418,338 @@ process.on("exit", () => {
   ok("rolling: failed maintenance commit preserves the prior live set");
 }
 
-// ── stale-session startup work stops at a fixed root bound ──
+// ── sweep helpers: seed, backdate, and count retired sessions ──
+function seedSweepSessions(sweepRoot: string, count: number, prefix: string): Map<string, string> {
+  const seeded = new Map<string, string>();
+  for (let index = 0; index < count; index++) {
+    const name = `${prefix}-${String(index).padStart(4, "0")}`;
+    const store = new ArchiveStore(sweepRoot, name, DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    const id = store.store(`tc-${name}`, [{ type: "text", text: long(name) }]);
+    assert.ok(id, `sweep seed ${name} is live`);
+    seeded.set(name, id!);
+  }
+  return seeded;
+}
+
+function sweepSessionLockPath(sweepRoot: string, sessionKey: string): string {
+  return join(sweepRoot, `.session-${sha(sessionKey)}.batch.lock`);
+}
+
+function backdateDirectory(directory: string, at: number): void {
+  const seconds = at / 1000;
+  utimesSync(directory, seconds, seconds);
+  for (const name of readdirSync(directory)) {
+    utimesSync(join(directory, name), seconds, seconds);
+  }
+}
+
+function retiredSweepCount(sweepRoot: string, seeded: Map<string, string>): number {
+  let retired = 0;
+  for (const [name, id] of seeded) {
+    const index = JSON.parse(readFileSync(join(sweepRoot, name, "index.json"), "utf8"));
+    if (index.entries[id] === undefined) retired += 1;
+  }
+  return retired;
+}
+
+const SWEEP_TTL_MS = 60_000;
+const SWEEP_STALE_AT = baseClock - 120_000;
+
+// ── 129 stale directories progress across repeated bounded sweeps ──
 {
-  const real = defaultArchiveFilesystem();
-  let reads = 0;
-  let stats = 0;
-  let closed = 0;
-  const names = Array.from({ length: 129 }, (_, index) => ({ name: `stale-${index}` }));
-  const fs = {
-    ...real,
-    opendirSync(path: string) {
-      if (path !== root) return real.opendirSync(path);
-      return {
-        readSync() {
-          const entry = names[reads] ?? null;
-          reads += 1;
-          return entry;
-        },
-        closeSync() { closed += 1; },
-      };
-    },
-    statSync(path: string) {
-      stats += 1;
-      return real.statSync(path);
-    },
-  };
-  const sweeper = new ArchiveStore(root, "roll-bounded-sweep", DEFAULT_ARCHIVE_LIMITS, () => baseClock, fs);
-  sweeper.sweepStaleSessions();
-  assert.equal(reads, 129, "root iteration stops after the fixed limit plus one overflow check");
-  assert.equal(stats, 0, "oversized roots perform no per-session stat work");
-  assert.equal(closed, 1, "bounded root iterator closes on overflow");
-  ok("rolling: stale-session sweep has fixed root and child bounds");
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-129-"));
+  try {
+    const seeded = seedSweepSessions(sweepRoot, MAX_SWEEP_BATCH_SESSIONS + 1, "p129");
+    for (const name of seeded.keys()) backdateDirectory(join(sweepRoot, name), SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    const counting = createCountingFilesystem(real);
+    let retireCommits = 0;
+    const countedRename = counting.fs.renameSync;
+    const fs = {
+      ...counting.fs,
+      renameSync(from: string, to: string) {
+        if (to.endsWith("/index.json")) retireCommits += 1;
+        return countedRename(from, to);
+      },
+    };
+    const operations = (): number => Object.values(counting.counts).reduce((sum, count) => sum + count, 0);
+    const resetCounts = (): void => {
+      for (const key of Object.keys(counting.counts)) counting.counts[key] = 0;
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "sweeper-129", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    sweeper.sweepStaleSessions();
+    assert.equal(retiredSweepCount(sweepRoot, seeded), MAX_SWEEP_BATCH_SESSIONS, "first sweep retires exactly the batch size");
+    assert.equal(retireCommits, MAX_SWEEP_BATCH_SESSIONS, "first sweep performs at most 128 retirement commits");
+    assert.ok((counting.counts.directoryReadSync ?? 0) > 0, "directory readSync calls count toward sweep work");
+    assert.ok(operations() <= MAX_SWEEP_FILESYSTEM_OPERATIONS, "first sweep stays within the filesystem operation ceiling");
+    resetCounts();
+    retireCommits = 0;
+    sweeper.sweepStaleSessions();
+    assert.equal(retiredSweepCount(sweepRoot, seeded), 129, "second sweep finishes the 129-directory root");
+    assert.equal(retireCommits, 1, "second sweep retires only the remaining directory");
+    assert.ok(operations() <= MAX_SWEEP_FILESYSTEM_OPERATIONS, "every sweep stays within the filesystem operation ceiling");
+    const sample = [...seeded.entries()][0];
+    const check = new ArchiveStore(sweepRoot, sample[0], { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock);
+    assert.equal(check.retrieve(sample[1]).kind, "evicted", "a retired reference reports evicted exactly");
+    ok("rolling: 129 stale directories progress across two bounded sweeps");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+// ── 257 stale directories progress with fixed per-sweep work ──
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-257-"));
+  try {
+    const seeded = seedSweepSessions(sweepRoot, 2 * MAX_SWEEP_BATCH_SESSIONS + 1, "p257");
+    for (const name of seeded.keys()) backdateDirectory(join(sweepRoot, name), SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    let rootReads = 0;
+    let retireCommits = 0;
+    const fs = {
+      ...real,
+      opendirSync(path: string) {
+        if (path !== sweepRoot) return real.opendirSync(path);
+        const directory = real.opendirSync(path);
+        return {
+          readSync() {
+            const entry = directory.readSync();
+            if (entry !== null) rootReads += 1;
+            return entry;
+          },
+          closeSync() { directory.closeSync(); },
+        };
+      },
+      renameSync(from: string, to: string) {
+        if (to.endsWith("/index.json")) retireCommits += 1;
+        return real.renameSync(from, to);
+      },
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "sweeper-257", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    for (let sweep = 1; sweep <= 2; sweep++) {
+      rootReads = 0;
+      retireCommits = 0;
+      sweeper.sweepStaleSessions();
+      assert.equal(retiredSweepCount(sweepRoot, seeded), MAX_SWEEP_BATCH_SESSIONS * sweep, `sweep ${sweep} retires one bounded batch`);
+      assert.equal(retireCommits, MAX_SWEEP_BATCH_SESSIONS, `sweep ${sweep} commits at most 128 retirements`);
+      assert.ok(rootReads <= MAX_ROOT_SCAN_ENTRIES + 1, `sweep ${sweep} root readSync stays under the ceiling`);
+    }
+    rootReads = 0;
+    retireCommits = 0;
+    sweeper.sweepStaleSessions();
+    assert.equal(retiredSweepCount(sweepRoot, seeded), 257, "third sweep finishes the 257-directory root");
+    assert.equal(retireCommits, 1, "third sweep retires only the remaining directory");
+    assert.ok(rootReads <= MAX_ROOT_SCAN_ENTRIES + 1, "third sweep root readSync stays under the ceiling");
+    ok("rolling: 257 stale directories progress across three bounded sweeps");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+// ── a full fresh batch still lets later stale directories progress ──
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-fresh-"));
+  try {
+    const freshSeeded = seedSweepSessions(sweepRoot, MAX_SWEEP_BATCH_SESSIONS, "fresh");
+    const staleSeeded = seedSweepSessions(sweepRoot, 2, "zz-stale");
+    for (const name of staleSeeded.keys()) backdateDirectory(join(sweepRoot, name), SWEEP_STALE_AT);
+    const sweeper = new ArchiveStore(sweepRoot, "sweeper-fresh", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock);
+    sweeper.sweepStaleSessions();
+    assert.equal(retiredSweepCount(sweepRoot, freshSeeded), 0, "first sweep retires no fresh session");
+    assert.equal(retiredSweepCount(sweepRoot, staleSeeded), 0, "later stale sessions wait for the next batch");
+    const sample = [...freshSeeded.entries()][0];
+    const freshCheck = new ArchiveStore(sweepRoot, sample[0], DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    assert.equal(freshCheck.retrieve(sample[1]).kind, "ok", "fresh sessions stay fully retrievable");
+    sweeper.sweepStaleSessions();
+    assert.equal(retiredSweepCount(sweepRoot, staleSeeded), 2, "second sweep reaches the stale names after the cursor");
+    assert.equal(retiredSweepCount(sweepRoot, freshSeeded), 0, "fresh sessions are never retired");
+    ok("rolling: a full fresh batch still lets later stale directories progress");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+// ── stale sweeps never follow a session-directory symlink ──
+if (process.platform !== "win32") {
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-link-"));
+  const outsideRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-outside-"));
+  try {
+    const outside = new ArchiveStore(outsideRoot, "outside-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    const id = outside.store("tc-outside", [{ type: "text", text: long("outside") }]);
+    assert.ok(id, "outside target seed is live");
+    backdateDirectory(outside.directory(), SWEEP_STALE_AT);
+    symlinkSync(outside.directory(), join(sweepRoot, "linked-target"), "dir");
+    const sweeper = new ArchiveStore(sweepRoot, "link-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock);
+    sweeper.sweepStaleSessions();
+    assert.equal(outside.retrieve(id!).kind, "ok", "stale cleanup never changes a symlink target outside the root");
+    ok("rolling: stale sweeps never follow session-directory symlinks");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+    rmSync(outsideRoot, { recursive: true, force: true });
+  }
+}
+
+// ── sweep wraparound re-selects the cursor name when it goes stale again ──
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-wrap-"));
+  try {
+    const seeded = new Map<string, string>();
+    for (const name of ["wrap-a", "wrap-b"]) {
+      const store = new ArchiveStore(sweepRoot, name, DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+      seeded.set(name, store.store(`tc-${name}`, [{ type: "text", text: long(name) }])!);
+    }
+    for (const name of seeded.keys()) backdateDirectory(join(sweepRoot, name), SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    let retireCommits = 0;
+    const fs = {
+      ...real,
+      renameSync(from: string, to: string) {
+        if (to.endsWith("/index.json")) retireCommits += 1;
+        return real.renameSync(from, to);
+      },
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "wrap-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    sweeper.sweepStaleSessions();
+    assert.equal(retireCommits, 2, "first sweep retires both stale sessions");
+    // wrap-b is the committed cursor (the lexically last selected name).
+    // Make it stale again: the next sweep's wraparound must include the
+    // cursor name itself so no name starves between rounds.
+    backdateDirectory(join(sweepRoot, "wrap-b"), SWEEP_STALE_AT);
+    retireCommits = 0;
+    sweeper.sweepStaleSessions();
+    assert.equal(retireCommits, 1, "wraparound re-selects the cursor name when it is stale again");
+    const check = new ArchiveStore(sweepRoot, "wrap-b", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    assert.equal(check.retrieve(seeded.get("wrap-b")!).kind, "evicted", "the cursor session keeps its exact retired state");
+    ok("rolling: sweep wraparound includes the cursor name");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+// ── refresh interleaving before the target lock skips retirement ──
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-race-"));
+  try {
+    const targetDir = join(sweepRoot, "race-target");
+    const target = new ArchiveStore(sweepRoot, "race-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    const oldId = target.store("tc-race-old", [{ type: "text", text: long("race-old") }]);
+    assert.ok(oldId, "race target seed is live");
+    backdateDirectory(targetDir, SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    const targetLock = sweepSessionLockPath(sweepRoot, "race-target");
+    let refreshed = false;
+    let refreshedId: string | null = null;
+    // Interleave a normal concurrent writer after the preliminary
+    // unlocked scan but before the retiring store creates its target
+    // batch lock: intercept that one outer lock mkdir and let a real
+    // ArchiveStore writer (real filesystem, its own locking) admit a
+    // fresh entry first. No index or entry bytes are written by hand.
+    const fs = {
+      ...real,
+      mkdirSync(path: string, options?: { recursive?: boolean; mode?: number }) {
+        if (path === targetLock && !refreshed) {
+          refreshed = true;
+          const writer = new ArchiveStore(sweepRoot, "race-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+          refreshedId = writer.store("tc-race-refresh", [{ type: "text", text: long("race-refresh") }]);
+        }
+        return real.mkdirSync(path, options);
+      },
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "race-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    sweeper.sweepStaleSessions();
+    assert.equal(refreshed, true, "the interleaved writer runs before the target lock exists");
+    assert.ok(refreshedId && CM2_PATTERN.test(refreshedId), "the interleaved writer admits a new cm2 entry");
+    assert.notEqual(refreshedId, oldId, "the refreshed entry is a distinct admission");
+    const check = new ArchiveStore(sweepRoot, "race-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    assert.equal(check.retrieve(oldId!).kind, "ok", "the pre-race entry stays retrievable");
+    assert.equal(check.retrieve(refreshedId!).kind, "ok", "the returned new ID retrieves exactly after the sweep");
+    ok("rolling: refresh interleaving before the target lock skips retirement");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+// ── focused sweep failures: target lock, root release, cursor commit ──
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-lockfail-"));
+  try {
+    const target = new ArchiveStore(sweepRoot, "zz-lockfail-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    const id = target.store("tc-lockfail", [{ type: "text", text: long("lockfail") }]);
+    assert.ok(id, "lock-failure seed is live");
+    backdateDirectory(join(sweepRoot, "zz-lockfail-target"), SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    const fs = {
+      ...real,
+      mkdirSync(path: string, options?: { recursive?: boolean; mode?: number }) {
+        if (path === sweepSessionLockPath(sweepRoot, "zz-lockfail-target")) {
+          throw Object.assign(new Error("lock refused"), { code: "EIO" });
+        }
+        return real.mkdirSync(path, options);
+      },
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "lockfail-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    sweeper.sweepStaleSessions();
+    const check = new ArchiveStore(sweepRoot, "zz-lockfail-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    assert.equal(check.retrieve(id!).kind, "ok", "an unlockable target stays fully retrievable");
+    ok("rolling: target lock acquisition failure fails retirement open");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-releasefail-"));
+  try {
+    const target = new ArchiveStore(sweepRoot, "zz-releasefail-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    const id = target.store("tc-releasefail", [{ type: "text", text: long("releasefail") }]);
+    assert.ok(id, "release-failure seed is live");
+    backdateDirectory(join(sweepRoot, "zz-releasefail-target"), SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    const fs = {
+      ...real,
+      rmdirSync(path: string) {
+        if (path === join(sweepRoot, "root.lock")) throw new Error("root lock release refused");
+        return real.rmdirSync(path);
+      },
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "releasefail-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    sweeper.sweepStaleSessions();
+    assert.equal(
+      JSON.parse(real.readFileSync(join(sweepRoot, "sweep.state"), "utf8")).cursor,
+      "zz-releasefail-target",
+      "the cursor still commits before the release attempt",
+    );
+    assert.equal(target.retrieve(id!).kind, "ok", "a failed root release skips retirement");
+    ok("rolling: root lock release failure skips retirement");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
+}
+
+{
+  const sweepRoot = mkdtempSync(join(tmpdir(), "cm-roll-sweep-statefail-"));
+  try {
+    const target = new ArchiveStore(sweepRoot, "zz-statefail-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    const id = target.store("tc-statefail", [{ type: "text", text: long("statefail") }]);
+    assert.ok(id, "state-failure seed is live");
+    backdateDirectory(join(sweepRoot, "zz-statefail-target"), SWEEP_STALE_AT);
+    const real = defaultArchiveFilesystem();
+    const fs = {
+      ...real,
+      renameSync(from: string, to: string) {
+        if (to.endsWith("/sweep.state")) throw new Error("cursor commit refused");
+        return real.renameSync(from, to);
+      },
+    };
+    const sweeper = new ArchiveStore(sweepRoot, "statefail-sweeper", { ...DEFAULT_ARCHIVE_LIMITS, ttlMs: SWEEP_TTL_MS }, () => baseClock, fs);
+    sweeper.sweepStaleSessions();
+    assert.equal(existsSync(join(sweepRoot, "sweep.state")), false, "a failed cursor commit persists no state");
+    const check = new ArchiveStore(sweepRoot, "zz-statefail-target", DEFAULT_ARCHIVE_LIMITS, () => baseClock);
+    assert.equal(check.retrieve(id!).kind, "ok", "a failed cursor commit skips retirement");
+    ok("rolling: sweep cursor commit failure skips retirement");
+  } finally {
+    rmSync(sweepRoot, { recursive: true, force: true });
+  }
 }
 
 // ── bounded reads and commit-before-delete retrieval removal ──

@@ -79,6 +79,8 @@ Each scenario runs warmups plus measured iterations. Archive-enabled cases use r
 
 `benchmarks/archive-context.test.mjs` checks scenario names, candidate dimensions, pass schema, gate fields, storage bounds, disabled survivors, TTL expiry, and recreation verification.
 
+The context benchmark does not time root-wide stale-session retirement. Recovery regressions cover that lifecycle path. They enforce 1,040 root entries, 128 selected sessions, 2,048 child entries per target, and a conservative 1,400,000-operation ceiling per sweep.
+
 ### Result schema
 
 `archive-results.json` uses `schemaVersion: 2`. It records benchmark identity, timestamp, Node version, iteration counts, candidate counts, p95 budgets, gate failures, and scenarios.
@@ -89,17 +91,17 @@ Repeated-pass p95 must remain below configured budgets. Steady-state reuse must 
 
 ### Corrective rolling-admission result
 
-The regenerated run used 20 measured iterations per pass. All eight scenarios passed with zero reported failures. Steady-state repeated p95 reached at most 5.276 ms against the 25 ms budget. Repeated steady passes performed zero entry or index rewrites.
+The regenerated run used 20 measured iterations per pass. All eight scenarios passed with zero reported failures. Steady-state repeated p95 reached at most 8.496 ms against the 25 ms budget. Repeated steady passes performed zero entry or index rewrites.
 
 | Fifth pass scenario | New admissions | Evictions | Expirations | Masked | Visible | p95 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Disabled | 0 | 0 | 0 | 0 | 500 | 0.505 ms |
-| Capacity above count | 100 | 0 | 0 | 500 | 0 | 42.429 ms |
-| Capacity 128 | 100 | 100 | 0 | 128 | 372 | 39.714 ms |
-| Entry pressure, capacity 4 | 4 | 4 | 0 | 4 | 496 | 7.883 ms |
-| Aggregate pressure | 35 | 35 | 0 | 35 | 465 | 13.907 ms |
-| TTL expiry | 500 | 0 | 400 | 500 | 0 | 147.197 ms |
-| Store recreation | 100 | 0 | 0 | 500 | 0 | 39.189 ms |
+| Disabled | 0 | 0 | 0 | 0 | 500 | 0.423 ms |
+| Capacity above count | 100 | 0 | 0 | 500 | 0 | 40.889 ms |
+| Capacity 128 | 100 | 100 | 0 | 128 | 372 | 38.478 ms |
+| Entry pressure, capacity 4 | 4 | 4 | 0 | 4 | 496 | 7.755 ms |
+| Aggregate pressure | 35 | 35 | 0 | 35 | 465 | 15.058 ms |
+| TTL expiry | 500 | 0 | 400 | 500 | 0 | 130.972 ms |
+| Store recreation | 100 | 0 | 0 | 500 | 0 | 44.470 ms |
 
 Disabled passes performed zero archive filesystem operations. Every emitted reference returned expected canonical bytes. Old-reference alias count remained zero. Each pressured scenario stayed within its configured entry and aggregate-byte limits.
 

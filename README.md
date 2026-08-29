@@ -70,6 +70,14 @@ Storage strips ANSI codes and applies mandatory environment-line redaction befor
 
 Default retention allows 128 entries, 64 KiB per entry, 4 MiB per session, and a 24-hour lifetime. Retention applies TTL first. It then ranks semantic rows before historical rows. Current context position, persisted sequence, creation time, and ID provide deterministic tie-breakers. The final set must satisfy both count and aggregate-byte limits. Removal records remain bounded and may become `missing` after older records are dropped. Capacity removal and TTL expiry do not close admission. Oversize output or uncertain storage leaves original redacted output visible.
 
+A missing indexed entry makes its current context pass preserve original redacted content. While holding the session lock, the archive commits removal records for all missing rows. It performs no candidate write or sequence allocation during that repair. The next pass can admit new content without a retrieval or session restart.
+
+Stale-session cleanup supports at most 512 direct session directories. Each call scans no more than 1,040 root entries and advances a constant-size lexical cursor across 128 targets. Preliminary checks examine no more than 2,048 children per target. Final freshness and entry checks repeat under a root-contained target lock. The conservative fixed ceiling is 1,400,000 filesystem calls per sweep.
+
+Session paths must remain non-symlink direct children of the resolved recovery root. Admission and retirement validate them before file access and again after target lock acquisition. Session locks use deterministic names directly below the trusted root, so path replacement cannot redirect lock writes.
+
+Cleanup retains bounded removal indexes instead of deleting session directories. New session admission fails open at the 512-directory cap. Archive-created live entry bytes are bounded by that cap and the 16 MiB per-session configuration ceiling. Externally created roots above the scan ceiling require local cleanup.
+
 Each new row stores a SHA-256 digest of its exact canonical bytes. Reuse checks schema, ID, blocks, creation time, byte count, and digest. The verification cache also records file size and modification metadata. A metadata change forces a reread and rehash, so same-size substitutions do not remain trusted.
 
 ## Installation

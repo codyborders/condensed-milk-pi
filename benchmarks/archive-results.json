@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "benchmark": "archive-context",
-  "generatedAt": "2026-08-29T03:48:45.443Z",
+  "generatedAt": "2026-08-29T06:22:10.634Z",
   "nodeVersion": "v25.8.2",
   "quick": false,
   "warmupIterations": 2,
@@ -70,9 +70,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 511,
-          "medianRuntimeMs": 19.143,
-          "p95RuntimeMs": 21.752,
+          "archiveFilesystemWork": 524,
+          "medianRuntimeMs": 19.258,
+          "p95RuntimeMs": 21.598,
           "failures": [],
           "timingSamples": 20
         },
@@ -107,9 +107,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 308,
-          "medianRuntimeMs": 4.529,
-          "p95RuntimeMs": 5.236,
+          "archiveFilesystemWork": 314,
+          "medianRuntimeMs": 4.738,
+          "p95RuntimeMs": 7.182,
           "failures": [],
           "timingSamples": 20
         },
@@ -144,9 +144,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 308,
-          "medianRuntimeMs": 4.443,
-          "p95RuntimeMs": 5.276,
+          "archiveFilesystemWork": 314,
+          "medianRuntimeMs": 4.508,
+          "p95RuntimeMs": 8.12,
           "failures": [],
           "timingSamples": 20
         },
@@ -181,9 +181,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 308,
-          "medianRuntimeMs": 4.454,
-          "p95RuntimeMs": 5.146,
+          "archiveFilesystemWork": 314,
+          "medianRuntimeMs": 4.685,
+          "p95RuntimeMs": 5.467,
           "failures": [],
           "timingSamples": 20
         },
@@ -218,9 +218,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 308,
-          "medianRuntimeMs": 4.447,
-          "p95RuntimeMs": 5.22,
+          "archiveFilesystemWork": 314,
+          "medianRuntimeMs": 4.514,
+          "p95RuntimeMs": 8.496,
           "failures": [],
           "timingSamples": 20
         }
@@ -277,8 +277,8 @@
             "bytes": 0
           },
           "archiveFilesystemWork": 0,
-          "medianRuntimeMs": 0.089,
-          "p95RuntimeMs": 0.112,
+          "medianRuntimeMs": 0.084,
+          "p95RuntimeMs": 0.115,
           "failures": [],
           "timingSamples": 20
         },
@@ -315,7 +315,7 @@
           },
           "archiveFilesystemWork": 0,
           "medianRuntimeMs": 0.156,
-          "p95RuntimeMs": 0.195,
+          "p95RuntimeMs": 0.164,
           "failures": [],
           "timingSamples": 20
         },
@@ -351,8 +351,8 @@
             "bytes": 0
           },
           "archiveFilesystemWork": 0,
-          "medianRuntimeMs": 0.231,
-          "p95RuntimeMs": 0.314,
+          "medianRuntimeMs": 0.233,
+          "p95RuntimeMs": 0.265,
           "failures": [],
           "timingSamples": 20
         },
@@ -388,8 +388,8 @@
             "bytes": 0
           },
           "archiveFilesystemWork": 0,
-          "medianRuntimeMs": 0.307,
-          "p95RuntimeMs": 0.386,
+          "medianRuntimeMs": 0.315,
+          "p95RuntimeMs": 0.36,
           "failures": [],
           "timingSamples": 20
         },
@@ -425,8 +425,8 @@
             "bytes": 0
           },
           "archiveFilesystemWork": 0,
-          "medianRuntimeMs": 0.386,
-          "p95RuntimeMs": 0.505,
+          "medianRuntimeMs": 0.383,
+          "p95RuntimeMs": 0.423,
           "failures": [],
           "timingSamples": 20
         }
@@ -482,9 +482,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 511,
-          "medianRuntimeMs": 18.694,
-          "p95RuntimeMs": 20.355,
+          "archiveFilesystemWork": 524,
+          "medianRuntimeMs": 18.689,
+          "p95RuntimeMs": 21.228,
           "failures": [],
           "timingSamples": 20
         },
@@ -519,9 +519,9 @@
             "entries": 200,
             "bytes": 180070
           },
-          "archiveFilesystemWork": 810,
-          "medianRuntimeMs": 23.516,
-          "p95RuntimeMs": 25.173,
+          "archiveFilesystemWork": 816,
+          "medianRuntimeMs": 22.968,
+          "p95RuntimeMs": 25.77,
           "failures": [],
           "timingSamples": 20
         },
@@ -556,9 +556,9 @@
             "entries": 300,
             "bytes": 270270
           },
-          "archiveFilesystemWork": 1110,
-          "medianRuntimeMs": 27.028,
-          "p95RuntimeMs": 29.352,
+          "archiveFilesystemWork": 1116,
+          "medianRuntimeMs": 26.122,
+          "p95RuntimeMs": 28.1,
           "failures": [],
           "timingSamples": 20
         },
@@ -593,9 +593,9 @@
             "entries": 400,
             "bytes": 360470
           },
-          "archiveFilesystemWork": 1410,
-          "medianRuntimeMs": 32.816,
-          "p95RuntimeMs": 38.176,
+          "archiveFilesystemWork": 1416,
+          "medianRuntimeMs": 31.567,
+          "p95RuntimeMs": 32.896,
           "failures": [],
           "timingSamples": 20
         },
@@ -630,9 +630,9 @@
             "entries": 500,
             "bytes": 450670
           },
-          "archiveFilesystemWork": 1710,
-          "medianRuntimeMs": 36.777,
-          "p95RuntimeMs": 42.429,
+          "archiveFilesystemWork": 1716,
+          "medianRuntimeMs": 35.261,
+          "p95RuntimeMs": 40.889,
           "failures": [],
           "timingSamples": 20
         }
@@ -688,9 +688,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 511,
-          "medianRuntimeMs": 19.433,
-          "p95RuntimeMs": 21.265,
+          "archiveFilesystemWork": 524,
+          "medianRuntimeMs": 18.248,
+          "p95RuntimeMs": 20.893,
           "failures": [],
           "timingSamples": 20
         },
@@ -725,9 +725,9 @@
             "entries": 128,
             "bytes": 115372
           },
-          "archiveFilesystemWork": 738,
-          "medianRuntimeMs": 26.43,
-          "p95RuntimeMs": 37.81,
+          "archiveFilesystemWork": 744,
+          "medianRuntimeMs": 25.521,
+          "p95RuntimeMs": 38.66,
           "failures": [],
           "timingSamples": 20
         },
@@ -762,9 +762,9 @@
             "entries": 128,
             "bytes": 115456
           },
-          "archiveFilesystemWork": 794,
-          "medianRuntimeMs": 29.683,
-          "p95RuntimeMs": 32.86,
+          "archiveFilesystemWork": 800,
+          "medianRuntimeMs": 28.48,
+          "p95RuntimeMs": 34.61,
           "failures": [],
           "timingSamples": 20
         },
@@ -799,9 +799,9 @@
             "entries": 128,
             "bytes": 115456
           },
-          "archiveFilesystemWork": 794,
-          "medianRuntimeMs": 30.781,
-          "p95RuntimeMs": 35.078,
+          "archiveFilesystemWork": 800,
+          "medianRuntimeMs": 29.499,
+          "p95RuntimeMs": 35.682,
           "failures": [],
           "timingSamples": 20
         },
@@ -836,9 +836,9 @@
             "entries": 128,
             "bytes": 115456
           },
-          "archiveFilesystemWork": 794,
-          "medianRuntimeMs": 30.754,
-          "p95RuntimeMs": 39.714,
+          "archiveFilesystemWork": 800,
+          "medianRuntimeMs": 29.74,
+          "p95RuntimeMs": 38.478,
           "failures": [],
           "timingSamples": 20
         }
@@ -894,9 +894,9 @@
             "entries": 4,
             "bytes": 3596
           },
-          "archiveFilesystemWork": 31,
-          "medianRuntimeMs": 1.94,
-          "p95RuntimeMs": 2.23,
+          "archiveFilesystemWork": 44,
+          "medianRuntimeMs": 2.115,
+          "p95RuntimeMs": 2.52,
           "failures": [],
           "timingSamples": 20
         },
@@ -931,9 +931,9 @@
             "entries": 4,
             "bytes": 3608
           },
-          "archiveFilesystemWork": 38,
-          "medianRuntimeMs": 2.562,
-          "p95RuntimeMs": 2.779,
+          "archiveFilesystemWork": 44,
+          "medianRuntimeMs": 2.557,
+          "p95RuntimeMs": 3.05,
           "failures": [],
           "timingSamples": 20
         },
@@ -968,9 +968,9 @@
             "entries": 4,
             "bytes": 3608
           },
-          "archiveFilesystemWork": 38,
-          "medianRuntimeMs": 3.158,
-          "p95RuntimeMs": 3.499,
+          "archiveFilesystemWork": 44,
+          "medianRuntimeMs": 3.315,
+          "p95RuntimeMs": 4.76,
           "failures": [],
           "timingSamples": 20
         },
@@ -1005,9 +1005,9 @@
             "entries": 4,
             "bytes": 3608
           },
-          "archiveFilesystemWork": 38,
-          "medianRuntimeMs": 3.836,
-          "p95RuntimeMs": 4.403,
+          "archiveFilesystemWork": 44,
+          "medianRuntimeMs": 3.883,
+          "p95RuntimeMs": 6.322,
           "failures": [],
           "timingSamples": 20
         },
@@ -1042,9 +1042,9 @@
             "entries": 4,
             "bytes": 3608
           },
-          "archiveFilesystemWork": 38,
-          "medianRuntimeMs": 4.306,
-          "p95RuntimeMs": 7.883,
+          "archiveFilesystemWork": 44,
+          "medianRuntimeMs": 4.494,
+          "p95RuntimeMs": 7.755,
           "failures": [],
           "timingSamples": 20
         }
@@ -1100,9 +1100,9 @@
             "entries": 35,
             "bytes": 31465
           },
-          "archiveFilesystemWork": 186,
-          "medianRuntimeMs": 7.019,
-          "p95RuntimeMs": 7.788,
+          "archiveFilesystemWork": 199,
+          "medianRuntimeMs": 7.363,
+          "p95RuntimeMs": 8.273,
           "failures": [],
           "timingSamples": 20
         },
@@ -1137,9 +1137,9 @@
             "entries": 35,
             "bytes": 31570
           },
-          "archiveFilesystemWork": 255,
-          "medianRuntimeMs": 10.335,
-          "p95RuntimeMs": 11.868,
+          "archiveFilesystemWork": 261,
+          "medianRuntimeMs": 10.175,
+          "p95RuntimeMs": 13.876,
           "failures": [],
           "timingSamples": 20
         },
@@ -1174,9 +1174,9 @@
             "entries": 35,
             "bytes": 31570
           },
-          "archiveFilesystemWork": 255,
-          "medianRuntimeMs": 11.249,
-          "p95RuntimeMs": 13.417,
+          "archiveFilesystemWork": 261,
+          "medianRuntimeMs": 11.417,
+          "p95RuntimeMs": 13.91,
           "failures": [],
           "timingSamples": 20
         },
@@ -1211,9 +1211,9 @@
             "entries": 35,
             "bytes": 31570
           },
-          "archiveFilesystemWork": 255,
-          "medianRuntimeMs": 11.894,
-          "p95RuntimeMs": 13.386,
+          "archiveFilesystemWork": 261,
+          "medianRuntimeMs": 12.116,
+          "p95RuntimeMs": 13.613,
           "failures": [],
           "timingSamples": 20
         },
@@ -1248,9 +1248,9 @@
             "entries": 35,
             "bytes": 31570
           },
-          "archiveFilesystemWork": 255,
-          "medianRuntimeMs": 12.179,
-          "p95RuntimeMs": 13.907,
+          "archiveFilesystemWork": 261,
+          "medianRuntimeMs": 13.072,
+          "p95RuntimeMs": 15.058,
           "failures": [],
           "timingSamples": 20
         }
@@ -1306,9 +1306,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 511,
-          "medianRuntimeMs": 18.662,
-          "p95RuntimeMs": 21.451,
+          "archiveFilesystemWork": 524,
+          "medianRuntimeMs": 18.433,
+          "p95RuntimeMs": 21.718,
           "failures": [],
           "timingSamples": 20
         },
@@ -1343,9 +1343,9 @@
             "entries": 200,
             "bytes": 180070
           },
-          "archiveFilesystemWork": 1210,
-          "medianRuntimeMs": 45.522,
-          "p95RuntimeMs": 49.043,
+          "archiveFilesystemWork": 1216,
+          "medianRuntimeMs": 45.334,
+          "p95RuntimeMs": 53.753,
           "failures": [],
           "timingSamples": 20
         },
@@ -1380,9 +1380,9 @@
             "entries": 300,
             "bytes": 270270
           },
-          "archiveFilesystemWork": 1910,
-          "medianRuntimeMs": 75.742,
-          "p95RuntimeMs": 91.55,
+          "archiveFilesystemWork": 1916,
+          "medianRuntimeMs": 71.068,
+          "p95RuntimeMs": 74.935,
           "failures": [],
           "timingSamples": 20
         },
@@ -1417,9 +1417,9 @@
             "entries": 400,
             "bytes": 360470
           },
-          "archiveFilesystemWork": 2610,
-          "medianRuntimeMs": 104.406,
-          "p95RuntimeMs": 124.271,
+          "archiveFilesystemWork": 2616,
+          "medianRuntimeMs": 98.298,
+          "p95RuntimeMs": 103.946,
           "failures": [],
           "timingSamples": 20
         },
@@ -1454,9 +1454,9 @@
             "entries": 500,
             "bytes": 450670
           },
-          "archiveFilesystemWork": 3310,
-          "medianRuntimeMs": 131.526,
-          "p95RuntimeMs": 147.197,
+          "archiveFilesystemWork": 3316,
+          "medianRuntimeMs": 124.685,
+          "p95RuntimeMs": 130.972,
           "failures": [],
           "timingSamples": 20
         }
@@ -1512,9 +1512,9 @@
             "entries": 100,
             "bytes": 89870
           },
-          "archiveFilesystemWork": 511,
-          "medianRuntimeMs": 18.71,
-          "p95RuntimeMs": 22.296,
+          "archiveFilesystemWork": 524,
+          "medianRuntimeMs": 18.552,
+          "p95RuntimeMs": 31.264,
           "failures": [],
           "timingSamples": 20
         },
@@ -1549,9 +1549,9 @@
             "entries": 200,
             "bytes": 180070
           },
-          "archiveFilesystemWork": 812,
-          "medianRuntimeMs": 23.327,
-          "p95RuntimeMs": 24.764,
+          "archiveFilesystemWork": 827,
+          "medianRuntimeMs": 22.744,
+          "p95RuntimeMs": 38.977,
           "failures": [],
           "timingSamples": 20
         },
@@ -1586,9 +1586,9 @@
             "entries": 300,
             "bytes": 270270
           },
-          "archiveFilesystemWork": 1112,
-          "medianRuntimeMs": 26.85,
-          "p95RuntimeMs": 40.042,
+          "archiveFilesystemWork": 1127,
+          "medianRuntimeMs": 27.522,
+          "p95RuntimeMs": 38.306,
           "failures": [],
           "timingSamples": 20
         },
@@ -1623,9 +1623,9 @@
             "entries": 400,
             "bytes": 360470
           },
-          "archiveFilesystemWork": 1412,
-          "medianRuntimeMs": 32.464,
-          "p95RuntimeMs": 36.793,
+          "archiveFilesystemWork": 1427,
+          "medianRuntimeMs": 32.005,
+          "p95RuntimeMs": 39.42,
           "failures": [],
           "timingSamples": 20
         },
@@ -1660,9 +1660,9 @@
             "entries": 500,
             "bytes": 450670
           },
-          "archiveFilesystemWork": 1712,
-          "medianRuntimeMs": 35.704,
-          "p95RuntimeMs": 39.189,
+          "archiveFilesystemWork": 1727,
+          "medianRuntimeMs": 36.211,
+          "p95RuntimeMs": 44.47,
           "failures": [],
           "timingSamples": 20
         }

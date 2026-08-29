@@ -14,12 +14,15 @@
  * Run: npx tsx test-recovery-admission.ts
  */
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ArchiveStore,
   DEFAULT_ARCHIVE_LIMITS,
+  MAX_ROOT_SCAN_ENTRIES,
+  MAX_ROOT_SESSIONS,
   defaultArchiveFilesystem,
   deriveArchiveId,
 } from "./filters/recovery.js";
@@ -598,6 +601,237 @@ for (const failure of invalidLiveCases) {
   const later = fresh.store("tc-after-expiry", [{ type: "text", text: long("n") }]);
   assert.ok(later && later !== live && later !== readmitted, "a fresh store admits later work without aliasing old references");
   ok("admission: persisted expiry permits collision-safe readmission after reload");
+}
+
+// --- the recovery root holds at most 512 direct session directories ---
+{
+  const capRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-cap-"));
+  try {
+    for (let index = 0; index < MAX_ROOT_SESSIONS; index++) {
+      mkdirSync(join(capRoot, `cap-${String(index).padStart(4, "0")}`), { recursive: true, mode: 0o700 });
+    }
+    const store = new ArchiveStore(capRoot, "cap-new", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.equal(
+      store.prepareBatch([{ toolCallId: "tc-cap", blocks: [{ type: "text", text: long("cap") }] }]),
+      null,
+      "a 513th session directory fails new archive admission open",
+    );
+    assert.equal(existsSync(join(capRoot, "cap-new")), false, "no 513th directory is created");
+  } finally {
+    rmSync(capRoot, { recursive: true, force: true });
+  }
+  ok("admission: the recovery root enforces its direct session directory cap");
+}
+
+// --- root cap counts only real session directories ---
+{
+  const fileRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-files-"));
+  try {
+    for (let index = 0; index < MAX_ROOT_SESSIONS; index++) {
+      writeFileSync(join(fileRoot, `fake-${String(index).padStart(4, "0")}`), "not a session", { mode: 0o600 });
+    }
+    const store = new ArchiveStore(fileRoot, "real-new", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    const refs = store.prepareBatch([{ toolCallId: "tc-real", blocks: [{ type: "text", text: long("real") }] }]);
+    assert.ok(refs && refs.size === 1, "pattern-matching files never consume session capacity");
+  } finally {
+    rmSync(fileRoot, { recursive: true, force: true });
+  }
+  ok("admission: the root cap counts only stat-validated session directories");
+}
+
+// --- a root beyond the cap fails open for existing sessions too ---
+{
+  const overRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-over-"));
+  try {
+    for (let index = 0; index <= MAX_ROOT_SESSIONS; index++) {
+      mkdirSync(join(overRoot, `over-${String(index).padStart(4, "0")}`), { recursive: true, mode: 0o700 });
+    }
+    const store = new ArchiveStore(overRoot, "over-0000", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.equal(
+      store.prepareBatch([{ toolCallId: "tc-over", blocks: [{ type: "text", text: long("over") }] }]),
+      null,
+      "an existing session fails open when the root exceeds the cap",
+    );
+  } finally {
+    rmSync(overRoot, { recursive: true, force: true });
+  }
+  const atCapRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-atcap-"));
+  try {
+    const seated = new ArchiveStore(atCapRoot, "atcap-live", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.ok(seated.store("tc-atcap", [{ type: "text", text: long("atcap") }]), "a session seeds below the cap");
+    for (let index = 0; index < MAX_ROOT_SESSIONS - 1; index++) {
+      mkdirSync(join(atCapRoot, `fill-${String(index).padStart(4, "0")}`), { recursive: true, mode: 0o700 });
+    }
+    const store = new ArchiveStore(atCapRoot, "atcap-live", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    const refs = store.prepareBatch([{ toolCallId: "tc-atcap-2", blocks: [{ type: "text", text: long("atcap2") }] }]);
+    assert.ok(refs && refs.size === 1, "an existing session at exactly the cap still admits");
+  } finally {
+    rmSync(atCapRoot, { recursive: true, force: true });
+  }
+  ok("admission: a root beyond the cap fails existing sessions open");
+}
+
+// --- a root maintenance lock failure fails new admission open ---
+{
+  const lockRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-lockfail-"));
+  try {
+    const real = defaultArchiveFilesystem();
+    const failing = {
+      ...real,
+      mkdirSync(path: string, options?: { recursive?: boolean; mode?: number }) {
+        if (path === join(lockRoot, "root.lock")) {
+          throw Object.assign(new Error("root lock refused"), { code: "EIO" });
+        }
+        return real.mkdirSync(path, options);
+      },
+    };
+    const store = new ArchiveStore(lockRoot, "lockfail-new", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock, failing);
+    assert.equal(
+      store.prepareBatch([{ toolCallId: "tc-lockfail", blocks: [{ type: "text", text: long("lockfail") }] }]),
+      null,
+      "a failed root maintenance lock fails admission open",
+    );
+    assert.equal(existsSync(join(lockRoot, "lockfail-new")), false, "no session directory is created without the root lock");
+  } finally {
+    rmSync(lockRoot, { recursive: true, force: true });
+  }
+  ok("admission: a root maintenance lock failure fails admission open");
+}
+
+// --- symlinked session names cannot redirect archive writes ---
+if (process.platform !== "win32") {
+  const linkRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-link-"));
+  const outside = mkdtempSync(join(tmpdir(), "cm-recovery-root-outside-"));
+  try {
+    symlinkSync(outside, join(linkRoot, "linked-session"), "dir");
+    const store = new ArchiveStore(linkRoot, "linked-session", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.equal(
+      store.prepareBatch([{ toolCallId: "tc-link", blocks: [{ type: "text", text: long("link") }] }]),
+      null,
+      "a symlinked session name emits no archive reference",
+    );
+    assert.equal(existsSync(join(outside, "index.json")), false, "archive writes never leave the resolved recovery root");
+  } finally {
+    rmSync(linkRoot, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
+  ok("admission: symlinked session names cannot redirect archive writes");
+}
+
+// --- a live store revalidates its session path before later writes ---
+if (process.platform !== "win32") {
+  const linkRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-replace-"));
+  const outside = mkdtempSync(join(tmpdir(), "cm-recovery-root-replace-outside-"));
+  try {
+    const store = new ArchiveStore(linkRoot, "replace-session", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.ok(store.store("tc-before", [{ type: "text", text: long("before") }]), "initial direct session write succeeds");
+    const original = join(linkRoot, "replace-session");
+    renameSync(original, join(linkRoot, "replace-session-parked"));
+    symlinkSync(outside, original, "dir");
+    assert.equal(store.store("tc-after", [{ type: "text", text: long("after") }]), null, "same store rejects a replaced session path");
+    assert.equal(existsSync(join(outside, "index.json")), false, "later writes never follow the replacement symlink");
+  } finally {
+    rmSync(linkRoot, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
+  ok("admission: live stores revalidate replaced session paths");
+}
+
+// --- replacement between validation and lock acquisition fails open ---
+if (process.platform !== "win32") {
+  const linkRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-lock-race-"));
+  const outside = mkdtempSync(join(tmpdir(), "cm-recovery-root-lock-race-outside-"));
+  try {
+    const session = "lock-race-session";
+    const seed = new ArchiveStore(linkRoot, session, { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.ok(seed.store("tc-seed", [{ type: "text", text: long("seed") }]), "lock-race seed is live");
+    const real = defaultArchiveFilesystem();
+    const lockName = `.session-${createHash("sha256").update(session).digest("hex")}.batch.lock`;
+    let replaced = false;
+    const fs = {
+      ...real,
+      mkdirSync(path: string, options?: { recursive?: boolean; mode?: number }) {
+        if (path === join(linkRoot, lockName) && !replaced) {
+          replaced = true;
+          renameSync(join(linkRoot, session), join(linkRoot, `${session}-parked`));
+          symlinkSync(outside, join(linkRoot, session), "dir");
+        }
+        return real.mkdirSync(path, options);
+      },
+    };
+    const store = new ArchiveStore(linkRoot, session, { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock, fs);
+    assert.equal(store.store("tc-race", [{ type: "text", text: long("race") }]), null, "replacement before lock acquisition fails open");
+    assert.equal(replaced, true, "replacement runs at the session-lock boundary");
+    assert.equal(existsSync(join(outside, "index.json")), false, "post-lock validation prevents redirected archive writes");
+    assert.equal(existsSync(join(outside, "batch.lock")), false, "session locking creates no file below the replaced path");
+  } finally {
+    rmSync(linkRoot, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+  }
+  ok("admission: replacement at lock acquisition fails open");
+}
+
+// --- root maintenance control names cannot become session directories ---
+{
+  for (const session of ["root.lock", "sweep.state"]) {
+    const controlRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-control-"));
+    try {
+      const store = new ArchiveStore(controlRoot, session, { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+      assert.equal(
+        store.prepareBatch([{ toolCallId: "tc-control", blocks: [{ type: "text", text: long("control") }] }]),
+        null,
+        `${session} is reserved for root maintenance`,
+      );
+    } finally {
+      rmSync(controlRoot, { recursive: true, force: true });
+    }
+  }
+  ok("admission: root maintenance names are reserved");
+}
+
+// --- root lock release uncertainty fails new admission open ---
+{
+  const releaseRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-release-"));
+  try {
+    const real = defaultArchiveFilesystem();
+    const failing = {
+      ...real,
+      rmdirSync(path: string) {
+        if (path === join(releaseRoot, "root.lock")) throw new Error("root lock release refused");
+        return real.rmdirSync(path);
+      },
+    };
+    const store = new ArchiveStore(releaseRoot, "release-new", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock, failing);
+    assert.equal(
+      store.prepareBatch([{ toolCallId: "tc-release", blocks: [{ type: "text", text: long("release") }] }]),
+      null,
+      "an uncertain root lock release emits no archive reference",
+    );
+  } finally {
+    rmSync(releaseRoot, { recursive: true, force: true });
+  }
+  ok("admission: root lock release uncertainty fails admission open");
+}
+
+// --- an oversized root fails new admission open at the scan ceiling ---
+{
+  const ceiling = MAX_ROOT_SCAN_ENTRIES;
+  const bigRoot = mkdtempSync(join(tmpdir(), "cm-recovery-root-big-"));
+  try {
+    for (let index = 0; index < ceiling + 1; index++) {
+      writeFileSync(join(bigRoot, `entry-${String(index).padStart(4, "0")}.txt`), "x", { mode: 0o600 });
+    }
+    const store = new ArchiveStore(bigRoot, "big-new", { ...DEFAULT_ARCHIVE_LIMITS }, () => baseClock);
+    assert.equal(
+      store.prepareBatch([{ toolCallId: "tc-big", blocks: [{ type: "text", text: long("big") }] }]),
+      null,
+      "a root beyond the fixed scan ceiling fails new admission open",
+    );
+    assert.equal(existsSync(join(bigRoot, "big-new")), false, "no directory is created from an uncertain scan");
+  } finally {
+    rmSync(bigRoot, { recursive: true, force: true });
+  }
+  ok("admission: an oversized root fails open at the fixed scan ceiling");
 }
 
 console.log(`recovery admission tests: ${passed} groups passed`);
