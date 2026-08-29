@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "study": "provider-study",
+  "frozenAt": "2026-08-29T21:52:09.661Z",
+  "digests": {
+    "schemaVersion": 1,
+    "pins": {
+      "provider": "z-ai",
+      "model": "glm-5.3-flash",
+      "thinking": "high",
+      "piVersion": "0.84.2",
+      "tools": [
+        "read",
+        "bash",
+        "edit",
+        "write",
+        "grep",
+        "find",
+        "ls",
+        "condensed_milk_retrieve"
+      ],
+      "timeoutMsPerAttempt": 3600000,
+      "repetitionsPreallocated": 5,
+      "conditionalRepetitions": [
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "noPaidRetry": true
+    },
+    "evaluator": {
+      "commit": "02ba8c34d433b3d714d485be89fd22888c23aae0",
+      "headTree": "9e3d370763152f3d901adfbad1c343365184cba9",
+      "sourceSha256": "d15f6c81c1a24ee02da0d30388373cf4174ed86419fcd65a1161f90d3c0f6208"
+    },
+    "runnerModulesSha256": "85d16765f7b19685f38db1a8946033711c1e7ad7bd5e0422b5dc8484467b6683",
+    "neutralStubSha256": "8e3b366788a119d53e7fba908080dcb228f8bceb43ba092b8db69e26b7dcf7cf",
+    "runtimeModulesSha256": "76660fe54ff1ed9786dcb85ad7a1ece5f81cac9cc92ac23efa1eb7e5912d2d43",
+    "libModulesSha256": "36ff9a0f11064b506ca47a26a18c37bae5e56414ebb447c6300fafee38b4b9fd",
+    "developmentScorersSha256": "291d9fca6d0736f82b82e2ac482380adc886ebf811556b7b8016ccc9bccf6f7f",
+    "taskManifestSha256": "13d1557ce31eead8eff27975ef79ae51e4a13e0491033cc0631dedc6539dc062",
+    "developmentManifestSha256": "32ee19084c2502c3094d56792211c5fe760c7289bd2a41f075c197679b4cac72",
+    "holdoutManifestSha256": "b3631267257578d8ad6582dec37ec9d029acd7ab773e862d3a82e68bd9602f73",
+    "profilesSha256": "4bf691c851ed7025759b4fdd94be609d0585a2c445bc4113cfaa2e87848fcb5e",
+    "protocolSha256": "d5172934d2ec5867754854e165927b433a2aa2656c0c1d64b94d10eec624fc6f",
+    "holdoutBundleFileSha256": "74e3424ba3ed0e544b5c0d7efe4ae22f22b1722983bb73254ecc38c422163078",
+    "holdoutEnvelopeSha256": "9590cf7bcfb482030ed56ef54ab7eb0f3f81085ac9b0ae3b1c6eb385495648c7",
+    "judgeRubricSha256": "5ec105da5367cfc30ca1e617b1f8e00e6125db964f26f650a98d6df9de2da9a3",
+    "statsCodeSha256": "4cf93a1f2707179fc800abee7e6c06018c2384d9141f22a3011081b66bf8a02b",
+    "piRuntimeSha256": "a131c543306799de2040b11c707d2fce857e58ce4be3d43649a809f7e38251e3",
+    "seeds": {
+      "development": "provider-study-development-2026-04",
+      "holdout": "provider-study-holdout-2026-04"
+    },
+    "holdoutScorerSha256": {
+      "holdout-task-01": "a5664a540926d4f7b4d948455848a8004299a18192adb0fbef3ce7efc3c246ef",
+      "holdout-task-02": "7f80b07b87759f5e0ebbaa8800425674c5c0278fb326b9043f215b5c91ef090c",
+      "holdout-task-03": "60a7c8c042df6748a9aa15aac59059943cc44ecfdf9db7bab733854ba11a6856",
+      "holdout-task-04": "b2a9663dc6fc16877ec0a526e8426e8b23c34471f5c173f4e46a9440ca69b463",
+      "holdout-task-05": "d43ccc80fe2e46e7f982a5d219b156e91824d3afad4ba6137355f4ef18daaea4",
+      "holdout-task-06": "3bae8fb5ce994eb2ab6e0cf5b961dfe7afaab3eb15b3858c0fa6bc79fe8dd253",
+      "holdout-task-07": "061053a5ebff50377f1f5ca4700837bd8d39b9d4747b226585ad83cabdf88c6e",
+      "holdout-task-08": "92af9a8bb25e32d8bca1a4ae7010284c6126cdeb862e6871208072089c35541d"
+    },
+    "holdoutSolutionSha256": {
+      "holdout-task-01": "6ab8711cf489ad55b04a1aebbadda08fa5b52a626e2df9ad6dc42a45f0779205",
+      "holdout-task-02": "20fb4c20495a3e6f5bdcdb9c2be856467d82495a24def5a2cadd368bb8a064ec",
+      "holdout-task-03": "eeac2eba348df92d3309655d059ff6f913d0b2d8994203504615601850c0dbb2",
+      "holdout-task-04": "833d85f12b6ed820d7d3de55b4ca03afd50699c00f448394cc1e92bfba917deb",
+      "holdout-task-05": "52ed7df9ad3f5e5d06ec7d34e5e3fd8b9a3d5249418d18489f089b66f9a20648",
+      "holdout-task-06": "53e4494c4fb896da4a0fa21ccee7f11077f779a10593fb0059dd7057c35913a1",
+      "holdout-task-07": "449e13380303db10ac8eda5c3ab11146618ca00278354af77fd4cc898316a6dc",
+      "holdout-task-08": "41de38f96a6b30a246f52eabac849fbda1697db7009daed10d0e06c8ec1431e1"
+    },
+    "holdoutFixtureSha256": {
+      "holdout-task-01": "8071318f413792d11ad6bf899d4cd7feb6f249ecc32e0210fb69aeb777f9124e",
+      "holdout-task-02": "972ffd04bff8d1c520f6f5e456c2bd86fef7b8a8bc9797f78bac6a279cb24b74",
+      "holdout-task-03": "7a613f565dc5226f0bd9055c241e865c162d1bb7e4e0830e4a1d8e337fd55df6",
+      "holdout-task-04": "136598cf12e193a20567a7ca566f17d3ec4d2f085a485f7e908987e39cf70c78",
+      "holdout-task-05": "bfbfbbb2962266a7c2ddea8aa83b01e07f130d52c4ebec6970e75b48e92907b0",
+      "holdout-task-06": "e05b5f835ade9fda4b81ec37c27ac4e90620f52e3c132681a48b9fc6d07478f9",
+      "holdout-task-07": "76d9713215a076014e9f9f4de8f9bc9d23f52c26b785d2aab620a1a14adbc3db",
+      "holdout-task-08": "00c2cefb893a8f21efd9bcab8fde63861345917f57f7cabf9fbf700f1a958ba7"
+    },
+    "armIdentitySha256": {
+      "none": "1a7d52d3c0d8bd767344f9effd064fa6ee98af986b3cd5285b3b67c1e064e044",
+      "upstream": "1c73bff1c90cc4a810337dc6cb38594d6d4a251cb5458fe0124de563f92c1aa0",
+      "remediated-defaults": "bd98c29c510fb94cc435a99bc6f6af0c30be6b2759be54ba813a86dbe981f96a",
+      "remediated-archive": "b246f1545400b4f0cbdc8c60372f45373ad90af2f8acd582177caab9d1654d6f"
+    },
+    "planSha256": {
+      "development": "e776487351021588f8d970c29f29a4fb2139a6df1b27b6bfa53ad7dd07abc170",
+      "holdout": "7b6c5565002bcf9a41eaf21bfae42617025e06f4b165150beeddce782dd4309a"
+    }
+  }
+}
