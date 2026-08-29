@@ -58,6 +58,18 @@ test("primary interval is success-only total provider tokens with a seeded boots
   assert.equal(typeof result.pairedT95.low, "number");
 });
 
+test("primary interval excludes incomplete or anomalous provider accounting", () => {
+  const rows = ARMS.map((arm) => attempt("t1", 1, arm, { tokens: arm === "upstream" ? 1000 : 900 }));
+  rows.find((row) => row.arm === "remediated-defaults").providerTrafficAnomaly = true;
+  const result = primaryInterval(rows, {
+    treatment: "remediated-defaults",
+    baseline: "upstream",
+    seed: "provider-study:accounting",
+  });
+  assert.equal(result.n, 0);
+  assert.equal(fiveToTenRequired(result), true);
+});
+
 test("primary interval carries a seeded task-clustered bootstrap over per-task deltas", () => {
   const rows = [];
   for (const rep of [1, 2, 3]) {

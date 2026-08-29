@@ -57,6 +57,9 @@ function terminalRows(repoRoot, runsRoot, phase) {
           status: typeof result?.status === "string" ? result.status : "unknown",
           success: result?.deterministicResult === true,
           totalProviderTokens: typeof result?.totalProviderTokens === "number" ? result.totalProviderTokens : null,
+          providerTrafficAnomaly: result?.providerTrafficAnomaly === true,
+          proxyFailedRequestCount: typeof result?.proxyFailedRequestCount === "number" ? result.proxyFailedRequestCount : null,
+          proxyRejectedCount: typeof result?.proxyRejectedCount === "number" ? result.proxyRejectedCount : null,
         });
       }
     }

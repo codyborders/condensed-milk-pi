@@ -12,7 +12,7 @@
  */
 
 import { closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync, writeSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { join } from "node:path";
 import http from "node:http";
 import { loadProviderStudyManifestFile } from "./manifest.mjs";
@@ -195,7 +195,7 @@ export async function providerStudyJudgeExport({
         const attemptDir = providerStudySlotPath(runsRoot, phase, task.id, arm, block.rep);
         const result = providerStudyReadCompletedResult(attemptDir);
         if (result?.status !== "completed") continue;
-        const caseId = sha256Text(`provider-study:case:${phase}:${task.id}:${arm}:${block.rep}`);
+        const caseId = randomBytes(32).toString("hex");
         const worktree = join(attemptDir, "worktree");
         const tree = existsSync(worktree)
           ? { contentSha256: hashTree(worktree), gitStateSha256: gitStateHash(worktree) }

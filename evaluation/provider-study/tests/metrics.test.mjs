@@ -35,6 +35,11 @@ test("usage nulls stay null and never feed the total", () => {
   assert.equal(providerTotalTokens(normalized), 10);
 });
 
+test("missing provider token categories produce no total", () => {
+  assert.equal(providerTotalTokens(normalizeProviderUsage({})), null);
+  assert.equal(providerTotalTokens(normalizeProviderUsage({ input: null, output: "unknown" })), null);
+});
+
 test("non-numeric token fields never feed the total", () => {
   const normalized = normalizeProviderUsage({ input: 5, output: "7", cacheRead: true });
   assert.equal(normalized.output, "7");

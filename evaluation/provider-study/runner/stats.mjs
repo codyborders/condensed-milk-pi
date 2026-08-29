@@ -34,6 +34,13 @@ function numeric(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function accountingUsable(row) {
+  if (row?.providerTrafficAnomaly === true) return false;
+  if (typeof row?.proxyFailedRequestCount === "number" && row.proxyFailedRequestCount > 0) return false;
+  if (typeof row?.proxyRejectedCount === "number" && row.proxyRejectedCount > 0) return false;
+  return numeric(row?.totalProviderTokens) !== null;
+}
+
 /**
  * Primary comparison: paired treatment-minus-baseline differences of
  * success-only total provider tokens over complete blocks. Both arms
@@ -53,6 +60,7 @@ export function primaryInterval(rows, { treatment, baseline, seed, arms = null }
     if (treatmentRow?.success === true) successTreatment += 1;
     if (baselineRow?.success === true) successBaseline += 1;
     if (treatmentRow?.success !== true || baselineRow?.success !== true) continue;
+    if (!accountingUsable(treatmentRow) || !accountingUsable(baselineRow)) continue;
     const treatmentTokens = numeric(treatmentRow.totalProviderTokens);
     const baselineTokens = numeric(baselineRow.totalProviderTokens);
     if (treatmentTokens === null || baselineTokens === null) continue;

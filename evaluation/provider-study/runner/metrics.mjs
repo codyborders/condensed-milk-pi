@@ -34,14 +34,16 @@ export function normalizeProviderUsage(raw) {
 export function providerTotalTokens(usage) {
   const source = typeof usage === "object" && usage !== null && !Array.isArray(usage) ? usage : {};
   let total = 0;
+  let observed = false;
   for (const [key, value] of Object.entries(source)) {
     const isTokenField = TOKEN_TOTAL_FIELDS.includes(key) || /tokens?$/i.test(key);
     if (!isTokenField) continue;
     if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
       total += value;
+      observed = true;
     }
   }
-  return total;
+  return observed ? total : null;
 }
 
 /**
