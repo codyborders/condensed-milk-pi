@@ -22,7 +22,6 @@ import { providerStudyRejectInsideRepo, providerStudyFreezeMatchesPath } from ".
 import { withHoldoutTasks } from "./holdout.mjs";
 import { fixturesCacheRoot, publishFixtureCache } from "../../lib/cache.mjs";
 import { loadProviderCredential, startCredentialProxy } from "../../runner/real-credentials.mjs";
-import { gitStateHash, hashTree } from "../../lib/fixtures.mjs";
 
 const ARMS = ["none", "upstream", "remediated-defaults", "remediated-archive"];
 
@@ -197,10 +196,7 @@ export async function providerStudyJudgeExport({
         if (result?.status !== "completed") continue;
         const caseId = randomBytes(32).toString("hex");
         const worktree = join(attemptDir, "worktree");
-        const tree = existsSync(worktree)
-          ? { contentSha256: hashTree(worktree), gitStateSha256: gitStateHash(worktree) }
-          : null;
-        const files = tree === null
+        const files = !existsSync(worktree)
           ? { initialFiles: [], finalChangedFiles: [] }
           : providerStudyJudgeCaseFiles({
               caseId,
@@ -215,7 +211,6 @@ export async function providerStudyJudgeExport({
           rubric: PROVIDER_STUDY_JUDGE_RUBRIC,
           initialFiles: files.initialFiles,
           finalChangedFiles: files.finalChangedFiles,
-          finalTree: tree,
         });
         entries.push({ caseId, taskId: task.id, arm, rep: block.rep });
       }

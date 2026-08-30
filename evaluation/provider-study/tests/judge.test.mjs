@@ -48,6 +48,7 @@ test("judge export carries anonymous changed-file paths, full bytes, initial byt
     ];
     for (const testCase of caseLines) {
       assert.equal(typeof testCase.prompt, "string");
+      assert.equal(Object.hasOwn(testCase, "finalTree"), false, "judge cases carry no arm-dependent whole-tree fingerprint");
       assert.ok(testCase.prompt.length > 0, "the task prompt travels with the case");
       assert.equal(testCase.rubric, PROVIDER_STUDY_JUDGE_RUBRIC, "the frozen rubric travels with the case");
       assert.ok(Array.isArray(testCase.finalChangedFiles), "changed files are enumerated");
