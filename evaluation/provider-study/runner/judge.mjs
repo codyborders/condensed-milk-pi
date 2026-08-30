@@ -542,8 +542,16 @@ export async function providerStudyJudgeRun({ repoRoot, runsRoot = null, phase, 
   const proxy = await startCredentialProxy({ upstreamBaseUrl: baseUrl, apiKey, dummyApiKey });
   const results = [];
   const failures = [];
+  const partialRoot = join(judgeRoot, ".partial-scores");
+  mkdirSync(partialRoot, { recursive: true });
   try {
     for (const caseId of order) {
+      const partialPath = join(partialRoot, `${caseId}.json`);
+      const prior = readJsonOrNull(partialPath);
+      if (prior?.caseId === caseId && typeof prior?.score === "number" && prior.score >= 0 && prior.score <= 5) {
+        results.push({ caseId, score: prior.score });
+        continue;
+      }
       const entry = byCase.get(caseId);
       const prompt = providerStudyJudgePrompt(entry);
       let valid = null;
@@ -574,7 +582,10 @@ export async function providerStudyJudgeRun({ repoRoot, runsRoot = null, phase, 
         break;
       }
       if (valid === null) failures.push({ caseId, error: lastError });
-      else results.push(valid);
+      else {
+        writeAppendNew(partialPath, `${JSON.stringify(valid)}\n`);
+        results.push(valid);
+      }
     }
   } finally {
     const proxyLedgerPath = join(judgeRoot, "judge-proxy-ledger.jsonl");

@@ -77,6 +77,7 @@ test("an incomplete judge run seals no scores and can retry the frozen schedule"
     const second = await providerStudyCli(args, { repoRoot });
     assert.equal(second.code, 0, second.stderr);
     assert.equal(JSON.parse(second.stdout).judged, 20);
+    assert.equal(upstream.seen.length, 23, "the second run requests only the one missing anonymous case");
     assert.equal(existsSync(join(runsRoot, "development", "judge", "scores.jsonl")), true);
   } finally {
     await upstream.close();

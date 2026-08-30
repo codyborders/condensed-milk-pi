@@ -66,7 +66,7 @@ Each attempt records tool calls, shell reruns, file rereads, test reruns, and bu
 
 The arm mapping lives beside the cases under a mapping digest. `judge-import` validates that digest. One frozen quality score lands per attempt and is never overwritten. Base and conditional repetitions use the same slot enumeration.
 
-Judge execution uses a separate schedule, proxy ledger, and provider usage ledger. A case may retry up to three times after invalid or failed judge responses. Judge usage is excluded from all plugin token totals.
+Judge execution uses a separate schedule, proxy ledger, and provider usage ledger. A case may retry up to three times after invalid or failed judge responses. Valid anonymous scores remain in private checkpoints, so a later judge run requests only missing cases. An incomplete run creates no importable score set. Judge usage is excluded from all plugin token totals.
 
 ## Statistics
 
