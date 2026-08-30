@@ -11,6 +11,7 @@ import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 
 const homeRoot = mkdtempSync(join(tmpdir(), "cm-recovery-home-"));
+const originalHome = process.env.HOME;
 
 const repositoryRoot = dirname(fileURLToPath(import.meta.url));
 const buildRoot = mkdtempSync(join(tmpdir(), "cm-recovery-build-"));
@@ -31,15 +32,8 @@ try {
   if (tsc.status !== 0) throw new Error(`TypeScript compilation failed: ${[tsc.stdout, tsc.stderr].filter(Boolean).join("\n")}`);
   // HOME must be set before import: the extension resolves its archive
   // root from the real home directory at load time.
-  const previousHome = process.env.HOME;
   process.env.HOME = homeRoot;
-  let mod;
-  try {
-    mod = await import(join(outputDirectory, "index.js"));
-  } finally {
-    if (previousHome === undefined) delete process.env.HOME;
-    else process.env.HOME = previousHome;
-  }
+  const mod = await import(join(outputDirectory, "index.js"));
 
   const handlers = new Map();
   const tools = new Map();
@@ -55,16 +49,9 @@ try {
     ui: { setStatus(key, value) { if (key === "token-savings") savingsStatus = value; } },
     sessionManager: { getSessionFile: () => "/fake/sessions/11111111-2222-3333-4444-555555555555.jsonl" },
   };
-  const restoreHome = process.env.HOME;
-  process.env.HOME = homeRoot;
   mkdirSync(join(homeRoot, ".config"), { recursive: true });
   writeFileSync(join(homeRoot, ".config", "condensed-milk.json"), JSON.stringify({ archive: { enabled: true } }));
-  try {
-    await sessionStart({ reason: "startup" }, ctx);
-  } finally {
-    if (restoreHome === undefined) delete process.env.HOME;
-    else process.env.HOME = restoreHome;
-  }
+  await sessionStart({ reason: "startup" }, ctx);
   const recoveryRoot = join(homeRoot, ".pi", "agent", "condensed-milk-recovery");
   assert.ok(existsSync(recoveryRoot), "recovery root under ~/.pi/agent/condensed-milk-recovery");
   const dirs = readdirSync(recoveryRoot);
@@ -94,7 +81,7 @@ try {
   );
   assert.ok(semantic, "semantic compression applied");
   assert.ok(semantic.content[0].text.startsWith("pytest: ===="), "summary visible");
-  const ref = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(semantic.content[0].text);
+  const ref = /\[cm-archive ((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\]/.exec(semantic.content[0].text);
   assert.ok(ref, "summary carries archive reference");
   const expectedSaved = longPytest.length - semantic.content[0].text.length;
   const expectedPercent = Math.round((expectedSaved / longPytest.length) * 100);
@@ -111,7 +98,7 @@ try {
     { toolName: "bash", toolCallId: "call-sem-1", input: { command: "pytest" }, content: [{ type: "text", text: longPytest }], isError: false },
     ctx,
   );
-  const refAgain = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(again.content[0].text);
+  const refAgain = /\[cm-archive ((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\]/.exec(again.content[0].text);
   assert.equal(refAgain[1], archiveId, "same tool call reuses the reference");
   console.log("PASS semantic archive creation, retrieval, stable id reuse");
 
@@ -131,7 +118,7 @@ try {
   );
   assert.equal(mixed.content.length, 2, "mixed block count preserved");
   assert.equal(mixed.content[1].type, "image", "non-text block order preserved");
-  const mixedId = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(mixed.content[0].text)[1];
+  const mixedId = /\[cm-archive ((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\]/.exec(mixed.content[0].text)[1];
   const mixedPage = await tool.execute("t2", { id: mixedId, offset: 0, limit: 4096 }, undefined, undefined, ctx);
   assert.ok(mixedPage.content[0].text.includes("aGVsbG8="), "archive preserves non-text block data");
 
@@ -184,7 +171,7 @@ try {
   };
   const masked = await contextHandler({ messages: historicalMessages }, context);
   const maskedText = masked.messages[1].content[0].text;
-  const historicalRef = /\[cm-archive (cm-[0-9a-f]{16})\]/.exec(maskedText);
+  const historicalRef = /\[cm-archive ((?:cm-[0-9a-f]{16}|cm2-[0-9a-f]{64}))\]/.exec(maskedText);
   assert.ok(historicalRef, "historical placeholder includes recovery reference");
   const maskedAgain = await contextHandler({ messages: historicalMessages }, context);
   assert.equal(maskedAgain.messages[1].content[0].text, maskedText, "historical reference stays stable");
@@ -232,6 +219,8 @@ try {
   );
   console.log("PASS session isolation and safe retrieval errors");
 } finally {
+  if (originalHome === undefined) delete process.env.HOME;
+  else process.env.HOME = originalHome;
   rmSync(buildRoot, { recursive: true, force: true });
   rmSync(homeRoot, { recursive: true, force: true });
 }

@@ -2,11 +2,11 @@
 
 ## Known issue
 
-Archive-backed lossy masking is disabled by default in this prerelease. Enabling `archive.enabled` activates a two-phase batch archive. The batch emits placeholders only for references confirmed live after retention. Any storage, verification, index, lock, or cleanup failure fails open. Original output stays visible when no live reference exists. Historical masking does not run while the archive is disabled.
+Archive-backed lossy masking is disabled by default in this prerelease. `archive.enabled` remains false unless explicitly enabled. Enabling `archive.enabled` activates a two-phase batch archive. The batch emits placeholders only for references confirmed live after retention. Any storage, verification, index, lock, or cleanup failure fails open. Original output stays visible when no live reference exists. Historical masking does not run while the archive is disabled.
 
 Condensed Milk is a pi terminal extension that reduces repetitive bash output and masks stale tool results before an LLM call. It uses deterministic, domain-aware transforms. It is not a general-purpose output truncator.
 
-This repository is the maintained remediation fork of upstream Condensed Milk. The fork keeps upstream author credit and uses prerelease `1.10.1-remediated.1` under the `@codyborders` scope. The earlier corrective prerelease v1.10.1-remediated.0 stays unchanged. It does not claim production approval.
+This repository is the maintained remediation fork of upstream Condensed Milk. The fork keeps upstream author credit and prepares unreleased prerelease `1.10.1-remediated.2` under the `@codyborders` scope. Corrective prerelease `v1.10.1-remediated.1` remains immutable. Earlier prerelease `v1.10.1-remediated.0` also stays unchanged. This correction does not claim production approval.
 
 Upstream v1.10.0 remains the reference baseline. Selecting upstream retains upstream behavior. This fork changes defaults and safety handling as documented below. Experimental filters stay disabled unless explicitly enabled. This prerelease includes bounded output recovery.
 
@@ -58,7 +58,9 @@ A command chain with two or more output-producing segments does not receive a se
 
 ## Output recovery
 
-When `archive.enabled` is true, lossy semantic summaries and historical masks include a stable `[cm-archive ID]` reference. Historical masking prepares all eligible candidates as one bounded batch. It replaces visible information only after final retention confirms each reference. Reprocessing the same tool result in one session reuses the live reference without rewriting archive content.
+When `archive.enabled` is true, lossy semantic summaries and historical masks include a stable `[cm-archive ID]` reference. New admissions use a full-width `cm2-` identity. The identity binds a persisted random session generation, tool digest, content digest, and persisted sequence. Each v2 row stores those identity fields. Historical masking prepares a bounded recent-candidate batch. It replaces visible information only after final retention confirms each reference. Reprocessing the same live tool result and content reuses its reference without rewriting archive content.
+
+Legacy cm references remain readable and never repointed. Their `cm-` files and rows stay unchanged during migration. New admissions never reuse legacy identities.
 
 Use `condensed_milk_retrieve` with the reference. Page mode accepts `offset` and `limit` as UTF-8 byte positions over a deterministic JSON form. Responses state the next offset and use text or base64 encoding. Concatenating decoded page bytes reconstructs the stored form exactly. Tail mode returns trailing text. Literal and restricted regex searches return bounded matching lines. Page, tail, literal, and regex modes cannot be combined.
 
@@ -66,14 +68,24 @@ Archives stay under `~/.pi/agent/condensed-milk-recovery` in opaque session dire
 
 Storage strips ANSI codes and applies mandatory environment-line redaction before writing. Retrieval applies that redaction again. Non-text blocks remain unchanged, so users must treat local archive access like local session-file access.
 
-Default retention allows 128 entries, 64 KiB per entry, 4 MiB per session, and a 24-hour lifetime. Context processing reads the index and runs retention at most once per batch. Removal records remain bounded. A persisted closure flag prevents admission after a capacity rejection or removal, even after an older removal record is dropped. Oversize output, unavailable storage, failed verification, or rejected retention leaves original redacted output visible.
+Default retention allows 128 entries, 64 KiB per entry, 4 MiB per session, and a 24-hour lifetime. Retention applies TTL first. It then ranks semantic rows before historical rows. Current context position, persisted sequence, creation time, and ID provide deterministic tie-breakers. The final set must satisfy both count and aggregate-byte limits. Removal records remain bounded and may become `missing` after older records are dropped. Capacity removal and TTL expiry do not close admission. Oversize output or uncertain storage leaves original redacted output visible.
+
+A missing indexed entry makes its current context pass preserve original redacted content. While holding the session lock, the archive commits removal records for all missing rows. It performs no candidate write or sequence allocation during that repair. The next pass can admit new content without a retrieval or session restart.
+
+Stale-session cleanup supports at most 512 direct session directories. Each call scans no more than 1,040 root entries and advances a constant-size lexical cursor across 128 targets. Preliminary checks examine no more than 2,048 children per target. Final freshness and entry checks repeat under a root-contained target lock. The conservative fixed ceiling is 1,400,000 filesystem calls per sweep.
+
+Session paths must remain non-symlink direct children of the resolved recovery root. Admission and retirement validate them before file access and again after target lock acquisition. Session locks use deterministic names directly below the trusted root, so path replacement cannot redirect lock writes.
+
+Cleanup retains bounded removal indexes instead of deleting session directories. New session admission fails open at the 512-directory cap. Archive-created live entry bytes are bounded by that cap and the 16 MiB per-session configuration ceiling. Externally created roots above the scan ceiling require local cleanup.
+
+Each new row stores a SHA-256 digest of its exact canonical bytes. Reuse checks schema, ID, blocks, creation time, byte count, and digest. The verification cache also records file size and modification metadata. A metadata change forces a reread and rehash, so same-size substitutions do not remain trusted.
 
 ## Installation
 
 Install the pinned prerelease from the tagged fork Git URL:
 
 ```bash
-pi install https://github.com/codyborders/condensed-milk-pi@v1.10.1-remediated.1
+pi install https://github.com/codyborders/condensed-milk-pi@v1.10.1-remediated.2
 ```
 
 The npm registry is not an installation source for this fork. The tagged Git URL above is the supported pinned form.
@@ -174,7 +186,7 @@ The fork retains upstream configuration paths: global cutoff settings at `~/.con
 
 Configurations carrying the recognized v1.6.x defaults, thresholds `[0.20, 0.35, 0.50]` and coverage `[0.50, 0.75, 0.90]`, migrate automatically to current defaults on session start. A matching tuple is treated as stale generated configuration. Other threshold or coverage values remain explicit customization. The old v1.1.x `windowSize` setting is ignored because static-cutoff masking replaced the rolling window.
 
-Pin prerelease installs to `1.10.1-remediated.1`. The earlier corrective tag `v1.10.1-remediated.0` stays unchanged. To roll back, remove the scoped fork and reinstall upstream v1.10.0 from its original package or repository. Do not reuse fork-only opt-ins when rolling back.
+Pin prerelease installs to `1.10.1-remediated.2`. The earlier corrective tag `v1.10.1-remediated.1` remains immutable. The earlier corrective tag `v1.10.1-remediated.0` stays unchanged. To roll back, remove the scoped fork and reinstall upstream v1.10.0 from its original package or repository. Do not reuse fork-only opt-ins when rolling back.
 
 ## Bounded telemetry
 
@@ -209,7 +221,9 @@ npm run benchmark
 
 The benchmark is a local synthetic performance check. It does not establish provider cost, task quality, safety in every shell environment, or production readiness. One completed sanitized Z.AI run covered 20 valid task pairs and 40 selected attempts. This was one completed 20-pair stochastic study. Both arms passed all 20 tasks, with zero measured quality difference. The run used `glm-5.3-flash`, Pi `0.84.2`, `high` thinking, and the `qwen-vllm` profile. Its aggregate token and timing deltas are descriptive only. They do not establish causality, broad savings, or production approval. The protocol, limits, and sanitized result are documented in [evaluation/paired-task-evaluation.md](evaluation/paired-task-evaluation.md).
 
-A separate masking-focused study completed 48 paid attempts and 24 valid pairs. Both arms passed 21 of 24 attempts. Every release gate passed, including historical-mask activation and required archive recovery. The fork used 2,260,347 reported tokens versus 1,589,801 upstream. Its paired mean wall time was 3,805 ms higher. Rerun counts were equal, and the fork made ten fewer rereads. These results do not support a token-cost reduction claim. See [evaluation/results/masking-focused-glm-5.3-flash.md](evaluation/results/masking-focused-glm-5.3-flash.md) for sanitized rows, intervals, exclusions, and limits.
+A separate masking-focused study completed 48 paid attempts and 24 valid pairs. Both arms passed 21 of 24 attempts. Every release gate passed, including historical-mask activation and required archive recovery. The prior paid study used 42.18% more reported tokens for the fork. No new paid token result exists for this prerelease. These results do not support a token-cost reduction claim. See [evaluation/results/masking-focused-glm-5.3-flash.md](evaluation/results/masking-focused-glm-5.3-flash.md) for sanitized rows, intervals, exclusions, and limits.
+
+Local filesystem benchmarks establish runtime only. They do not establish provider cost, task quality, or production safety. Fresh provider evaluation is required before production approval.
 
 ## Architecture
 

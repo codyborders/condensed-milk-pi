@@ -464,9 +464,17 @@ export interface ArchiveSink {
  *  null result means the whole batch failed and nothing may be masked. */
 export interface ArchiveBatchSink {
   prepareBatch(
-    candidates: ReadonlyArray<{ toolCallId: string | undefined; blocks: unknown[] }>,
+    candidates: ReadonlyArray<{
+      toolCallId: string | undefined;
+      blocks: unknown[];
+      kind: "historical";
+    }>,
   ): Map<string, string> | null;
 }
+
+/** A context pass keeps only its newest bounded candidate window. Older
+ *  candidates remain visible and never reach storage. */
+const MAX_ARCHIVE_BATCH_CANDIDATES = 10_000;
 
 /** v1.10.0 fallback templates — exact byte match for the v1.9.0
  *  hardcoded strings. Used when no profile is supplied. */
@@ -560,7 +568,12 @@ export function compressStaleToolResults(
   // fully visible. A null batch result masks nothing.
   let batchReferences: Map<string, string> | null = null;
   if (opts.archiveBatch) {
-    const candidates: Array<{ toolCallId: string | undefined; blocks: unknown[] }> = [];
+    const candidates: Array<{
+      toolCallId: string | undefined;
+      blocks: unknown[];
+      kind: "historical";
+    }> = [];
+    let candidateHead = 0;
     for (let idx = 0; idx < messages.length; idx++) {
       const msg = messages[idx]?.message ?? messages[idx];
       if (isAlreadyMasked(msg)) continue;
@@ -580,9 +593,20 @@ export function compressStaleToolResults(
         eligible = Boolean(path && content.length >= MIN_MASK_LENGTH && !isReferenceFile(path, rules) && idx < cutoffIdx);
       }
       if (eligible) {
-        candidates.push({ toolCallId: msg?.toolCallId, blocks: Array.isArray(msg?.content) ? msg.content : [] });
+        const archiveCandidate = {
+          toolCallId: msg?.toolCallId,
+          blocks: Array.isArray(msg?.content) ? msg.content : [],
+          kind: "historical" as const,
+        };
+        if (candidates.length < MAX_ARCHIVE_BATCH_CANDIDATES) {
+          candidates.push(archiveCandidate);
+        } else {
+          candidates[candidateHead] = archiveCandidate;
+          candidateHead = (candidateHead + 1) % MAX_ARCHIVE_BATCH_CANDIDATES;
+        }
       }
     }
+    if (candidateHead > 0) candidates.push(...candidates.splice(0, candidateHead));
     batchReferences = opts.archiveBatch.prepareBatch(candidates);
   }
 

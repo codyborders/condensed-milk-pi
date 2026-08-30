@@ -2,11 +2,11 @@
 /**
  * Evaluation runner CLI — public boundary.
  *
- * Commands grow test-first. Current slice: validate.
+ * Commands grow test-first. Current stage: validate.
  * All subprocesses use argv arrays; no shell is ever invoked.
  */
 
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -83,7 +83,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export async function cliMain(argv) {
   const command = argv[0];
-  const flags = parseFlags(argv.slice(1));
+  const flags = parseFlags(argv.filter((_, index) => index > 0));
   if (command === "validate") {
     return cmdValidate();
   }
@@ -1106,7 +1106,7 @@ async function executeSuccessAttempt({ runDir, runId, task, arm, attempt, attemp
 }
 
 function timestampRunId() {
-  return new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14);
+  return new Date().toISOString().replace(/[-:.TZ]/g, "").substring(0, 14);
 }
 
 function requireRunId(flags) {
@@ -1403,8 +1403,8 @@ function cmdValidate() {
   return 0;
 }
 
-if (process.argv[1] && process.argv[1].endsWith("cli.mjs")) {
-  Promise.resolve(cliMain(process.argv.slice(2))).then((code) => process.exit(code));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  Promise.resolve(cliMain(process.argv.filter((_, index) => index > 1))).then((code) => process.exit(code));
 }
 
 // Timeout fault path (red-driven): spawn fake-pi.mjs in its own process

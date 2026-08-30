@@ -12,7 +12,7 @@ const docs = `${readme}\n${changelog}`;
 const forkUrl = "https://github.com/codyborders/condensed-milk-pi";
 
 assert.equal(packageJson.name, "@codyborders/condensed-milk-pi");
-assert.equal(packageJson.version, "1.10.1-remediated.1");
+assert.equal(packageJson.version, "1.10.1-remediated.2");
 assert.equal(packageJson.repository.url, `${forkUrl}.git`);
 assert.equal(packageJson.homepage, `${forkUrl}#readme`);
 assert.equal(packageJson.bugs.url, `${forkUrl}/issues`);
@@ -32,8 +32,8 @@ assert.equal(lockfile.packages[""].version, packageJson.version);
 // pinned GitHub-tag install is the documented installation path.
 assert.doesNotMatch(readme, /npm install @codyborders\/condensed-milk-pi/, "npm registry install line must stay removed");
 assert.doesNotMatch(readme, /pi install npm:@codyborders\/condensed-milk-pi/, "pi npm-registry install line must stay removed");
-assert.match(readme, /pi install https:\/\/github\.com\/codyborders\/condensed-milk-pi@v1\.10\.1-remediated\.1/);
-assert.match(readme, /v1\.10\.1-remediated\.0 stays unchanged/);
+assert.match(readme, /pi install https:\/\/github\.com\/codyborders\/condensed-milk-pi@v1\.10\.1-remediated\.2/);
+assert.match(readme, /v1\.10\.1-remediated\.0`?\s+(?:also\s+)?stays unchanged/);
 assert.match(readme, /git clone https:\/\/github\.com\/codyborders\/condensed-milk-pi\.git/);
 assert.doesNotMatch(readme, /pi install npm:@tomooshi\/condensed-milk-pi/);
 assert.doesNotMatch(readme, /git clone https:\/\/github\.com\/tomooshi\/condensed-milk-pi/);
@@ -47,7 +47,24 @@ assert.match(readme, /Git log compression and generic log deduplication now requ
 assert.match(readme, /upstream v1\.10\.0/);
 assert.match(readme, /stable IDs/);
 assert.match(readme, /~\/\.config\/condensed-milk\.json/);
-assert.match(readme, /1\.10\.1-remediated\.1/);
+assert.match(readme, /1\.10\.1-remediated\.2/);
 assert.match(readme, /roll back/i);
+assert.match(docs, /full-width `cm2-` identity[\s\S]{0,200}session generation/i);
+assert.match(docs, /toolDigest|tool digest/i);
+assert.match(docs, /contentDigest|content digest/i);
+assert.match(docs, /persisted sequence|sequence cursor/i);
+assert.match(docs, /legacy cm references remain readable and never repointed/i);
+assert.match(docs, /retention applies TTL first/i);
+assert.match(docs, /semantic rows (?:have priority over|before) historical rows/i);
+assert.match(docs, /bounded removal records may become `?missing`?/i);
+assert.match(docs, /SHA-256 (?:canonical-byte checks|digest of its exact canonical bytes)/i);
+assert.match(docs, /metadata-aware rehash/i);
+assert.match(docs, /archive\.enabled.*false/i);
+assert.match(docs, /remediated\.1`?\s+(?:release\s+)?remains immutable/i);
+assert.match(docs, /42\.18% more reported tokens/i);
+assert.match(docs, /no new paid token result/i);
+assert.match(docs, /local filesystem benchmarks establish runtime only/i);
+assert.match(docs, /fresh provider evaluation is required before production approval/i);
+assert.match(changelog, /1\.10\.1-remediated\.2.*Unreleased|Unreleased[\s\S]*1\.10\.1-remediated\.2/i);
 
 console.log("package identity and fork documentation checks passed");

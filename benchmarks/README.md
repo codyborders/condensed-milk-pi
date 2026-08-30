@@ -55,7 +55,9 @@ The completed sanitized comparison is checked in at `benchmarks/comparison-resul
 
 ## Archive-enabled context benchmark
 
-`benchmarks/archive-context.mjs` measures the real recovery store in a temporary directory. It covers 100, 300, 1,000, and 10,000 eligible results. Each case records the first, second, and fifth context passes. Archive-enabled and archive-disabled cases use supported capacities above or below candidate count where possible.
+`benchmarks/archive-context.mjs` measures local filesystem recovery work in a temporary directory. It records runtime, filesystem operations, survivor counts, verification outcomes, and storage totals. It makes no provider, token, quality, or production-readiness claim.
+
+### Method and workloads
 
 Run the gate without changing checked-in results:
 
@@ -63,23 +65,45 @@ Run the gate without changing checked-in results:
 npm run benchmark:archive
 ```
 
-Update `benchmarks/archive-results.json` only after an intentional full run:
+Update `benchmarks/archive-results.json` only after intentional result regeneration:
 
 ```bash
 npm run benchmark:archive:update
 ```
 
-Repeated-pass p95 must remain below 25 ms. Repeated processing of live tool-call IDs must perform zero archive-content writes and zero archive-content renames. `benchmarks/archive-context.test.mjs` checks the complete dimension set, exact pass sample counts, raw result gates, supported-capacity survivor counts, and zero disabled survivors.
+Steady workload repeats one candidate count across five passes. It checks live-reference reuse and zero repeated content or index rewrites. It also checks deterministic survivors and repeated-pass p95 budget.
 
-Disabled cases run the same archive batch wrapper as production. The wrapper returns a null preparation result, so disabled runs fail open and mask nothing.
+Progressive workloads use candidate counts `[100, 200, 300, 400, 500]`. They cover disabled fail-open behavior, capacity pressure, aggregate-byte pressure, TTL expiry, and store recreation. Capacity cases test limits above and below candidate counts.
 
-The regenerated local run passed all 16 cases with 20 measured iterations per case. Its highest repeated-pass p95 was 8.795 ms for 10,000 candidates. The fifth-pass p95 was 0.511 ms for 100 candidates. It was 1.269 ms for 300, 3.580 ms for 1,000, and 8.795 ms for 10,000. Every repeated pass recorded zero content writes and renames.
+Each scenario runs warmups plus measured iterations. Archive-enabled cases use real temporary filesystem operations. Archive-disabled cases use the production batch wrapper. The wrapper returns null, so disabled runs mask nothing.
 
-`benchmarks/archive-before-results.json` records the synchronous per-entry behavior from merge commit `8d004bf97f5142d869aebcedf05ae7d7be4e1d30`. At 300 candidates with capacity 128, its fifth-pass p95 was 368.189 ms. The corrected batch path measured 0.933 ms for the matching case. At 300 candidates with capacity above candidate count, p95 changed from 43.448 ms to 1.269 ms.
+`benchmarks/archive-context.test.mjs` checks scenario names, candidate dimensions, pass schema, gate fields, storage bounds, disabled survivors, TTL expiry, and recreation verification.
 
-First-pass work remains larger because new survivors must be written and verified. At 10,000 candidates with the supported 1,024-entry maximum, first-pass p95 was 244.282 ms. The release gate applies to repeated passes, while first-pass timings remain visible in the raw report.
+The context benchmark does not time root-wide stale-session retirement. Recovery regressions cover that lifecycle path. They enforce 1,040 root entries, 128 selected sessions, 2,048 child entries per target, and a conservative 1,400,000-operation ceiling per sweep.
 
-Upstream ratios use exact candidate counts and pass numbers from `benchmarks/archive-upstream-baseline.json`. That file pins upstream commit `71f9e396951c42687f0c3456727b2b5c8c625da1`. Upstream does not archive results, so archive-enabled ratios describe added local recovery work. They are not token or provider-cost measurements.
+### Result schema
+
+`archive-results.json` uses `schemaVersion: 2`. It records benchmark identity, timestamp, Node version, iteration counts, candidate counts, p95 budgets, gate failures, and scenarios.
+
+Each scenario records name, archive mode, recreation and TTL flags, candidate counts, configured storage totals, and pass records. Each pass records admission counts, evictions, expirations, masked and visible counts, filesystem operations, verification counts, retrieval counts, storage totals, runtime percentiles, sample count, and failures.
+
+Repeated-pass p95 must remain below configured budgets. Steady-state reuse must perform zero archive-content writes and zero archive-content renames. Upstream comparison data describes local recovery work only. It is not a token or provider-cost measurement.
+
+### Corrective rolling-admission result
+
+The regenerated run used 20 measured iterations per pass. All eight scenarios passed with zero reported failures. Steady-state repeated p95 reached at most 8.496 ms against the 25 ms budget. Repeated steady passes performed zero entry or index rewrites.
+
+| Fifth pass scenario | New admissions | Evictions | Expirations | Masked | Visible | p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Disabled | 0 | 0 | 0 | 0 | 500 | 0.423 ms |
+| Capacity above count | 100 | 0 | 0 | 500 | 0 | 40.889 ms |
+| Capacity 128 | 100 | 100 | 0 | 128 | 372 | 38.478 ms |
+| Entry pressure, capacity 4 | 4 | 4 | 0 | 4 | 496 | 7.755 ms |
+| Aggregate pressure | 35 | 35 | 0 | 35 | 465 | 15.058 ms |
+| TTL expiry | 500 | 0 | 400 | 500 | 0 | 130.972 ms |
+| Store recreation | 100 | 0 | 0 | 500 | 0 | 44.470 ms |
+
+Disabled passes performed zero archive filesystem operations. Every emitted reference returned expected canonical bytes. Old-reference alias count remained zero. Each pressured scenario stayed within its configured entry and aggregate-byte limits.
 
 ## Current local results
 

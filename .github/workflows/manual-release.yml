@@ -1,0 +1,228 @@
+name: Manual release gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact commit SHA expected on main
+        required: true
+        type: string
+      version:
+        description: Release version without the v prefix
+        required: true
+        type: string
+      confirmation:
+        description: Type RELEASE to confirm this manual prerelease
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 22.19.0
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      verified_sha: ${{ steps.verify-head.outputs.verified_sha }}
+      tag_exists: ${{ steps.verify-head.outputs.tag_exists }}
+    steps:
+      - name: Require main branch dispatch
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [[ "$REF" == "refs/heads/main" ]] || { echo "manual release must run from refs/heads/main" >&2; exit 1; }
+
+      - name: Check out expected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_commit }}
+          fetch-depth: 0
+
+      - name: Fetch main and tags
+        run: git fetch origin main --tags
+
+      - name: Verify main head and release identity
+        id: verify-head
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          VERSION: ${{ inputs.version }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRMATION" == "RELEASE" ]] || { echo "confirmation must equal RELEASE" >&2; exit 1; }
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-remediated\.[0-9]+$ ]] || { echo "invalid remediated prerelease version" >&2; exit 1; }
+          HEAD_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          git rev-parse --verify "$EXPECTED_COMMIT^{commit}" >/dev/null
+          [[ "$HEAD_SHA" == "$EXPECTED_COMMIT" ]] || { echo "HEAD differs from expected_commit" >&2; exit 1; }
+          [[ "$HEAD_SHA" == "$MAIN_SHA" ]] || { echo "HEAD differs from origin/main" >&2; exit 1; }
+          echo "verified_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          TAG="v$VERSION"
+          REMOTE_TAGS="$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}")"
+          if [[ -n "$REMOTE_TAGS" ]]; then
+            [[ "$(git rev-parse "$TAG^{commit}")" == "$EXPECTED_COMMIT" ]] || { echo "existing tag targets a different commit" >&2; exit 1; }
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            [[ -z "$(git tag --list "$TAG")" ]] || { echo "local-only tag already exists: $TAG" >&2; exit 1; }
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub release already exists: $TAG" >&2
+            exit 1
+          fi
+
+      - name: Verify package version and clean worktree
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          node --input-type=module - "$VERSION" <<'NODE'
+          import { readFileSync } from "node:fs";
+          const expected = process.argv[2];
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
+          if (pkg.version !== expected || lock.version !== expected || lock.packages?.[""].version !== expected) {
+            throw new Error(`version mismatch: expected ${expected}`);
+          }
+          NODE
+          [[ -z "$(git status --porcelain)" ]] || { echo "worktree is not clean" >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run npm test three times
+        run: |
+          npm test
+          npm test
+          npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate evaluation manifest
+        run: npm run evaluation:validate
+
+      - name: Generate evaluation fixtures
+        run: npm run evaluation:fixtures
+
+      - name: Run evaluation tests
+        run: npm run evaluation:test
+
+      - name: Run unpaid evaluation dry-run
+        run: npm run evaluation:dry-run
+
+      - name: Validate masking manifest
+        run: npm run masking:validate
+
+      - name: Generate masking fixtures
+        run: npm run masking:fixtures
+
+      - name: Prepare deterministic unpaid masking run
+        run: npm run masking:prepare -- --runs-dir evaluation/masking-runs --run-id release-masking-unpaid
+
+      - name: Run deterministic unpaid masking dry-run
+        run: npm run masking:dry-run -- --runs-dir evaluation/masking-runs --run-id release-masking-unpaid
+
+      - name: Run benchmark tests
+        run: npm run benchmark:test
+
+      - name: Run archive benchmark gate
+        run: npm run benchmark:archive
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Inspect packed runtime contents
+        run: |
+          set -euo pipefail
+          npm pack --dry-run --json > "$RUNNER_TEMP/npm-pack.json"
+          node --input-type=module - "$RUNNER_TEMP/npm-pack.json" <<'NODE'
+          import { readFileSync } from "node:fs";
+          const report = JSON.parse(readFileSync(process.argv[2], "utf8"));
+          const files = report[0]?.files?.map(({ path }) => path.replace(/^package\//, "")) ?? [];
+          const allowed = (path) => path === "index.ts" || path === "README.md" || path === "CHANGELOG.md" || path === "LICENSE" || path === "package.json" || path.startsWith("filters/");
+          const denied = /^(evaluation|benchmarks|tests|test-|\.github|credentials|node_modules|local-artifacts)(\/|$)|(^|\/)(credentials|\.env|.*\.(pem|key|crt|tgz|log))$/i;
+          if (files.length === 0 || files.some((path) => !allowed(path) || denied.test(path))) {
+            throw new Error(`unexpected package contents: ${JSON.stringify(files)}`);
+          }
+          NODE
+
+      - name: Recheck clean tree
+        run: |
+          set -euo pipefail
+          [[ -z "$(git status --porcelain)" ]] || { git status --short; exit 1; }
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: corrective-prerelease
+    permissions:
+      contents: write
+    steps:
+      - name: Check out exact verified SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.verified_sha }}
+          fetch-depth: 0
+
+      - name: Recheck main, version, and tag absence
+        env:
+          EXPECTED_COMMIT: ${{ needs.verify.outputs.verified_sha }}
+          VERSION: ${{ inputs.version }}
+          REF: ${{ github.ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$REF" == "refs/heads/main" ]] || exit 1
+          git fetch origin main --tags
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]] || exit 1
+          [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/main)" ]] || exit 1
+          node --input-type=module - "$VERSION" <<'NODE'
+          import { readFileSync } from "node:fs";
+          const expected = process.argv[2];
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+          const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
+          if (pkg.version !== expected || lock.version !== expected || lock.packages?.[""].version !== expected) throw new Error("version mismatch");
+          NODE
+          TAG="v$VERSION"
+          REMOTE_TAGS="$(git ls-remote --tags origin "refs/tags/$TAG" "refs/tags/$TAG^{}")"
+          if [[ -n "$REMOTE_TAGS" ]]; then
+            [[ "$(git rev-parse "$TAG^{commit}")" == "$EXPECTED_COMMIT" ]] || exit 1
+          else
+            [[ -z "$(git tag --list "$TAG")" ]] || exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then exit 1; fi
+          [[ -z "$(git status --porcelain)" ]] || exit 1
+
+      - name: Create and push annotated tag only
+        if: needs.verify.outputs.tag_exists != 'true'
+        env:
+          VERSION: ${{ inputs.version }}
+          EXPECTED_COMMIT: ${{ needs.verify.outputs.verified_sha }}
+        run: |
+          set -euo pipefail
+          TAG="v$VERSION"
+          git tag --annotate "$TAG" "$EXPECTED_COMMIT" --message "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Create GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          EXPECTED_COMMIT: ${{ needs.verify.outputs.verified_sha }}
+        run: |
+          set -euo pipefail
+          TAG="v$VERSION"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$EXPECTED_COMMIT" --title "$TAG" --prerelease --generate-notes

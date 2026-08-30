@@ -329,8 +329,10 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   ];
   const id = store.store("toolcall-basic", blocks);
   assert.ok(id && ARCHIVE_ID_PATTERN.test(id));
-  const again = store.store("toolcall-basic", [{ type: "text", text: "different" }]);
-  assert.equal(again, id, "reprocessing the same tool result reuses its id");
+  const again = store.store("toolcall-basic", blocks);
+  assert.equal(again, id, "reprocessing identical content reuses its live id");
+  const changed = store.store("toolcall-basic", [{ type: "text", text: "different" }]);
+  assert.ok(changed && changed !== id, "changed content receives a distinct reference");
   const got = store.retrieve(id);
   assert.equal(got.kind, "ok");
   if (got.kind === "ok") {
@@ -348,7 +350,7 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
     assert.equal(indexMode, 0o600, "index must be 0600");
   }
   const index = JSON.parse(readFileSync(join(store.directory(), "index.json"), "utf8"));
-  assert.equal(Object.keys(index.entries).length, 1, "no duplicate storage for the same tool call");
+  assert.equal(Object.keys(index.entries).length, 2, "identical content deduplicates while changed content remains distinct");
   // Well-formed unknown reference is missing, never a crash.
   assert.equal(store.retrieve("cm-0000000000000000").kind, "missing");
   // Corrupt entry file degrades to missing AND is dropped from the index,
@@ -413,8 +415,8 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   assert.equal(store.retrieve(id!).kind, "expired", "entry expired at ttl");
   assert.equal(store.retrieve(id!).kind, "expired", "expired reason persists across retrievals");
   // Cleanup at session start also removes expired entries without a read.
-  // Use a separate open session because the first persisted expiry closes
-  // admission in sess-ttl.
+  // A separate session keeps expiry handling here independent of the
+  // interactive retrievals above.
   clock = baseClock;
   const cleanupStore = makeStore("sess-ttl-cleanup", { ttlMs: 1000 }, () => clock);
   const id2 = cleanupStore.store("toolcall-ttl2", [{ type: "text", text: longText("t2") }]);
@@ -422,19 +424,20 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   clock = baseClock + 5000;
   cleanupStore.cleanup();
   assert.equal(cleanupStore.retrieve(id2!).kind, "expired", "cleanup removes ttl-expired entries with a persistent reason");
-  // Retention eviction keeps its own distinct reason. Under the
-  // admission-closure contract the existing live row wins its slot, the
-  // new candidate is refused, and the live row keeps its distinct state.
+  // Retention eviction keeps its own distinct reason. Rolling admission
+  // lets the newer candidate take the slot: the oldest row leaves with
+  // the distinct evicted state, never a silent overwrite.
   const lru = makeStore("sess-ttl-lru", { maxEntries: 1 }, () => clock);
   const first = lru.store("tc-lru-1", [{ type: "text", text: longText("l1") }])!;
   clock += 1;
-  assert.equal(lru.store("tc-lru-2", [{ type: "text", text: longText("l2") }]), null,
-    "capacity rejection returns no reference and closes admission");
-  assert.equal(lru.retrieve(first).kind, "ok", "existing live row wins over the new candidate");
+  const newer = lru.store("tc-lru-2", [{ type: "text", text: longText("l2") }]);
+  assert.ok(newer && newer !== first, "count pressure admits the newer candidate with a distinct reference");
+  assert.equal(lru.retrieve(first).kind, "evicted", "the displaced row keeps the distinct evicted reason");
+  assert.equal(lru.retrieve(newer).kind, "ok", "the newly admitted row retrieves immediately");
   ok("archive store: ttl expiry with distinct expired/evicted states");
 }
 
-// --- entry-count rejection closes admission (existing rows win) ---
+// --- rolling count retention: newest admission displaces the oldest ---
 {
   let clock = baseClock;
   const store = makeStore("sess-count", { maxEntries: 2 }, () => clock);
@@ -442,18 +445,24 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   clock += 10;
   const idB = store.store("tc-b", [{ type: "text", text: longText("b") }])!;
   clock += 10;
-  // The third candidate loses to the two live rows: no reference, and
-  // admission closes so later ids are refused too.
-  assert.equal(store.store("tc-c", [{ type: "text", text: longText("c") }]), null,
-    "count-cap rejection returns no reference");
-  assert.equal(store.store("tc-d", [{ type: "text", text: longText("d") }]), null,
-    "closed archive refuses the next candidate");
-  assert.equal(store.retrieve(idA).kind, "ok", "existing live rows win over new candidates");
-  assert.equal(store.retrieve(idB).kind, "ok");
-  ok("archive store: entry-count rejection closes admission");
+  // Rolling admission: the third candidate takes the oldest slot and the
+  // displaced row keeps its distinct evicted state.
+  const idC = store.store("tc-c", [{ type: "text", text: longText("c") }]);
+  assert.ok(idC && idC !== idA && idC !== idB, "count pressure admits the newer candidate with a new reference");
+  assert.equal(store.retrieve(idA).kind, "evicted", "the oldest row is evicted deterministically");
+  assert.equal(store.retrieve(idC).kind, "ok", "the newly admitted row retrieves immediately");
+  clock += 10;
+  const idD = store.store("tc-d", [{ type: "text", text: longText("d") }]);
+  assert.ok(idD && idD !== idB && idD !== idC, "admission keeps rolling after an eviction");
+  assert.equal(store.retrieve(idB).kind, "evicted", "the next-oldest row is evicted in turn");
+  assert.equal(store.retrieve(idC).kind, "ok", "surviving rows stay retrievable");
+  assert.equal(store.retrieve(idD).kind, "ok");
+  const countIndex = JSON.parse(readFileSync(join(store.directory(), "index.json"), "utf8"));
+  assert.equal(Object.keys(countIndex.entries).length, 2, "entry count remains bounded");
+  ok("archive store: rolling count retention admits newer candidates");
 }
 
-// --- aggregate-byte rejection closes admission (existing bytes win) ---
+// --- rolling aggregate-byte retention: newer bytes displace older bytes ---
 {
   let clock = baseClock;
   const store = makeStore("sess-bytes", { maxEntries: 10, maxAggregateBytes: 1024 }, () => clock);
@@ -462,15 +471,18 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   clock += 10;
   const idB = store.store("tc-b2", [{ type: "text", text: payload }])!;
   clock += 10;
-  // A third ~380-byte entry would exceed the aggregate cap: the two live
-  // rows win, the candidate is refused, and admission closes.
-  assert.equal(store.store("tc-b3", [{ type: "text", text: payload }]), null,
-    "aggregate-byte rejection returns no reference");
-  assert.equal(store.store("tc-b4", [{ type: "text", text: payload }]), null,
-    "closed archive refuses later candidates");
-  assert.equal(store.retrieve(idA).kind, "ok", "existing rows keep their aggregate budget");
-  assert.equal(store.retrieve(idB).kind, "ok");
-  ok("archive store: aggregate-byte rejection closes admission");
+  // A third ~380-byte entry exceeds the aggregate cap, so rolling
+  // admission drops the oldest bytes to fit the newer candidate.
+  const idC = store.store("tc-b3", [{ type: "text", text: payload }]);
+  assert.ok(idC && idC !== idA && idC !== idB, "aggregate-byte pressure admits the newer candidate");
+  assert.equal(store.retrieve(idA).kind, "evicted", "the oldest bytes are evicted deterministically");
+  assert.equal(store.retrieve(idC).kind, "ok", "the newly admitted row retrieves immediately");
+  clock += 10;
+  const idD = store.store("tc-b4", [{ type: "text", text: payload }]);
+  assert.ok(idD, "admission keeps rolling after an aggregate eviction");
+  assert.equal(store.retrieve(idB).kind, "evicted", "the next-oldest bytes are evicted in turn");
+  assert.equal(store.retrieve(idD).kind, "ok");
+  ok("archive store: rolling aggregate-byte retention admits newer candidates");
 }
 
 // --- stale session sweep (startup cleanup across sessions) ---
@@ -489,12 +501,9 @@ const longText = (mark: string) => `${mark} ${"payload ".repeat(30)}\n`.repeat(3
   sweeper.sweepStaleSessions();
   const revived = makeStore("sess-sweep-target", { ttlMs: 1000 }, () => clock);
   assert.equal(revived.retrieve(staleId!).kind, "evicted", "inactive session retirement preserves the eviction reason");
-  assert.equal(
-    revived.store("tc-after-sweep", [{ type: "text", text: "recreate" }]),
-    null,
-    "inactive retirement closes admission so removed ids cannot return after tombstones roll off",
-  );
-  ok("archive store: stale session directories swept after ttl and remain closed");
+  const afterSweep = revived.store("tc-after-sweep", [{ type: "text", text: "recreate" }]);
+  assert.ok(afterSweep && afterSweep !== staleId, "inactive retirement permits a new admission without reusing the old reference");
+  ok("archive store: stale session directories sweep old rows and admit a distinct new reference");
 }
 
 // --- stale sweep fails open when index integrity is uncertain ---
@@ -680,14 +689,14 @@ process.on("exit", () => rmSync(root, { recursive: true, force: true }));
 {
   // Post-write cleanup must verify the new entry survived retention.
   // An entry larger than the aggregate cap cannot persist, so store must
-  // return null instead of handing out a dead reference. The aggregate
-  // rejection also closes admission, so a later small candidate is
-  // refused as well and its content stays visible.
+  // return null instead of handing out a dead reference. Rolling admission
+  // then accepts a later candidate that fits the aggregate limit.
   const tiny = makeStore("sess-selfevict", { maxEntries: 5, maxAggregateBytes: 300 });
   const selfEvicted = tiny.store("tc-self", [{ type: "text", text: "z".repeat(600) }]);
   assert.equal(selfEvicted, null, "store returns null when retention removes the new entry");
-  assert.equal(tiny.store("tc-survive", [{ type: "text", text: "ok" }]), null,
-    "closed archive refuses later candidates after an aggregate rejection");
+  const survivingSmall = tiny.store("tc-survive", [{ type: "text", text: "ok" }]);
+  assert.ok(survivingSmall, "a smaller candidate is admitted after aggregate rejection");
+  assert.equal(tiny.retrieve(survivingSmall!).kind, "ok", "the later admitted reference retrieves immediately");
 
   // Active retrieval must prevent stale-session sweeping: the sweep uses
   // the newest child (entry or index) activity, not directory mtime alone.

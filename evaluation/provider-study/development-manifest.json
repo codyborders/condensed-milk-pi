@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "study": "provider-study",
+  "phase": "development",
+  "evaluation": {
+    "provider": "z-ai",
+    "model": "glm-5.3-flash",
+    "thinking": "high",
+    "piVersion": "0.84.2",
+    "tools": ["read", "bash", "edit", "write", "grep", "find", "ls", "condensed_milk_retrieve"],
+    "timeoutMsPerAttempt": 3600000,
+    "repetitionsPreallocated": 5,
+    "conditionalRepetitions": [6, 7, 8, 9, 10],
+    "noPaidRetry": true,
+    "armSet": "baseline-four",
+    "seed": "provider-study-development-2026-04"
+  },
+  "tasks": [
+    { "id": "task-01", "source": "general" },
+    { "id": "task-02", "source": "general" },
+    { "id": "task-03", "source": "general" },
+    { "id": "task-04", "source": "general" },
+    { "id": "task-05", "source": "general" },
+    { "id": "task-06", "source": "general" },
+    { "id": "task-08", "source": "general" },
+    { "id": "task-09", "source": "general" },
+    { "id": "task-13", "source": "general" },
+    { "id": "task-15", "source": "general" },
+    { "id": "task-16", "source": "general" },
+    { "id": "task-18", "source": "general" }
+  ]
+}
