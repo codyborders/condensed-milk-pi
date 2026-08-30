@@ -27,6 +27,17 @@ test("usage preservation: raw provider fields survive verbatim and the total sum
   assert.equal(providerTotalTokens(normalized), 1000 + 200 + 300 + 50 + 12);
 });
 
+test("provider totalTokens is authoritative and is not added to its component categories", () => {
+  const normalized = normalizeProviderUsage({
+    input: 1000,
+    output: 200,
+    cacheRead: 300,
+    cacheWrite: 50,
+    totalTokens: 1550,
+  });
+  assert.equal(providerTotalTokens(normalized), 1550);
+});
+
 test("usage nulls stay null and never feed the total", () => {
   const normalized = normalizeProviderUsage({ input: 10, output: null, cacheRead: undefined });
   assert.equal(normalized.input, 10);

@@ -12,6 +12,7 @@ import { loadProviderStudyManifestFile } from "./manifest.mjs";
 import { providerStudySchedule, providerStudyPlannedBlocks, providerStudyPlannedSlots } from "./schedule.mjs";
 import { providerStudyReadCompletedResult, providerStudySlotPath } from "./reserve.mjs";
 import { completeBlocks, primaryInterval, fiveToTenRequired, primaryConclusion } from "./stats.mjs";
+import { providerTotalTokens } from "./metrics.mjs";
 
 // Report rows walk the shared planned-slot enumeration so conditional
 // repetitions 6-10 appear whenever those slots exist.
@@ -76,7 +77,7 @@ function sanitizedRow(taskId, arm, rep, result, quality) {
     usageOutput: result?.usage?.output ?? null,
     usageCacheRead: result?.usage?.cacheRead ?? null,
     usageCacheWrite: result?.usage?.cacheWrite ?? null,
-    totalProviderTokens: typeof result?.totalProviderTokens === "number" ? result.totalProviderTokens : null,
+    totalProviderTokens: providerTotalTokens(result?.usage),
     peakContextTokens: typeof result?.peakContextTokens === "number" ? result.peakContextTokens : null,
     modelRequests: typeof result?.modelRequests === "number" ? result.modelRequests : null,
     assistantCompletions: typeof result?.assistantCompletions === "number" ? result.assistantCompletions : null,

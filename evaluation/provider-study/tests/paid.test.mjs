@@ -426,16 +426,18 @@ describe("provider-study paid execution", () => {
           }
           if (arm !== "none") {
             assert.equal(
-              existsSync(join(attemptDir, "worktree", "implementation", "node_modules", "proper-lockfile", "package.json")),
+              existsSync(join(attemptDir, "arm-runtime", "node_modules", "proper-lockfile", "package.json")),
               true,
               `${arm} receives the frozen production dependency tree`,
             );
             assert.equal(
-              existsSync(join(attemptDir, "worktree", "implementation", "node_modules", "typebox", "package.json")),
+              existsSync(join(attemptDir, "arm-runtime", "node_modules", "typebox", "package.json")),
               true,
               `${arm} receives the frozen typebox package`,
             );
           }
+
+          assert.equal(existsSync(join(attemptDir, "worktree", "implementation")), false, "task tools cannot inspect arm implementation files");
 
           const config = providerStudyArmConfig(repoRoot, arm);
           const homeConfig = readFileSync(join(attemptDir, "home", ".config", "condensed-milk.json"), "utf8");

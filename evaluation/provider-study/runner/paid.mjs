@@ -56,7 +56,7 @@ function terminalRows(repoRoot, runsRoot, phase) {
           rep: block.rep,
           status: typeof result?.status === "string" ? result.status : "unknown",
           success: result?.deterministicResult === true,
-          totalProviderTokens: typeof result?.totalProviderTokens === "number" ? result.totalProviderTokens : null,
+          totalProviderTokens: providerTotalTokens(result?.usage),
           providerTrafficAnomaly: result?.providerTrafficAnomaly === true,
           proxyFailedRequestCount: typeof result?.proxyFailedRequestCount === "number" ? result.proxyFailedRequestCount : null,
           proxyRejectedCount: typeof result?.proxyRejectedCount === "number" ? result.proxyRejectedCount : null,
@@ -223,7 +223,7 @@ function studyExtensionPaths({ arm, attemptDir, stagedNeutral }) {
   const armDef = providerStudyArm(arm);
   const paths = [];
   if (armDef.kind === "commit") {
-    paths.push(join(attemptDir, "worktree", "implementation", "index.ts"));
+    paths.push(join(attemptDir, "arm-runtime", "index.ts"));
   }
   if (arm === "none" || arm === "upstream") {
     paths.push(stagedNeutral.path);
@@ -408,6 +408,7 @@ async function executeProviderStudySlot({
     profileSha256: config.sha256,
     scorerSha256: taskData.scorerSha256,
     extensionPaths,
+    implementationOutsideWorktree: true,
     implementationDependencies: armDef.kind === "commit" ? providerStudyDependencySpecs(repoRoot) : [],
     observers: providerStudyObserverStudyObservers(),
     scoreWorktree: ({ repoRoot: root, worktree, taskId }) =>

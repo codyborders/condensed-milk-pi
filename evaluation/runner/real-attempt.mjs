@@ -112,10 +112,12 @@ export function buildEvalProviderModels({ proxyBaseUrl, template = null, dummyAp
   };
 }
 
-export function attemptPaths(attemptDir) {
+export function attemptPaths(attemptDir, { implementationOutsideWorktree = false } = {}) {
   return {
     worktree: join(attemptDir, "worktree"),
-    implementation: join(attemptDir, "worktree", "implementation"),
+    implementation: implementationOutsideWorktree
+      ? join(attemptDir, "arm-runtime")
+      : join(attemptDir, "worktree", "implementation"),
     sessions: join(attemptDir, "sessions"),
     home: join(attemptDir, "home"),
     agent: join(attemptDir, "agent"),
@@ -164,7 +166,9 @@ function dependencyDirectorySha256(root) {
 }
 
 export function prepareAttemptWorkspace({ attemptDir, fixtureDir, arm, profile, proxyBaseUrl, template = null, dummyApiKey, study = null }) {
-  const paths = attemptPaths(attemptDir);
+  const paths = attemptPaths(attemptDir, {
+    implementationOutsideWorktree: study?.implementationOutsideWorktree === true,
+  });
   mkdirSync(paths.sessions, { recursive: true });
   mkdirSync(paths.tmp, { recursive: true });
   mkdirSync(dirname(paths.homeConfig), { recursive: true });
@@ -421,7 +425,9 @@ export async function executeRealAttempt({
     throw new Error(`attempt at ${basename(attemptDir)} already reached a terminal status; refusing to invoke Pi again`);
   }
   const evaluation = manifest.evaluation;
-  const paths = attemptPaths(attemptDir);
+  const paths = attemptPaths(attemptDir, {
+    implementationOutsideWorktree: study?.implementationOutsideWorktree === true,
+  });
   const { apiKey, baseUrl } = loadProviderCredential({ sourcePath: credentialSourcePath });
   const template = loadSafeModelTemplate({ sourcePath: credentialSourcePath });
   const dummyApiKey = generateDummyApiKey();
