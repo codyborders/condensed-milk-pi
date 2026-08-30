@@ -26,6 +26,18 @@ export function providerStudyFreezeLockPath(repoRoot) {
   return join(repoRoot, "evaluation", "provider-study", "freeze-lock.json");
 }
 
+export function providerStudyCanonicalFreezeIdentity(repoRoot) {
+  const path = providerStudyFreezeLockPath(repoRoot);
+  if (!existsSync(path)) throw new Error("canonical freeze lock is missing");
+  const bytes = readFileSync(path);
+  const lock = JSON.parse(bytes.toString("utf8"));
+  return {
+    freezeLockSha256: createHash("sha256").update(bytes).digest("hex"),
+    evaluatorCommit: lock?.digests?.evaluator?.commit,
+    evaluatorSourceSha256: lock?.digests?.evaluator?.sourceSha256,
+  };
+}
+
 function sha256File(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }

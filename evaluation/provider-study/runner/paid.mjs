@@ -24,7 +24,7 @@ import {
   providerStudyReserve,
   providerStudySlotPath,
 } from "./reserve.mjs";
-import { providerStudyFreezeMatches } from "./freeze.mjs";
+import { providerStudyCanonicalFreezeIdentity, providerStudyFreezeMatches } from "./freeze.mjs";
 import { providerStudyRunsRoot, providerStudyFixtureCacheRoot } from "./study.mjs";
 import { withHoldoutTasks } from "./holdout.mjs";
 import { normalizeProviderUsage, providerTotalTokens, proxyRequestAccounting, providerTrafficAnomaly } from "./metrics.mjs";
@@ -137,6 +137,10 @@ function verifyPhaseLock(repoRoot, runsRoot, phase) {
   if (lock.study !== "provider-study" || lock.phase !== phase) {
     throw new Error(`phase lock at ${lockPath} is not a provider-study ${phase} lock; refusing`);
   }
+  const freezeIdentity = providerStudyCanonicalFreezeIdentity(repoRoot);
+  if (stableJson(lock.freezeIdentity) !== stableJson(freezeIdentity)) {
+    throw new Error(`the persisted ${phase} lock freeze identity differs from the canonical freeze; refusing`);
+  }
   if (`${stableJson(lock.plan)}\n` !== providerStudyPlanBytes(repoRoot, phase)) {
     throw new Error(`the persisted ${phase} plan no longer matches the frozen schedule; refusing before any reservation`);
   }
@@ -145,10 +149,13 @@ function verifyPhaseLock(repoRoot, runsRoot, phase) {
     throw new Error(`no run metadata at ${runPath}; prepare must create it before paid execution`);
   }
   const run = JSON.parse(readFileSync(runPath, "utf8"));
+  if (stableJson(run.freezeIdentity) !== stableJson(freezeIdentity)) {
+    throw new Error(`run metadata freeze identity differs from the canonical freeze; refusing`);
+  }
   if (run.planSha256 !== providerStudyPlanHash(repoRoot, phase)) {
     throw new Error(`run metadata plan hash differs from the current ${phase} plan; refusing`);
   }
-  return { lock, run };
+  return { lock, run, freezeIdentity };
 }
 
 /**
@@ -523,7 +530,7 @@ export async function providerStudyPaidRun({
   if (!freeze.ok) {
     throw new Error(`paid execution refused: ${freeze.problems.join("; ")}`);
   }
-  const { run } = verifyPhaseLock(repoRoot, root, phase);
+  const { run, freezeIdentity } = verifyPhaseLock(repoRoot, root, phase);
   const runId = run.runId;
   const loaded = loadProviderStudyManifestFile(repoRoot, { phase });
   const schedule = providerStudySchedule(repoRoot, phase);
@@ -598,6 +605,7 @@ export async function providerStudyPaidRun({
             piVersion: PROVIDER_STUDY_PINS.piVersion,
             noPaidRetry: true,
             timeoutMsPerAttempt: PROVIDER_STUDY_PINS.timeoutMsPerAttempt,
+            ...freezeIdentity,
             promptSha256: sha256Text(buildAttemptPrompt(task.prompt)),
             scorerSha256: providerStudyTaskData(repoRoot, phase, task).scorerSha256,
           };

@@ -449,6 +449,9 @@ describe("provider-study paid execution", () => {
           assert.match(pinned.armIdentitySha256, /^[0-9a-f]{64}$/);
           assert.match(pinned.observerSha256, /^[0-9a-f]{64}$/);
           assert.match(pinned.planSha256, /^[0-9a-f]{64}$/);
+          assert.match(pinned.freezeLockSha256, /^[0-9a-f]{64}$/);
+          assert.match(pinned.evaluatorCommit, /^[0-9a-f]{40}$/);
+          assert.match(pinned.evaluatorSourceSha256, /^[0-9a-f]{64}$/);
         }
       }
 

@@ -89,17 +89,23 @@ export async function providerStudyCli(argv, { repoRoot }) {
       if (existsSync(runPath)) {
         return { code: 3, stdout: "", stderr: `run metadata already exists at ${runPath}; refusing to overwrite\n` };
       }
+      const { providerStudyCanonicalFreezeIdentity, providerStudyFreezeMatches } = await import("./freeze.mjs");
+      const freeze = providerStudyFreezeMatches(repoRoot);
+      if (!freeze.ok) {
+        return { code: 4, stdout: "", stderr: `prepare refused: ${freeze.problems.join("; ")}\n` };
+      }
+      const freezeIdentity = providerStudyCanonicalFreezeIdentity(repoRoot);
       mkdirSync(phaseRoot, { recursive: true });
       const plan = providerStudySchedule(repoRoot, phase);
       const planSha256 = planSha256Of(repoRoot, phase);
       writeFileSync(
         lockPath,
-        `${JSON.stringify({ schemaVersion: 1, study: "provider-study", phase, runId, plan }, null, 2)}\n`,
+        `${JSON.stringify({ schemaVersion: 1, study: "provider-study", phase, runId, plan, freezeIdentity }, null, 2)}\n`,
         "utf8",
       );
       writeFileSync(
         runPath,
-        `${JSON.stringify({ schemaVersion: 1, study: "provider-study", phase, runId, planSha256, createdAt: new Date().toISOString() }, null, 2)}\n`,
+        `${JSON.stringify({ schemaVersion: 1, study: "provider-study", phase, runId, planSha256, freezeIdentity, createdAt: new Date().toISOString() }, null, 2)}\n`,
         "utf8",
       );
       return { code: 0, stdout: `${JSON.stringify({ phase, runId, phaseRoot })}\n`, stderr: "" };

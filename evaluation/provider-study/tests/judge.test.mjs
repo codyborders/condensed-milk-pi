@@ -76,6 +76,24 @@ test("judge export carries anonymous changed-file paths, full bytes, initial byt
   }
 });
 
+test("judge export excludes evaluator implementation scaffolding", async () => {
+  const runsRoot = freshRunsRoot();
+  try {
+    await providerStudyDryRun({ repoRoot, runsRoot, phase: "development", taskIds: ["task-01"] });
+    const worktree = join(runsRoot, "development", "attempts", "task-01", "none", "attempt-001", "worktree");
+    mkdirSync(join(worktree, "implementation", "node_modules"), { recursive: true });
+    writeFileSync(join(worktree, "implementation", "node_modules", "private.bin"), "x".repeat(300 * 1024), "utf8");
+    const exported = await providerStudyJudgeExport({ repoRoot, runsRoot, phase: "development" });
+    const cases = readFileSync(exported.casesPath, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    assert.equal(
+      cases.some((entry) => [...entry.initialFiles, ...entry.finalChangedFiles].some((file) => file.path.startsWith("implementation/"))),
+      false,
+    );
+  } finally {
+    rmSync(runsRoot, { recursive: true, force: true });
+  }
+});
+
 test("judge export rejects an oversize case under the documented bound instead of hashing content", async () => {
   const runsRoot = freshRunsRoot();
   try {

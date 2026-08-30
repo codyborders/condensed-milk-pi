@@ -66,7 +66,7 @@ function walkFiles(root, prefix = "") {
     const path = join(root, entry.name);
     const relative = prefix.length === 0 ? entry.name : `${prefix}/${entry.name}`;
     if (entry.isDirectory()) {
-      if (entry.name === ".git") continue;
+      if (entry.name === ".git" || (prefix.length === 0 && entry.name === "implementation")) continue;
       for (const [nested, bytes] of walkFiles(path, relative)) files.set(nested, bytes);
       continue;
     }
