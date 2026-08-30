@@ -438,11 +438,12 @@ export function providerStudyJudgePrompt(entry) {
 }
 
 const JUDGE_MAX_RESPONSE_BYTES = 1024 * 1024;
+const JUDGE_MAX_ATTEMPTS_PER_CASE = 3;
 
 /** One non-streaming judge request through the loopback proxy. */
 function judgeRequest({ proxyBaseUrl, dummyApiKey, model, prompt, timeoutMs }) {
   return new Promise((resolve) => {
-    const body = JSON.stringify({ model, max_tokens: 1024, stream: false, messages: [{ role: "user", content: prompt }] });
+    const body = JSON.stringify({ model, max_tokens: 8192, stream: false, messages: [{ role: "user", content: prompt }] });
     const request = http.request(
       new URL(`${proxyBaseUrl}/v1/messages`),
       {
@@ -545,30 +546,45 @@ export async function providerStudyJudgeRun({ repoRoot, runsRoot = null, phase, 
     for (const caseId of order) {
       const entry = byCase.get(caseId);
       const prompt = providerStudyJudgePrompt(entry);
-      const response = await judgeRequest({
-        proxyBaseUrl: proxy.baseUrl,
-        dummyApiKey,
-        model,
-        prompt,
-        timeoutMs: 120_000,
-      });
-      if (response.error) {
-        failures.push({ caseId, error: response.error });
-        continue;
+      let valid = null;
+      let lastError = "judge attempt did not complete";
+      for (let attempt = 1; attempt <= JUDGE_MAX_ATTEMPTS_PER_CASE; attempt += 1) {
+        const response = await judgeRequest({
+          proxyBaseUrl: proxy.baseUrl,
+          dummyApiKey,
+          model,
+          prompt,
+          timeoutMs: 120_000,
+        });
+        if (response.error) {
+          lastError = response.error;
+          continue;
+        }
+        if (response.status !== 200) {
+          lastError = `judge upstream status ${response.status}`;
+          continue;
+        }
+        const parsed = scoreFromJudgeBody(response.body);
+        if (parsed.error) {
+          lastError = parsed.error;
+          continue;
+        }
+        appendJudgeUsage(root, phase, { caseId, attempt, model, usage: response.body.usage ?? null });
+        valid = { caseId, score: parsed.score };
+        break;
       }
-      if (response.status !== 200) {
-        failures.push({ caseId, error: `judge upstream status ${response.status}` });
-        continue;
-      }
-      const parsed = scoreFromJudgeBody(response.body);
-      if (parsed.error) {
-        failures.push({ caseId, error: parsed.error });
-        continue;
-      }
-      appendJudgeUsage(root, phase, { caseId, model, usage: response.body.usage ?? null });
-      results.push({ caseId, score: parsed.score });
+      if (valid === null) failures.push({ caseId, error: lastError });
+      else results.push(valid);
     }
   } finally {
+    const proxyLedgerPath = join(judgeRoot, "judge-proxy-ledger.jsonl");
+    const fd = openSync(proxyLedgerPath, "a");
+    try {
+      writeSync(fd, `${JSON.stringify({ schemaVersion: 1, at: new Date().toISOString(), ...proxy.stats() })}\n`, "utf8");
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
     await proxy.close();
   }
   if (failures.length > 0 || results.length !== cases.length) {

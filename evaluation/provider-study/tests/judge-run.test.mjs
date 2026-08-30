@@ -20,7 +20,7 @@ import { writeCredentialSource, SENTINEL_KEY } from "../../tests/real-attempt-fa
 const repoRoot = join(fileURLToPath(import.meta.url), "..", "..", "..", "..");
 
 /** Loopback fake judge upstream: one JSON score per request. */
-function startFakeJudgeUpstream({ failFirst = false } = {}) {
+function startFakeJudgeUpstream({ failFirstCount = 0 } = {}) {
   const seen = [];
   const server = http.createServer((req, res) => {
     let body = "";
@@ -29,7 +29,7 @@ function startFakeJudgeUpstream({ failFirst = false } = {}) {
     });
     req.on("end", () => {
       seen.push({ url: req.url, headers: req.headers, body });
-      if (failFirst && seen.length === 1) {
+      if (seen.length <= failFirstCount) {
         res.writeHead(503, { "content-type": "application/json" });
         res.end(JSON.stringify({ error: "transient judge failure" }));
         return;
@@ -59,7 +59,7 @@ function startFakeJudgeUpstream({ failFirst = false } = {}) {
 
 test("an incomplete judge run seals no scores and can retry the frozen schedule", { timeout: 240_000 }, async () => {
   const work = mkdtempSync(join(tmpdir(), "cm-ps-judge-retry-"));
-  const upstream = await startFakeJudgeUpstream({ failFirst: true });
+  const upstream = await startFakeJudgeUpstream({ failFirstCount: 3 });
   try {
     const runsRoot = join(work, "runs");
     const credentialSource = join(work, "models.json");
